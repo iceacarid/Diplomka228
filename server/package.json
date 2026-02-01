@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "@google/genai": "^1.39.0",
+    "leaflet": "^1.9.4",
+    "react-markdown": "^10.1.0"
+  }
+}
