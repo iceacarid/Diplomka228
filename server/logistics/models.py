@@ -39,6 +39,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True, verbose_name='Email')
     name = models.CharField(max_length=255, verbose_name='Имя')
     phone = models.CharField(max_length=20, blank=True, null=True, verbose_name='Телефон')
+    avatar = models.ImageField(upload_to='avatars/', blank=True, null=True, verbose_name='Аватар')
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='client', verbose_name='Роль')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания')
     is_active = models.BooleanField(default=True, verbose_name='Активен')
@@ -117,6 +118,17 @@ class Order(models.Model):
         ('rejected', 'Отклонено'),
     )
 
+    CARGO_TYPE_CHOICES = (
+        ('general', 'Обычный груз'),
+        ('fragile', 'Хрупкое'),
+        ('flammable', 'Огнеопасное'),
+        ('perishable', 'Скоропортящееся'),
+        ('hazardous', 'Опасное'),
+        ('oversized', 'Негабаритное'),
+        ('temperature_controlled', 'Температурный режим'),
+        ('other', 'Другое'),
+    )
+
     tracking_id = models.CharField(max_length=20, unique=True, editable=False, verbose_name='Tracking ID')
     client = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders', verbose_name='Клиент')
     manager = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='managed_orders', verbose_name='Менеджер')
@@ -127,6 +139,8 @@ class Order(models.Model):
     dest_address = models.CharField(max_length=500, verbose_name='Адрес доставки')
     weight = models.FloatField(verbose_name='Вес груза (кг)')
     volume = models.FloatField(verbose_name='Объём груза (м³)')
+    cargo_type = models.CharField(max_length=30, choices=CARGO_TYPE_CHOICES, default='general', verbose_name='Тип груза')
+    cargo_type_custom = models.CharField(max_length=255, blank=True, null=True, verbose_name='Тип груза (свой вариант)')
     price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Стоимость (₽)')
     eta = models.DateTimeField(null=True, blank=True, verbose_name='Примерное время прибытия')
     rejection_reason = models.TextField(blank=True, null=True, verbose_name='Причина отклонения')

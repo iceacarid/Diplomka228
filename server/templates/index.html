@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ФураЕдет - Система грузоперевозок</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', 'Open Sans', sans-serif;
+            background: #FAF8F0;
+            color: #0D1B2A;
+        }
+
+        .header {
+            background: #0D1B2A;
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .logo {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #F7B500;
+        }
+
+        .nav {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .nav a {
+            color: white;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .nav a:hover {
+            color: #F7B500;
+        }
+
+        .user-menu {
+            position: relative;
+        }
+
+        .user-btn {
+            background: #F7B500;
+            color: #0D1B2A;
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .user-btn:hover {
+            background: #e5a600;
+            transform: translateY(-2px);
+        }
+
+        .dropdown {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 100%;
+            margin-top: 0.5rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            min-width: 200px;
+            z-index: 1000;
+        }
+
+        .dropdown.show {
+            display: block;
+        }
+
+        .dropdown a, .dropdown button {
+            display: block;
+            padding: 0.8rem 1.2rem;
+            color: #0D1B2A;
+            text-decoration: none;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .dropdown a:hover, .dropdown button:hover {
+            background: #F7B500;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, #0D1B2A 0%, #1a2f45 100%);
+            color: white;
+            padding: 4rem 2rem;
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            color: #FAF8F0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+
+        .calculator {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .calculator h2 {
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            color: #0D1B2A;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #0D1B2A;
+        }
+
+        .form-group input {
+            padding: 0.8rem;
+            border: 2px solid #E5E7EB;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #F7B500;
+        }
+
+        .btn {
+            background: #F7B500;
+            color: #0D1B2A;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            background: #e5a600;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #0D1B2A;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #1a2f45;
+        }
+
+        .result {
+            margin-top: 1.5rem;
+            padding: 1.5rem;
+            background: #FAF8F0;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .result.show {
+            display: block;
+        }
+
+        .result h3 {
+            color: #F7B500;
+            margin-bottom: 1rem;
+        }
+
+        .result p {
+            margin: 0.5rem 0;
+            font-size: 1.1rem;
+        }
+
+        .actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .role-badge {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+        }
+
+        .role-admin {
+            background: #EF4444;
+            color: white;
+        }
+
+        .role-manager {
+            background: #3B82F6;
+            color: white;
+        }
+
+        .role-client {
+            background: #22C55E;
+            color: white;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="logo">🚛 ФураЕдет</div>
+        <nav class="nav">
+            <a href="#calculator">Калькулятор</a>
+            <a href="#tracking">Отследить груз</a>
+            <div class="user-menu" id="userMenu">
+                <a href="/login" class="user-btn" id="loginLink">Войти</a>
+                <button class="user-btn hidden" id="userBtn">Пользователь</button>
+                <div class="dropdown" id="userDropdown">
+                    <a href="#" id="profileLink">Личный кабинет</a>
+                    <a href="#" id="ordersLink">Мои заказы</a>
+                    <a href="#" id="adminLink" class="hidden">Админ панель</a>
+                    <button id="logoutBtn">Выйти</button>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <section class="hero">
+        <h1>Грузоперевозки по России</h1>
+        <p>Быстро, надёжно, выгодно. Рассчитайте стоимость доставки за 1 минуту!</p>
+        <div style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+            <button class="btn" onclick="goToNewOrder()" style="font-size: 1.1rem; padding: 1.2rem 2.5rem;">📦 Оставить заявку</button>
+            <button class="btn btn-secondary" onclick="getConsultation()" style="font-size: 1.1rem; padding: 1.2rem 2.5rem;">💬 Получить консультацию</button>
+        </div>
+    </section>
+
+    <div class="container">
+        <div class="calculator" id="calculator">
+            <h2>📦 Калькулятор стоимости</h2>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Город отправления</label>
+                    <input type="text" id="originCity" placeholder="Например: Москва">
+                </div>
+                <div class="form-group">
+                    <label>Город назначения</label>
+                    <input type="text" id="destCity" placeholder="Например: Санкт-Петербург">
+                </div>
+                <div class="form-group">
+                    <label>Вес груза (кг)</label>
+                    <input type="number" id="weight" placeholder="1000">
+                </div>
+                <div class="form-group">
+                    <label>Объём груза (м³)</label>
+                    <input type="number" id="volume" placeholder="5">
+                </div>
+            </div>
+            <button class="btn" onclick="calculateCost()">Рассчитать стоимость</button>
+
+            <div class="result" id="result">
+                <h3>Результат расчёта</h3>
+                <p><strong>Расстояние:</strong> <span id="distance">-</span> км</p>
+                <p><strong>Стоимость:</strong> <span id="price">-</span> ₽</p>
+                <p><strong>Примерное время доставки:</strong> <span id="eta">-</span> дней</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://127.0.0.1:8000/api';
+        let currentUser = null;
+        let token = localStorage.getItem('token');
+        let calculationResult = null;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            if (token) {
+                loadCurrentUser();
+            }
+
+            const userBtn = document.getElementById('userBtn');
+            if (userBtn) {
+                userBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    document.getElementById('userDropdown').classList.toggle('show');
+                });
+            }
+
+            document.addEventListener('click', function() {
+                const dropdown = document.getElementById('userDropdown');
+                if (dropdown) {
+                    dropdown.classList.remove('show');
+                }
+            });
+
+            const logoutBtn = document.getElementById('logoutBtn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', logout);
+            }
+
+            const profileLink = document.getElementById('profileLink');
+            if (profileLink) {
+                profileLink.addEventListener('click', goToProfile);
+            }
+
+            const ordersLink = document.getElementById('ordersLink');
+            if (ordersLink) {
+                ordersLink.addEventListener('click', goToOrders);
+            }
+
+            const adminLink = document.getElementById('adminLink');
+            if (adminLink) {
+                adminLink.addEventListener('click', goToAdmin);
+            }
+        });
+
+        async function loadCurrentUser() {
+            try {
+                const response = await fetch(`${API_URL}/auth/me/`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    currentUser = await response.json();
+                    updateUserUI();
+                } else {
+                    localStorage.removeItem('token');
+                    token = null;
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки пользователя:', error);
+            }
+        }
+
+        function updateUserUI() {
+            const loginLink = document.getElementById('loginLink');
+            const userBtn = document.getElementById('userBtn');
+            
+            if (currentUser) {
+                let roleClass = 'role-client';
+                let roleName = 'Клиент';
+                
+                if (currentUser.role === 'admin') {
+                    roleClass = 'role-admin';
+                    roleName = 'Админ';
+                    document.getElementById('adminLink').classList.remove('hidden');
+                } else if (currentUser.role === 'manager') {
+                    roleClass = 'role-manager';
+                    roleName = 'Менеджер';
+                } else {
+                    document.getElementById('adminLink').classList.add('hidden');
+                }
+
+                loginLink.classList.add('hidden');
+                userBtn.classList.remove('hidden');
+                userBtn.innerHTML = `
+                    ${currentUser.name}
+                    <span class="${roleClass} role-badge">${roleName}</span>
+                `;
+            } else {
+                loginLink.classList.remove('hidden');
+                userBtn.classList.add('hidden');
+            }
+        }
+
+        async function calculateCost() {
+            const originCity = document.getElementById('originCity').value;
+            const destCity = document.getElementById('destCity').value;
+            const weight = parseFloat(document.getElementById('weight').value);
+            const volume = parseFloat(document.getElementById('volume').value);
+
+            if (!originCity || !destCity || !weight || !volume) {
+                alert('Заполните все поля!');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/calculator/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        origin: originCity,
+                        destination: destCity,
+                        weight: weight,
+                        volume: volume
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    calculationResult = data;
+                    
+                    document.getElementById('distance').textContent = data.distance;
+                    document.getElementById('price').textContent = data.price.toLocaleString('ru-RU');
+                    document.getElementById('eta').textContent = Math.ceil(data.distance / 800);
+                    document.getElementById('result').classList.add('show');
+                } else {
+                    alert('Ошибка расчёта стоимости');
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                alert('Ошибка соединения с сервером');
+            }
+        }
+
+        function goToNewOrder() {
+            if (!currentUser) {
+                alert('Для подачи заявки необходимо войти в систему');
+                window.location.href = '/login';
+                return;
+            }
+
+            if (currentUser.role === 'manager' || currentUser.role === 'admin') {
+                alert('Только клиенты могут подавать заявки.');
+                return;
+            }
+
+            window.location.href = '/dashboard';
+        }
+
+        function getConsultation() {
+            if (!currentUser) {
+                alert('Для получения консультации необходимо войти в систему');
+                window.location.href = '/login';
+                return;
+            }
+
+            alert('Для получения консультации оставьте заявку, и наш менеджер свяжется с вами в ближайшее время.');
+            goToNewOrder();
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            token = null;
+            currentUser = null;
+            updateUserUI();
+            alert('Вы вышли из системы');
+        }
+
+        function goToProfile() {
+            window.location.href = '/dashboard';
+        }
+
+        function goToOrders() {
+            window.location.href = '/dashboard';
+        }
+
+        function goToAdmin() {
+            window.location.href = '/dashboard';
+        }
+    </script>
+</body>
+</html>

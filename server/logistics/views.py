@@ -16,6 +16,22 @@ from .permissions import IsClient, IsManager, IsAdmin, IsManagerOrAdmin, IsOwner
 from .services import GeminiService, YandexMapsService
 
 
+def index_view(request):
+    return render(request, 'index.html')
+
+
+def login_view(request):
+    return render(request, 'login.html')
+
+
+def register_view(request):
+    return render(request, 'register.html')
+
+
+def dashboard_view(request):
+    return render(request, 'dashboard.html')
+
+
 class RegisterView(APIView):
     permission_classes = [permissions.AllowAny]
 
@@ -62,8 +78,22 @@ class LogoutView(APIView):
 
 class CurrentUserView(APIView):
     def get(self, request):
-        serializer = UserSerializer(request.user)
+        serializer = UserSerializer(request.user, context={'request': request})
         return Response(serializer.data)
+    
+    def put(self, request):
+        serializer = UserSerializer(request.user, data=request.data, partial=True, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def patch(self, request):
+        serializer = UserSerializer(request.user, data=request.data, partial=True, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -83,13 +113,15 @@ class UserViewSet(viewsets.ModelViewSet):
             return User.objects.filter(role='client')
         return User.objects.filter(id=self.request.user.id)
 
-    @action(detail=True, methods=['patch'], permission_classes=[IsAdmin])
+    @action(detail=True, methods=['post', 'patch'], permission_classes=[IsAdmin])
     def change_role(self, request, pk=None):
         user = self.get_object()
         new_role = request.data.get('role')
         if new_role not in ['client', 'manager', 'admin']:
             return Response({'error': 'Неверная роль'}, status=status.HTTP_400_BAD_REQUEST)
         user.role = new_role
+        if new_role == 'admin':
+            user.is_staff = True
         user.save()
         return Response(UserSerializer(user).data)
 

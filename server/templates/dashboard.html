@@ -1,0 +1,1330 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Личный кабинет - ФураЕдет</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+        }
+
+        .header {
+            background: #333;
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+        }
+
+        .header a {
+            color: white;
+            text-decoration: none;
+            margin-left: 20px;
+        }
+
+        .container {
+            display: flex;
+            min-height: calc(100vh - 60px);
+        }
+
+        .sidebar {
+            width: 250px;
+            background: white;
+            padding: 20px;
+            border-right: 1px solid #ddd;
+        }
+
+        .sidebar h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .sidebar ul {
+            list-style: none;
+        }
+
+        .sidebar ul li {
+            margin-bottom: 10px;
+        }
+
+        .sidebar ul li a {
+            text-decoration: none;
+            color: #555;
+            display: block;
+            padding: 10px;
+            border-radius: 4px;
+        }
+
+        .sidebar ul li a:hover,
+        .sidebar ul li a.active {
+            background: #007bff;
+            color: white;
+        }
+
+        .content {
+            flex: 1;
+            padding: 30px;
+        }
+
+        .section {
+            display: none;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        .section h2 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .form-group input.error {
+            border-color: #dc3545;
+        }
+
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+        }
+
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background: #f8f9fa;
+            font-weight: bold;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .status-pending {
+            background: #ffc107;
+            color: #000;
+        }
+
+        .status-in_progress {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .status-shipped {
+            background: #007bff;
+            color: white;
+        }
+
+        .status-delivered {
+            background: #28a745;
+            color: white;
+        }
+
+        .status-rejected {
+            background: #dc3545;
+            color: white;
+        }
+
+        .role-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .role-admin {
+            background: #dc3545;
+            color: white;
+        }
+
+        .role-manager {
+            background: #007bff;
+            color: white;
+        }
+
+        .role-client {
+            background: #28a745;
+            color: white;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .status-active {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-inactive {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .user-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+
+        .user-info p {
+            margin: 5px 0;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .search-bar {
+            margin-bottom: 20px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .modal-close {
+            float: right;
+            font-size: 24px;
+            cursor: pointer;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚛 ФураЕдет</h1>
+        <div>
+            <span id="userName">Загрузка...</span>
+            <a href="/">Главная</a>
+            <a href="#" onclick="logout()">Выход</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="sidebar">
+            <h3>Личный кабинет</h3>
+            <ul id="menuList">
+                <!-- Меню будет загружено динамически -->
+            </ul>
+        </div>
+
+        <div class="content" id="contentContainer">
+            <div class="loading">Загрузка...</div>
+        </div>
+    </div>
+
+    <!-- Модальное окно для изменения роли -->
+    <div class="modal" id="roleModal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeModal()">&times;</span>
+            <h2>Изменить роль</h2>
+            <div id="modalMessage"></div>
+            <div class="form-group">
+                <label>Пользователь:</label>
+                <p><strong id="modalUserName"></strong></p>
+                <p id="modalUserEmail" style="color: #666;"></p>
+            </div>
+            <div class="form-group">
+                <label for="roleSelect">Новая роль:</label>
+                <select id="roleSelect">
+                    <option value="client">Клиент</option>
+                    <option value="manager">Менеджер</option>
+                    <option value="admin">Администратор</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" onclick="updateUserRole()">Сохранить</button>
+            <button class="btn btn-danger" onclick="closeModal()">Отмена</button>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://127.0.0.1:8000/api';
+        let token = localStorage.getItem('token');
+        let currentUser = null;
+        let allUsers = [];
+        let currentEditUserId = null;
+
+        if (!token) {
+            window.location.href = '/login';
+        }
+
+        const roleNames = {
+            'client': 'Клиент',
+            'manager': 'Менеджер',
+            'admin': 'Администратор'
+        };
+
+        const statusNames = {
+            'draft': 'Черновик',
+            'pending': 'На рассмотрении',
+            'in_progress': 'В работе',
+            'shipped': 'В пути',
+            'delivered': 'Доставлено',
+            'rejected': 'Отклонено'
+        };
+
+        const cargoTypeNames = {
+            'general': 'Обычный груз',
+            'fragile': 'Хрупкое',
+            'flammable': 'Огнеопасное',
+            'perishable': 'Скоропортящееся',
+            'hazardous': 'Опасное',
+            'oversized': 'Негабаритное',
+            'temperature_controlled': 'Температурный режим',
+            'other': 'Другое'
+        };
+
+        function getCargoTypeDisplay(cargoType, cargoTypeCustom) {
+            if (cargoType === 'other' && cargoTypeCustom) {
+                return cargoTypeCustom;
+            }
+            return cargoTypeNames[cargoType] || cargoType;
+        }
+
+        async function loadCurrentUser() {
+            try {
+                const response = await fetch(`${API_URL}/auth/me/`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    currentUser = await response.json();
+                    document.getElementById('userName').textContent = currentUser.name;
+                    loadMenu();
+                    loadDefaultSection();
+                } else {
+                    window.location.href = '/login';
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                window.location.href = '/login';
+            }
+        }
+
+        function loadMenu() {
+            const menuList = document.getElementById('menuList');
+            let menuItems = [];
+
+            if (currentUser.role === 'client') {
+                menuItems = [
+                    { id: 'orders', icon: '📋', name: 'Мои заказы' },
+                    { id: 'new-order', icon: '📦', name: 'Новая заявка' },
+                    { id: 'addresses', icon: '⭐', name: 'Избранные адреса' },
+                    { id: 'profile', icon: '👤', name: 'Профиль' }
+                ];
+            } else if (currentUser.role === 'manager') {
+                menuItems = [
+                    { id: 'manager-orders', icon: '📦', name: 'Заявки' },
+                    { id: 'fleet', icon: '🚛', name: 'Автопарк' },
+                    { id: 'drivers', icon: '👨‍✈️', name: 'Водители' },
+                    { id: 'profile', icon: '👤', name: 'Профиль' }
+                ];
+            } else if (currentUser.role === 'admin') {
+                menuItems = [
+                    { id: 'users', icon: '👥', name: 'Управление пользователями' },
+                    { id: 'profile', icon: '👤', name: 'Профиль' }
+                ];
+            }
+
+            menuList.innerHTML = menuItems.map((item, index) => `
+                <li>
+                    <a href="#" class="menu-link ${index === 0 ? 'active' : ''}" data-section="${item.id}">
+                        ${item.icon} ${item.name}
+                    </a>
+                </li>
+            `).join('');
+
+            document.querySelectorAll('.menu-link').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    document.querySelectorAll('.menu-link').forEach(l => l.classList.remove('active'));
+                    this.classList.add('active');
+                    loadSection(this.getAttribute('data-section'));
+                });
+            });
+        }
+
+        function loadDefaultSection() {
+            if (currentUser.role === 'client') {
+                loadSection('orders');
+            } else if (currentUser.role === 'manager') {
+                loadSection('manager-orders');
+            } else if (currentUser.role === 'admin') {
+                loadSection('users');
+            }
+        }
+
+        async function loadSection(sectionId) {
+            const container = document.getElementById('contentContainer');
+
+            switch(sectionId) {
+                case 'orders':
+                    await loadClientOrders(container);
+                    break;
+                case 'new-order':
+                    loadNewOrderForm(container);
+                    break;
+                case 'addresses':
+                    await loadAddresses(container);
+                    break;
+                case 'profile':
+                    loadProfile(container);
+                    break;
+                case 'users':
+                    await loadUsers(container);
+                    break;
+                case 'manager-orders':
+                    container.innerHTML = '<h2>Заявки</h2><p>Функционал в разработке</p>';
+                    break;
+                case 'fleet':
+                    container.innerHTML = '<h2>Автопарк</h2><p>Функционал в разработке</p>';
+                    break;
+                case 'drivers':
+                    container.innerHTML = '<h2>Водители</h2><p>Функционал в разработке</p>';
+                    break;
+            }
+        }
+
+        async function loadClientOrders(container) {
+            container.innerHTML = '<div class="section active"><h2>Мои заказы</h2><div class="loading">Загрузка...</div></div>';
+
+            try {
+                const response = await fetch(`${API_URL}/orders/`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const orders = await response.json();
+                    const ordersArray = Array.isArray(orders) ? orders : (orders.results || []);
+                    
+                    if (ordersArray.length === 0) {
+                        container.innerHTML = `
+                            <div class="section active">
+                                <h2>Мои заказы</h2>
+                                <div class="no-data">У вас пока нет заказов<br><br>
+                                <a href="/" class="btn btn-primary">Создать заявку через калькулятор</a>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        container.innerHTML = `
+                            <div class="section active">
+                                <h2>Мои заказы</h2>
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Tracking ID</th>
+                                            <th>Маршрут</th>
+                                            <th>Вес/Объём</th>
+                                            <th>Тип груза</th>
+                                            <th>Стоимость</th>
+                                            <th>Статус</th>
+                                            <th>Дата</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${ordersArray.map(order => `
+                                            <tr>
+                                                <td><strong>${order.tracking_id}</strong></td>
+                                                <td>${order.origin_address} → ${order.dest_address}</td>
+                                                <td>${order.weight} кг / ${order.volume} м³</td>
+                                                <td>${getCargoTypeDisplay(order.cargo_type, order.cargo_type_custom)}</td>
+                                                <td>${order.price} ₽</td>
+                                                <td><span class="status status-${order.status}">${statusNames[order.status]}</span></td>
+                                                <td>${new Date(order.created_at).toLocaleDateString('ru-RU')}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        `;
+                    }
+                } else {
+                    container.innerHTML = '<div class="section active"><h2>Мои заказы</h2><div class="no-data">Ошибка загрузки заказов</div></div>';
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                container.innerHTML = '<div class="section active"><h2>Мои заказы</h2><div class="no-data">Ошибка соединения с сервером</div></div>';
+            }
+        }
+
+        async function loadAddresses(container) {
+            container.innerHTML = '<div class="section active"><h2>Избранные адреса</h2><div class="loading">Загрузка...</div></div>';
+
+            try {
+                const response = await fetch(`${API_URL}/favorite-addresses/`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const addresses = await response.json();
+                    const addressesArray = Array.isArray(addresses) ? addresses : (addresses.results || []);
+                    
+                    container.innerHTML = `
+                        <div class="section active">
+                            <h2>Избранные адреса</h2>
+                            <div id="addressMessage"></div>
+                            <button class="btn btn-primary" onclick="showAddAddressForm()">+ Добавить адрес</button>
+                            
+                            <div id="addAddressForm" style="display:none; margin-top: 20px; background: #f8f9fa; padding: 20px; border-radius: 4px;">
+                                <h3>Новый адрес</h3>
+                                <div class="form-group">
+                                    <label>Название *</label>
+                                    <input type="text" id="addrTitle" placeholder="Например: Склад, Офис">
+                                </div>
+                                <div class="form-group">
+                                    <label>Адрес *</label>
+                                    <input type="text" id="addrAddress" placeholder="Город, улица, дом">
+                                </div>
+                                <button class="btn btn-success" onclick="saveAddress()">Сохранить</button>
+                                <button class="btn btn-danger" onclick="hideAddAddressForm()">Отмена</button>
+                            </div>
+
+                            ${addressesArray.length === 0 ? 
+                                '<div class="no-data">У вас нет сохранённых адресов</div>' :
+                                `<table>
+                                    <thead>
+                                        <tr>
+                                            <th>Название</th>
+                                            <th>Адрес</th>
+                                            <th>Действия</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${addressesArray.map(addr => `
+                                            <tr>
+                                                <td><strong>${addr.title}</strong></td>
+                                                <td>${addr.address}</td>
+                                                <td>
+                                                    <button class="btn btn-danger" onclick="deleteAddress(${addr.id})">Удалить</button>
+                                                </td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>`
+                            }
+                        </div>
+                    `;
+                } else {
+                    container.innerHTML = '<div class="section active"><h2>Избранные адреса</h2><div class="no-data">Ошибка загрузки адресов</div></div>';
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                container.innerHTML = '<div class="section active"><h2>Избранные адреса</h2><div class="no-data">Ошибка соединения с сервером</div></div>';
+            }
+        }
+
+        function showAddAddressForm() {
+            document.getElementById('addAddressForm').style.display = 'block';
+        }
+
+        function hideAddAddressForm() {
+            document.getElementById('addAddressForm').style.display = 'none';
+            document.getElementById('addrTitle').value = '';
+            document.getElementById('addrAddress').value = '';
+        }
+
+        async function saveAddress() {
+            const title = document.getElementById('addrTitle').value;
+            const address = document.getElementById('addrAddress').value;
+
+            if (!title || !address) {
+                showMessage('addressMessage', 'Заполните все поля', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/favorite-addresses/`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ title, address })
+                });
+
+                if (response.ok) {
+                    showMessage('addressMessage', 'Адрес добавлен!', 'success');
+                    hideAddAddressForm();
+                    loadSection('addresses');
+                } else {
+                    showMessage('addressMessage', 'Ошибка добавления адреса', 'error');
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                showMessage('addressMessage', 'Ошибка соединения с сервером', 'error');
+            }
+        }
+
+        async function deleteAddress(id) {
+            if (!confirm('Удалить этот адрес?')) return;
+
+            try {
+                const response = await fetch(`${API_URL}/favorite-addresses/${id}/`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    loadSection('addresses');
+                } else {
+                    alert('Ошибка удаления адреса');
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                alert('Ошибка соединения с сервером');
+            }
+        }
+
+        function loadNewOrderForm(container) {
+            container.innerHTML = `
+                <div class="section active">
+                    <h2>Новая заявка</h2>
+                    <div id="newOrderMessage"></div>
+                    <form id="newOrderForm" onsubmit="event.preventDefault(); submitNewOrder();">
+                        <div class="form-group">
+                            <label>Адрес отправления *</label>
+                            <input type="text" id="originAddress" required placeholder="Москва, ул. Ленина, 1" oninput="autoCalculateOrderPrice()">
+                        </div>
+                        <div class="form-group">
+                            <label>Адрес доставки *</label>
+                            <input type="text" id="destAddress" required placeholder="Санкт-Петербург, Невский пр., 10" oninput="autoCalculateOrderPrice()">
+                        </div>
+                        <div class="form-group">
+                            <label>Вес груза (кг) *</label>
+                            <input type="number" id="orderWeight" required min="1" step="0.1" placeholder="1000" oninput="autoCalculateOrderPrice()">
+                        </div>
+                        <div class="form-group">
+                            <label>Объём груза (м³) *</label>
+                            <input type="number" id="orderVolume" required min="0.1" step="0.1" placeholder="5" oninput="autoCalculateOrderPrice()">
+                        </div>
+                        <div class="form-group">
+                            <label>Тип груза *</label>
+                            <select id="cargoType" required onchange="toggleCargoTypeCustomField()">
+                                <option value="general">Обычный груз</option>
+                                <option value="fragile">Хрупкое</option>
+                                <option value="flammable">Огнеопасное</option>
+                                <option value="perishable">Скоропортящееся</option>
+                                <option value="hazardous">Опасное</option>
+                                <option value="oversized">Негабаритное</option>
+                                <option value="temperature_controlled">Температурный режим</option>
+                                <option value="other">Другое</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="cargoTypeCustomGroup" style="display: none;">
+                            <label>Укажите тип груза *</label>
+                            <input type="text" id="cargoTypeCustom" placeholder="Например: Живые цветы, Мебель и т.д.">
+                        </div>
+                        <div class="form-group">
+                            <label>Стоимость (рассчитывается автоматически)</label>
+                            <input type="text" id="calculatedOrderPrice" readonly placeholder="Введите все данные для расчета" style="background: #f0f0f0;">
+                        </div>
+                        <div id="calculationStatus" style="color: #666; font-size: 14px; margin-bottom: 15px;"></div>
+                        <button type="submit" class="btn btn-success">Отправить заявку</button>
+                    </form>
+                </div>
+            `;
+        }
+
+        let calculationTimeout = null;
+
+        function toggleCargoTypeCustomField() {
+            const cargoType = document.getElementById('cargoType')?.value;
+            const customGroup = document.getElementById('cargoTypeCustomGroup');
+            const customInput = document.getElementById('cargoTypeCustom');
+            
+            if (cargoType === 'other') {
+                customGroup.style.display = 'block';
+                customInput.required = true;
+            } else {
+                customGroup.style.display = 'none';
+                customInput.required = false;
+                customInput.value = '';
+            }
+        }
+
+        function autoCalculateOrderPrice() {
+            clearTimeout(calculationTimeout);
+            
+            const statusElement = document.getElementById('calculationStatus');
+            if (statusElement) {
+                statusElement.textContent = 'Расчет...';
+                statusElement.style.color = '#666';
+            }
+            
+            calculationTimeout = setTimeout(async () => {
+                const origin = document.getElementById('originAddress')?.value;
+                const dest = document.getElementById('destAddress')?.value;
+                const weight = parseFloat(document.getElementById('orderWeight')?.value);
+                const volume = parseFloat(document.getElementById('orderVolume')?.value);
+
+                if (!origin || !dest || !weight || !volume || weight <= 0 || volume <= 0) {
+                    document.getElementById('calculatedOrderPrice').value = '';
+                    window.calculatedPrice = null;
+                    if (statusElement) statusElement.textContent = '';
+                    return;
+                }
+
+                try {
+                    const response = await fetch(API_URL + '/calculator/', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            origin: origin,
+                            destination: dest,
+                            weight: weight,
+                            volume: volume
+                        })
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        document.getElementById('calculatedOrderPrice').value = data.price.toLocaleString('ru-RU') + ' ₽ (расстояние ' + data.distance + ' км)';
+                        window.calculatedPrice = data.price;
+                        window.calculatedDistance = data.distance;
+                        if (statusElement) {
+                            statusElement.textContent = '✓ Расчет выполнен';
+                            statusElement.style.color = '#28a745';
+                        }
+                    } else {
+                        document.getElementById('calculatedOrderPrice').value = '';
+                        window.calculatedPrice = null;
+                        if (statusElement) {
+                            statusElement.textContent = '✗ Ошибка расчета';
+                            statusElement.style.color = '#dc3545';
+                        }
+                    }
+                } catch (error) {
+                    console.error('Ошибка:', error);
+                    document.getElementById('calculatedOrderPrice').value = '';
+                    window.calculatedPrice = null;
+                    if (statusElement) {
+                        statusElement.textContent = '✗ Ошибка соединения';
+                        statusElement.style.color = '#dc3545';
+                    }
+                }
+            }, 800);
+        }
+
+        async function submitNewOrder() {
+            const origin = document.getElementById('originAddress').value;
+            const dest = document.getElementById('destAddress').value;
+            const weight = parseFloat(document.getElementById('orderWeight').value);
+            const volume = parseFloat(document.getElementById('orderVolume').value);
+            const cargoType = document.getElementById('cargoType').value;
+            const cargoTypeCustom = document.getElementById('cargoTypeCustom').value;
+
+            if (!origin || !dest || !weight || !volume || !cargoType) {
+                showNewOrderMessage('Заполните все поля', 'error');
+                return;
+            }
+
+            if (cargoType === 'other' && !cargoTypeCustom) {
+                showNewOrderMessage('Укажите тип груза', 'error');
+                return;
+            }
+
+            if (!window.calculatedPrice) {
+                showNewOrderMessage('Подождите, идет расчет стоимости...', 'error');
+                return;
+            }
+
+            const orderData = {
+                origin_address: origin,
+                dest_address: dest,
+                weight: weight,
+                volume: volume,
+                cargo_type: cargoType,
+                price: window.calculatedPrice
+            };
+
+            if (cargoType === 'other' && cargoTypeCustom) {
+                orderData.cargo_type_custom = cargoTypeCustom;
+            }
+
+            try {
+                const response = await fetch(API_URL + '/orders/', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(orderData)
+                });
+
+                if (response.ok) {
+                    const order = await response.json();
+                    showNewOrderMessage('Заявка успешно создана! Tracking ID: ' + order.tracking_id, 'success');
+                    document.getElementById('newOrderForm').reset();
+                    document.getElementById('calculatedOrderPrice').value = '';
+                    window.calculatedPrice = null;
+                    
+                    setTimeout(() => {
+                        document.querySelector('[data-section="orders"]').click();
+                    }, 2000);
+                } else {
+                    showNewOrderMessage('Ошибка создания заявки', 'error');
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                showNewOrderMessage('Ошибка соединения с сервером', 'error');
+            }
+        }
+
+        function showNewOrderMessage(message, type) {
+            const element = document.getElementById('newOrderMessage');
+            if (element) {
+                element.innerHTML = '<div class="alert alert-' + type + '">' + message + '</div>';
+                setTimeout(() => {
+                    element.innerHTML = '';
+                }, 5000);
+            }
+        }
+
+        function loadProfile(container) {
+            const avatarUrl = currentUser.avatar_url || 'https://via.placeholder.com/150?text=Нет+фото';
+            const userName = currentUser.name || '';
+            const userEmail = currentUser.email || '';
+            const userPhone = currentUser.phone || '';
+            const userRole = roleNames[currentUser.role] || '';
+            const userDate = new Date(currentUser.created_at).toLocaleDateString('ru-RU');
+            
+            container.innerHTML = `
+                <div class="section active">
+                    <h2>Мой профиль</h2>
+                    <div id="profileMessage"></div>
+                    
+                    <div style="display: flex; gap: 30px; margin-bottom: 30px;">
+                        <div>
+                            <img src="${avatarUrl}" alt="Аватар" id="avatarPreview" 
+                                 style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid #007bff;">
+                            <div style="margin-top: 10px;">
+                                <input type="file" id="avatarInput" accept="image/*" style="display: none;" onchange="uploadAvatar(event)">
+                                <button class="btn btn-primary" onclick="document.getElementById('avatarInput').click()">Изменить фото</button>
+                            </div>
+                        </div>
+                        
+                        <div style="flex: 1;">
+                            <form id="profileForm" onsubmit="event.preventDefault(); updateProfile();">
+                                <div class="form-group">
+                                    <label>Имя и Фамилия *</label>
+                                    <input type="text" id="profileName" value="${userName}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Email</label>
+                                    <input type="email" value="${userEmail}" disabled>
+                                    <small style="color: #666;">Email нельзя изменить</small>
+                                </div>
+                                <div class="form-group">
+                                    <label>Телефон</label>
+                                    <input type="tel" id="profilePhone" value="${userPhone}" placeholder="+7XXX-XXX-XX-XX">
+                                </div>
+                                <div class="form-group">
+                                    <label>Роль</label>
+                                    <input type="text" value="${userRole}" disabled>
+                                </div>
+                                <div class="form-group">
+                                    <label>Дата регистрации</label>
+                                    <input type="text" value="${userDate}" disabled>
+                                </div>
+                                <button type="submit" class="btn btn-success">Сохранить изменения</button>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <hr style="margin: 30px 0;">
+                    
+                    <h3>Изменить пароль</h3>
+                    <form id="passwordForm" onsubmit="event.preventDefault(); updatePassword();" style="max-width: 500px;">
+                        <div class="form-group">
+                            <label>Новый пароль</label>
+                            <input type="password" id="newPassword" minlength="6" placeholder="Минимум 6 символов">
+                        </div>
+                        <div class="form-group">
+                            <label>Подтвердите пароль</label>
+                            <input type="password" id="confirmPassword" minlength="6">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Изменить пароль</button>
+                    </form>
+                </div>
+            `;
+        }
+
+        async function uploadAvatar(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (!file.type.startsWith('image/')) {
+                showProfileMessage('Пожалуйста, выберите изображение', 'error');
+                return;
+            }
+
+            if (file.size > 5 * 1024 * 1024) {
+                showProfileMessage('Размер файла не должен превышать 5 МБ', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('avatar', file);
+
+            try {
+                const response = await fetch(API_URL + '/auth/me/', {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    currentUser = data;
+                    document.getElementById('avatarPreview').src = data.avatar_url || 'https://via.placeholder.com/150?text=Нет+фото';
+                    showProfileMessage('Фото профиля обновлено!', 'success');
+                } else {
+                    showProfileMessage('Ошибка загрузки фото', 'error');
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                showProfileMessage('Ошибка соединения с сервером', 'error');
+            }
+        }
+
+        async function updateProfile() {
+            const name = document.getElementById('profileName').value;
+            const phone = document.getElementById('profilePhone').value;
+
+            if (!name) {
+                showProfileMessage('Имя обязательно для заполнения', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(API_URL + '/auth/me/', {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ name, phone })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    currentUser = data;
+                    document.getElementById('userName').textContent = data.name;
+                    showProfileMessage('Профиль успешно обновлён!', 'success');
+                } else {
+                    showProfileMessage('Ошибка обновления профиля', 'error');
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                showProfileMessage('Ошибка соединения с сервером', 'error');
+            }
+        }
+
+        async function updatePassword() {
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            if (!newPassword || !confirmPassword) {
+                showProfileMessage('Заполните оба поля пароля', 'error');
+                return;
+            }
+
+            if (newPassword !== confirmPassword) {
+                showProfileMessage('Пароли не совпадают', 'error');
+                return;
+            }
+
+            if (newPassword.length < 6) {
+                showProfileMessage('Пароль должен быть минимум 6 символов', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(API_URL + '/auth/me/', {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ password: newPassword })
+                });
+
+                if (response.ok) {
+                    showProfileMessage('Пароль успешно изменён!', 'success');
+                    document.getElementById('passwordForm').reset();
+                } else {
+                    showProfileMessage('Ошибка изменения пароля', 'error');
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                showProfileMessage('Ошибка соединения с сервером', 'error');
+            }
+        }
+
+        function showProfileMessage(message, type) {
+            const element = document.getElementById('profileMessage');
+            if (element) {
+                element.innerHTML = '<div class="alert alert-' + type + '">' + message + '</div>';
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                setTimeout(() => {
+                    element.innerHTML = '';
+                }, 5000);
+            }
+        }
+
+        async function loadUsers(container) {
+            container.innerHTML = `
+                <div class="section active">
+                    <h2>Управление пользователями</h2>
+                    <div id="usersMessage"></div>
+                    <div class="search-bar">
+                        <input type="text" class="search-input" id="searchInput" 
+                               placeholder="Поиск по имени, email или телефону..." 
+                               oninput="filterUsers()">
+                    </div>
+                    <div class="loading">Загрузка пользователей...</div>
+                </div>
+            `;
+
+            try {
+                const response = await fetch(`${API_URL}/users/`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    allUsers = Array.isArray(data) ? data : (data.results || []);
+                    displayUsers(allUsers);
+                } else {
+                    container.querySelector('.loading').innerHTML = '<div class="no-data">Ошибка загрузки пользователей</div>';
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                container.querySelector('.loading').innerHTML = '<div class="no-data">Ошибка соединения с сервером</div>';
+            }
+        }
+
+        function displayUsers(users) {
+            const container = document.getElementById('contentContainer');
+            const section = container.querySelector('.section');
+            
+            const loadingEl = section.querySelector('.loading');
+            if (loadingEl) {
+                if (users.length === 0) {
+                    loadingEl.outerHTML = '<div class="no-data">Пользователи не найдены</div>';
+                } else {
+                    loadingEl.outerHTML = `
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Имя</th>
+                                    <th>Email</th>
+                                    <th>Телефон</th>
+                                    <th>Роль</th>
+                                    <th>Статус</th>
+                                    <th>Дата регистрации</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${users.map(user => `
+                                    <tr>
+                                        <td>${user.id}</td>
+                                        <td>${user.name}</td>
+                                        <td>${user.email}</td>
+                                        <td>${user.phone || '-'}</td>
+                                        <td><span class="role-badge role-${user.role}">${roleNames[user.role]}</span></td>
+                                        <td><span class="status-badge status-${user.is_active ? 'active' : 'inactive'}">${user.is_active ? 'Активен' : 'Заблокирован'}</span></td>
+                                        <td>${new Date(user.created_at).toLocaleDateString('ru-RU')}</td>
+                                        <td>
+                                            <button class="btn btn-primary" onclick="openRoleModal(${user.id})">Изменить роль</button>
+                                            ${user.is_active ? 
+                                                `<button class="btn btn-danger" onclick="toggleUserStatus(${user.id}, false)">Заблокировать</button>` :
+                                                `<button class="btn btn-success" onclick="toggleUserStatus(${user.id}, true)">Разблокировать</button>`
+                                            }
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                }
+            }
+        }
+
+        function filterUsers() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = allUsers.filter(user => 
+                user.name.toLowerCase().includes(searchTerm) ||
+                user.email.toLowerCase().includes(searchTerm) ||
+                (user.phone && user.phone.toLowerCase().includes(searchTerm))
+            );
+            
+            const container = document.getElementById('contentContainer');
+            container.querySelector('.section').querySelector('table').remove();
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'loading';
+            container.querySelector('.section').appendChild(loadingDiv);
+            displayUsers(filtered);
+        }
+
+        function openRoleModal(userId) {
+            const user = allUsers.find(u => u.id === userId);
+            if (!user) return;
+
+            currentEditUserId = userId;
+            document.getElementById('modalUserName').textContent = user.name;
+            document.getElementById('modalUserEmail').textContent = user.email;
+            document.getElementById('roleSelect').value = user.role;
+            document.getElementById('modalMessage').innerHTML = '';
+            document.getElementById('roleModal').classList.add('show');
+        }
+
+        function closeModal() {
+            document.getElementById('roleModal').classList.remove('show');
+            currentEditUserId = null;
+        }
+
+        async function updateUserRole() {
+            const newRole = document.getElementById('roleSelect').value;
+            
+            try {
+                const response = await fetch(`${API_URL}/users/${currentEditUserId}/change_role/`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ role: newRole })
+                });
+
+                if (response.ok) {
+                    document.getElementById('modalMessage').innerHTML = '<div class="alert alert-success">Роль успешно изменена!</div>';
+                    setTimeout(() => {
+                        closeModal();
+                        loadSection('users');
+                    }, 1500);
+                } else {
+                    const data = await response.json();
+                    document.getElementById('modalMessage').innerHTML = `<div class="alert alert-error">${data.detail || 'Ошибка изменения роли'}</div>`;
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                document.getElementById('modalMessage').innerHTML = '<div class="alert alert-error">Ошибка соединения с сервером</div>';
+            }
+        }
+
+        async function toggleUserStatus(userId, activate) {
+            const action = activate ? 'разблокировать' : 'заблокировать';
+            if (!confirm(`Вы уверены, что хотите ${action} этого пользователя?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/users/${userId}/`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ is_active: activate })
+                });
+
+                if (response.ok) {
+                    alert(`Пользователь успешно ${activate ? 'разблокирован' : 'заблокирован'}!`);
+                    loadSection('users');
+                } else {
+                    alert('Ошибка изменения статуса пользователя');
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                alert('Ошибка соединения с сервером');
+            }
+        }
+
+        function showMessage(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+                setTimeout(() => {
+                    element.innerHTML = '';
+                }, 5000);
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('refresh');
+            localStorage.removeItem('user');
+            window.location.href = '/';
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadCurrentUser();
+        });
+    </script>
+</body>
+</html>

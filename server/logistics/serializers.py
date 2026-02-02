@@ -5,11 +5,28 @@ from .models import User, Driver, Truck, Order, FavoriteAddr, Tariff, AIRequest
 
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=False)
+    avatar_url = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ('id', 'email', 'name', 'phone', 'role', 'password', 'created_at', 'is_active')
-        read_only_fields = ('id', 'created_at')
+        fields = ('id', 'email', 'name', 'phone', 'avatar', 'avatar_url', 'role', 'password', 'created_at', 'is_active')
+        read_only_fields = ('id', 'created_at', 'avatar_url')
+
+    def get_avatar_url(self, obj):
+        if obj.avatar:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.avatar.url)
+            return obj.avatar.url
+        return None
+
+    def update(self, instance, validated_data):
+        password = validated_data.pop('password', None)
+        instance = super().update(instance, validated_data)
+        if password:
+            instance.set_password(password)
+            instance.save()
+        return instance
 
     def create(self, validated_data):
         password = validated_data.pop('password', None)
@@ -31,23 +48,20 @@ class UserSerializer(serializers.ModelSerializer):
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True, min_length=6)
-    password2 = serializers.CharField(write_only=True, required=True, label='Подтвердите пароль')
 
     class Meta:
         model = User
-        fields = ('email', 'name', 'phone', 'password', 'password2', 'role')
-
-    def validate(self, attrs):
-        if attrs['password'] != attrs['password2']:
-            raise serializers.ValidationError({"password": "Пароли не совпадают"})
-        return attrs
+        fields = ('email', 'name', 'phone', 'password')
 
     def create(self, validated_data):
-        validated_data.pop('password2')
         password = validated_data.pop('password')
-        user = User(**validated_data)
-        user.set_password(password)
-        user.save()
+        user = User.objects.create_user(
+            email=validated_data['email'],
+            password=password,
+            name=validated_data['name'],
+            phone=validated_data.get('phone'),
+            role='client'
+        )
         return user
 
 
@@ -104,7 +118,7 @@ class OrderListSerializer(serializers.ModelSerializer):
         model = Order
         fields = ('id', 'tracking_id', 'client', 'client_name', 'manager', 'manager_name', 
                   'truck', 'truck_plate', 'driver', 'driver_name', 'status', 
-                  'origin_address', 'dest_address', 'weight', 'volume', 'price', 
+                  'origin_address', 'dest_address', 'weight', 'volume', 'cargo_type', 'cargo_type_custom', 'price', 
                   'eta', 'created_at')
         read_only_fields = ('tracking_id', 'created_at')
 
@@ -124,7 +138,7 @@ class OrderDetailSerializer(serializers.ModelSerializer):
 class OrderCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
-        fields = ('origin_address', 'dest_address', 'weight', 'volume', 'price')
+        fields = ('origin_address', 'dest_address', 'weight', 'volume', 'cargo_type', 'cargo_type_custom', 'price')
 
     def create(self, validated_data):
         validated_data['client'] = self.context['request'].user
