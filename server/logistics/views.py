@@ -131,6 +131,15 @@ class DriverViewSet(viewsets.ModelViewSet):
     serializer_class = DriverSerializer
     permission_classes = [IsManagerOrAdmin]
 
+    def destroy(self, request, *args, **kwargs):
+        driver = self.get_object()
+        if driver.trucks.filter(status='in_transit').exists():
+            return Response(
+                {'error': 'Нельзя удалить водителя, который находится в рейсе'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        return super().destroy(request, *args, **kwargs)
+
 
 class TruckViewSet(viewsets.ModelViewSet):
     queryset = Truck.objects.all()
@@ -162,8 +171,6 @@ class OrderViewSet(viewsets.ModelViewSet):
 
         if user.role == 'client':
             queryset = queryset.filter(client=user)
-        elif user.role == 'manager':
-            queryset = queryset.filter(status__in=['pending', 'in_progress', 'shipped'])
 
         status_filter = self.request.query_params.get('status')
         if status_filter:
@@ -173,7 +180,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         if tracking_id:
             queryset = queryset.filter(tracking_id=tracking_id)
 
-        return queryset
+        return queryset.order_by('-created_at')
 
     @action(detail=True, methods=['post'], permission_classes=[IsManagerOrAdmin])
     def accept(self, request, pk=None):
@@ -184,7 +191,8 @@ class OrderViewSet(viewsets.ModelViewSet):
         order.status = 'in_progress'
         order.manager = request.user
         order.save()
-        return Response(OrderDetailSerializer(order).data)
+        serializer = OrderDetailSerializer(order, context={'request': request})
+        return Response(serializer.data)
 
     @action(detail=True, methods=['post'], permission_classes=[IsManagerOrAdmin])
     def reject(self, request, pk=None):
@@ -200,7 +208,8 @@ class OrderViewSet(viewsets.ModelViewSet):
         order.rejection_reason = rejection_reason
         order.manager = request.user
         order.save()
-        return Response(OrderDetailSerializer(order).data)
+        serializer = OrderDetailSerializer(order, context={'request': request})
+        return Response(serializer.data)
 
     @action(detail=True, methods=['post'], permission_classes=[IsManagerOrAdmin])
     def assign_transport(self, request, pk=None):

@@ -87,16 +87,23 @@ class LoginSerializer(serializers.Serializer):
 
 
 class DriverSerializer(serializers.ModelSerializer):
+    trucks = serializers.SerializerMethodField()
+
     class Meta:
         model = Driver
         fields = '__all__'
 
+    def get_trucks(self, obj):
+        from logistics.models import Truck
+        trucks = Truck.objects.filter(driver=obj)
+        return [{'id': t.id, 'plate_number': t.plate_number, 'brand': t.brand, 'model': t.model} for t in trucks]
+
     def validate(self, attrs):
-        if attrs.get('type') == 'hired':
+        if attrs.get('personal_car') or attrs.get('insurance_num'):
             if not attrs.get('personal_car'):
-                raise serializers.ValidationError({"personal_car": "Обязательное поле для наёмных водителей"})
+                raise serializers.ValidationError({"personal_car": "Укажите госномер личного авто"})
             if not attrs.get('insurance_num'):
-                raise serializers.ValidationError({"insurance_num": "Обязательное поле для наёмных водителей"})
+                raise serializers.ValidationError({"insurance_num": "Укажите номер страховки"})
         return attrs
 
 

@@ -287,6 +287,227 @@
             color: #999;
         }
 
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.2s;
+        }
+
+        .modal.active {
+            display: flex !important;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from { 
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+            to { 
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideIn 0.3s;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+
+        .modal-content h3 {
+            margin-bottom: 30px;
+            color: #0D1B2A;
+            font-size: 20px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: #999;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+        }
+
+        .modal-close:hover {
+            color: #333;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .form-row-full {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            color: #666;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .radio-option {
+            flex: 1;
+            position: relative;
+        }
+
+        .radio-option input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+        }
+
+        .radio-option label {
+            display: block;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+            font-weight: 500;
+            text-transform: none;
+            color: #333;
+        }
+
+        .radio-option input[type="radio"]:checked + label {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+
+        .vehicle-data-block {
+            background: #fff7ed;
+            border: 2px solid #fb923c;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 15px;
+        }
+
+        .vehicle-data-block h4 {
+            margin: 0 0 15px 0;
+            color: #ea580c;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .vehicle-data-block h4:before {
+            content: '🚗 ';
+        }
+
+        .modal-buttons {
+            margin-top: 25px;
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .modal-buttons .btn {
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .modal-buttons .btn-secondary {
+            background: #f3f4f6;
+            color: #666;
+            border: none;
+        }
+
+        .modal-buttons .btn-secondary:hover {
+            background: #e5e7eb;
+        }
+
+        .modal-buttons .btn-primary {
+            background: #3b82f6;
+            color: white;
+            border: none;
+        }
+
+        .modal-buttons .btn-primary:hover {
+            background: #2563eb;
+        }
+
+        .cargo-card {
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 12px;
+            transition: all 0.2s;
+        }
+
+        .cargo-card:hover {
+            border-color: #3b82f6;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .truck-planning-card {
+            transition: all 0.2s;
+        }
+
         .user-info {
             background: #f8f9fa;
             padding: 15px;
@@ -473,9 +694,12 @@
                 ];
             } else if (currentUser.role === 'manager') {
                 menuItems = [
+                    { id: 'manager-dashboard', icon: '📊', name: 'Дашборд' },
                     { id: 'manager-orders', icon: '📦', name: 'Заявки' },
+                    { id: 'rejected-orders', icon: '❌', name: 'Отклоненные' },
                     { id: 'fleet', icon: '🚛', name: 'Автопарк' },
                     { id: 'drivers', icon: '👨‍✈️', name: 'Водители' },
+                    { id: 'planning', icon: '📋', name: 'Планирование' },
                     { id: 'profile', icon: '👤', name: 'Профиль' }
                 ];
             } else if (currentUser.role === 'admin') {
@@ -507,7 +731,7 @@
             if (currentUser.role === 'client') {
                 loadSection('orders');
             } else if (currentUser.role === 'manager') {
-                loadSection('manager-orders');
+                loadSection('manager-dashboard');
             } else if (currentUser.role === 'admin') {
                 loadSection('users');
             }
@@ -532,14 +756,23 @@
                 case 'users':
                     await loadUsers(container);
                     break;
+                case 'manager-dashboard':
+                    await loadManagerDashboard(container);
+                    break;
                 case 'manager-orders':
-                    container.innerHTML = '<h2>Заявки</h2><p>Функционал в разработке</p>';
+                    await loadManagerOrders(container);
+                    break;
+                case 'rejected-orders':
+                    await loadRejectedOrders(container);
                     break;
                 case 'fleet':
-                    container.innerHTML = '<h2>Автопарк</h2><p>Функционал в разработке</p>';
+                    await loadFleet(container);
                     break;
                 case 'drivers':
-                    container.innerHTML = '<h2>Водители</h2><p>Функционал в разработке</p>';
+                    await loadDrivers(container);
+                    break;
+                case 'planning':
+                    await loadPlanning(container);
                     break;
             }
         }
@@ -1134,6 +1367,1032 @@
             }
         }
 
+        async function loadManagerDashboard(container) {
+            container.innerHTML = '<div class="section active"><h2>Дашборд</h2><div class="loading">Загрузка...</div></div>';
+
+            try {
+                const [ordersRes, trucksRes, driversRes] = await Promise.all([
+                    fetch(API_URL + '/orders/', { headers: { 'Authorization': 'Bearer ' + token } }),
+                    fetch(API_URL + '/trucks/', { headers: { 'Authorization': 'Bearer ' + token } }),
+                    fetch(API_URL + '/drivers/', { headers: { 'Authorization': 'Bearer ' + token } })
+                ]);
+
+                if (!ordersRes.ok || !trucksRes.ok || !driversRes.ok) {
+                    throw new Error('Ошибка загрузки данных');
+                }
+
+                const ordersData = await ordersRes.json();
+                const trucksData = await trucksRes.json();
+                const driversData = await driversRes.json();
+
+                const orders = Array.isArray(ordersData) ? ordersData : (ordersData.results || []);
+                const trucks = Array.isArray(trucksData) ? trucksData : (trucksData.results || []);
+                const drivers = Array.isArray(driversData) ? driversData : (driversData.results || []);
+
+                const pendingOrders = orders.filter(o => o.status === 'pending').length;
+                const activeOrders = orders.filter(o => o.status === 'in_progress' || o.status === 'shipped').length;
+                const busyTrucks = trucks.filter(t => t.status === 'in_transit').length;
+                const totalRevenue = orders.filter(o => o.status !== 'rejected').reduce((sum, o) => sum + parseFloat(o.price || 0), 0);
+                const monthRevenue = orders.filter(o => {
+                    const orderDate = new Date(o.created_at);
+                    const now = new Date();
+                    return orderDate.getMonth() === now.getMonth() && orderDate.getFullYear() === now.getFullYear();
+                }).reduce((sum, o) => sum + parseFloat(o.price || 0), 0);
+
+                container.innerHTML = `
+                    <div class="section active">
+                        <h2>📊 Дашборд менеджера</h2>
+                        
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px;">
+                            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 12px; color: white;">
+                                <div style="font-size: 14px; opacity: 0.9;">Новые заявки</div>
+                                <div style="font-size: 32px; font-weight: bold; margin: 10px 0;">${pendingOrders}</div>
+                                <div style="font-size: 12px; opacity: 0.8;">Требуют обработки</div>
+                            </div>
+                            
+                            <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); padding: 20px; border-radius: 12px; color: white;">
+                                <div style="font-size: 14px; opacity: 0.9;">В работе</div>
+                                <div style="font-size: 32px; font-weight: bold; margin: 10px 0;">${activeOrders}</div>
+                                <div style="font-size: 12px; opacity: 0.8;">Активных заказов</div>
+                            </div>
+                            
+                            <div style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); padding: 20px; border-radius: 12px; color: white;">
+                                <div style="font-size: 14px; opacity: 0.9;">Занято машин</div>
+                                <div style="font-size: 32px; font-weight: bold; margin: 10px 0;">${busyTrucks}/${trucks.length}</div>
+                                <div style="font-size: 12px; opacity: 0.8;">${trucks.length > 0 ? Math.round(busyTrucks/trucks.length*100) : 0}% загрузка парка</div>
+                            </div>
+                            
+                            <div style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); padding: 20px; border-radius: 12px; color: white;">
+                                <div style="font-size: 14px; opacity: 0.9;">Выручка за месяц</div>
+                                <div style="font-size: 32px; font-weight: bold; margin: 10px 0;">${monthRevenue.toLocaleString('ru-RU')} ₽</div>
+                                <div style="font-size: 12px; opacity: 0.8;">Всего: ${totalRevenue.toLocaleString('ru-RU')} ₽</div>
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                                <h3>⚠️ Требуют внимания</h3>
+                                ${pendingOrders > 0 ? 
+                                    '<p style="color: #f59e0b;">• ' + pendingOrders + ' новых заявок на рассмотрении</p>' : 
+                                    '<p style="color: #22c55e;">✓ Все заявки обработаны</p>'
+                                }
+                                ${trucks.filter(t => t.status === 'available' && !t.driver).length > 0 ?
+                                    '<p style="color: #ef4444;">• ' + trucks.filter(t => t.status === 'available' && !t.driver).length + ' машин без водителя</p>' :
+                                    ''
+                                }
+                            </div>
+
+                            <div style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                                <h3>🚀 Быстрые действия</h3>
+                                <button class="btn btn-primary" onclick="document.querySelector('[data-section=\\'manager-orders\\']').click()" style="margin: 5px 0; width: 100%;">Обработать заявки</button>
+                                <button class="btn btn-secondary" onclick="document.querySelector('[data-section=\\'planning\\']').click()" style="margin: 5px 0; width: 100%;">Планирование загрузки</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Ошибка:', error);
+                container.innerHTML = '<div class="section active"><h2>Дашборд</h2><p style="color: red;">Ошибка загрузки данных</p></div>';
+            }
+        }
+
+        async function loadManagerOrders(container) {
+            container.innerHTML = '<div class="section active"><h2>Заявки</h2><div class="loading">Загрузка...</div></div>';
+
+            try {
+                const response = await fetch(API_URL + '/orders/', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                if (!response.ok) throw new Error('Ошибка загрузки заявок');
+
+                const data = await response.json();
+                const orders = Array.isArray(data) ? data : (data.results || []);
+                const activeOrders = orders.filter(o => o.status !== 'rejected' && o.status !== 'delivered');
+
+                if (activeOrders.length === 0) {
+                    container.innerHTML = `
+                        <div class="section active">
+                            <h2>📦 Заявки</h2>
+                            <div class="no-data">Нет активных заявок</div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = `
+                    <div class="section active">
+                        <h2>📦 Заявки</h2>
+                        <div id="managerOrdersMessage"></div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Клиент</th>
+                                    <th>Маршрут</th>
+                                    <th>Груз</th>
+                                    <th>Тип</th>
+                                    <th>Цена</th>
+                                    <th>Статус</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${activeOrders.map(order => `
+                                    <tr style="${order.status === 'pending' ? 'background: #fffbeb;' : ''}">
+                                        <td><strong>${order.tracking_id}</strong></td>
+                                        <td>${order.client_name || 'Неизвестно'}</td>
+                                        <td style="font-size: 12px;">${order.origin_address} → ${order.dest_address}</td>
+                                        <td>${order.weight} кг / ${order.volume} м³</td>
+                                        <td>${getCargoTypeDisplay(order.cargo_type, order.cargo_type_custom)}</td>
+                                        <td>${order.price} ₽</td>
+                                        <td><span class="status status-${order.status}">${statusNames[order.status]}</span></td>
+                                        <td>
+                                            ${order.status === 'pending' ? 
+                                                '<button class="btn btn-success" onclick="acceptOrder(' + order.id + ')" style="margin: 2px;">Принять</button>' +
+                                                '<button class="btn btn-danger" onclick="showRejectModal(' + order.id + ')" style="margin: 2px;">Отклонить</button>' 
+                                            : order.status === 'in_progress' ?
+                                                '<button class="btn btn-primary" onclick="assignTransport(' + order.id + ')" style="margin: 2px;">Назначить</button>'
+                                            : '—'}
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+
+                window.allOrders = orders;
+            } catch (error) {
+                console.error('Ошибка:', error);
+                container.innerHTML = '<div class="section active"><h2>Заявки</h2><p style="color: red;">Ошибка загрузки заявок</p></div>';
+            }
+        }
+
+        async function acceptOrder(orderId) {
+            if (!confirm('Принять заявку в работу?')) return;
+
+            try {
+                const response = await fetch(API_URL + '/orders/' + orderId + '/accept/', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    showManagerOrdersMessage('Заявка принята в работу!', 'success');
+                    loadSection('manager-orders');
+                } else {
+                    const errorData = await response.json();
+                    console.error('Ошибка принятия:', errorData);
+                    showManagerOrdersMessage('Ошибка: ' + (errorData.error || 'Не удалось принять заявку'), 'error');
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                showManagerOrdersMessage('Ошибка соединения с сервером', 'error');
+            }
+        }
+
+        function showRejectModal(orderId) {
+            window.currentRejectOrderId = orderId;
+            document.getElementById('rejectionReason').value = '';
+            document.getElementById('rejectModal').classList.add('active');
+        }
+
+        function closeRejectModal() {
+            document.getElementById('rejectModal').classList.remove('active');
+            document.getElementById('rejectionReason').value = '';
+        }
+
+        async function confirmRejectOrder() {
+            const orderId = window.currentRejectOrderId;
+            const reason = document.getElementById('rejectionReason').value.trim();
+            
+            if (!reason) {
+                alert('Пожалуйста, укажите причину отклонения');
+                return;
+            }
+
+            try {
+                const response = await fetch(API_URL + '/orders/' + orderId + '/reject/', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ rejection_reason: reason })
+                });
+
+                if (response.ok) {
+                    closeRejectModal();
+                    showManagerOrdersMessage('Заявка отклонена', 'success');
+                    loadSection('manager-orders');
+                } else {
+                    const errorData = await response.json();
+                    console.error('Ошибка отклонения:', errorData);
+                    showManagerOrdersMessage('Ошибка: ' + (errorData.error || 'Не удалось отклонить заявку'), 'error');
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                showManagerOrdersMessage('Ошибка соединения с сервером', 'error');
+            }
+        }
+
+        function showManagerOrdersMessage(message, type) {
+            const element = document.getElementById('managerOrdersMessage');
+            if (element) {
+                element.innerHTML = '<div class="alert alert-' + type + '">' + message + '</div>';
+                setTimeout(() => { element.innerHTML = ''; }, 5000);
+            }
+        }
+
+        async function showLoadTruckModal(orderId, weight, volume, trackingId) {
+            window.currentLoadOrderId = orderId;
+            window.currentLoadWeight = weight;
+            window.currentLoadVolume = volume;
+
+            document.getElementById('loadTruckInfo').innerHTML = `
+                <strong>Груз: ${weight} кг / ${volume} м³</strong><br>
+                <span style="color: #666; font-size: 13px;">${trackingId}</span>
+            `;
+
+            try {
+                const [ordersResponse, trucksResponse] = await Promise.all([
+                    fetch(API_URL + '/orders/?status=in_progress', {
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    }),
+                    fetch(API_URL + '/trucks/', {
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    })
+                ]);
+
+                const ordersData = await ordersResponse.json();
+                const trucksData = await trucksResponse.json();
+                
+                const orders = Array.isArray(ordersData) ? ordersData : (ordersData.results || []);
+                const trucks = Array.isArray(trucksData) ? trucksData : (trucksData.results || []);
+
+                const trucksList = trucks
+                    .sort((a, b) => {
+                        const statusOrder = { 'available': 0, 'in_transit': 1, 'maintenance': 2 };
+                        return statusOrder[a.status] - statusOrder[b.status];
+                    })
+                    .map(truck => {
+                        const loadedOrders = orders.filter(o => o.truck === truck.id);
+                        const currentWeight = loadedOrders.reduce((sum, o) => sum + parseFloat(o.weight || 0), 0);
+                        const currentVolume = loadedOrders.reduce((sum, o) => sum + parseFloat(o.volume || 0), 0);
+                        
+                        const newWeight = currentWeight + weight;
+                        const newVolume = currentVolume + volume;
+                        
+                        const weightPercent = (currentWeight / truck.capacity_weight) * 100;
+                        const volumePercent = (currentVolume / truck.capacity_volume) * 100;
+                        const newWeightPercent = (newWeight / truck.capacity_weight) * 100;
+                        const newVolumePercent = (newVolume / truck.capacity_volume) * 100;
+                        
+                        const isOverloaded = newWeightPercent > 100 || newVolumePercent > 100;
+                        const canLoad = truck.status === 'available' && !isOverloaded;
+
+                        const statusBadge = truck.status === 'available' ? 
+                            '<span style="background: #22c55e; color: white; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 600;">ПОДХОДИТ</span>' :
+                            truck.status === 'in_transit' ? 
+                            '<span style="background: #3b82f6; color: white; padding: 3px 8px; border-radius: 4px; font-size: 10px;">В РЕЙСЕ</span>' :
+                            '<span style="background: #ef4444; color: white; padding: 3px 8px; border-radius: 4px; font-size: 10px;">ЗАНЯТ</span>';
+
+                        return `
+                            <div style="border: 2px solid ${canLoad ? '#22c55e' : '#e5e7eb'}; border-radius: 10px; padding: 12px; margin-bottom: 10px; ${!canLoad ? 'opacity: 0.5;' : ''}">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                    <div>
+                                        <div style="font-weight: bold; font-size: 14px;">${truck.plate_number}</div>
+                                        <div style="font-size: 11px; color: #666;">${truck.brand} ${truck.model} • ${truck.plate_number}</div>
+                                    </div>
+                                    ${statusBadge}
+                                </div>
+
+                                ${truck.status === 'available' ? `
+                                    <div style="margin-bottom: 8px;">
+                                        <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 3px;">
+                                            <span>ВЕС</span>
+                                            <span><strong>${Math.round(newWeight)}</strong> / ${truck.capacity_weight} кг</span>
+                                        </div>
+                                        <div style="background: #f3f4f6; border-radius: 8px; height: 8px; overflow: hidden;">
+                                            <div style="background: ${newWeightPercent > 100 ? '#ef4444' : '#3b82f6'}; height: 100%; width: ${Math.min(newWeightPercent, 100)}%; transition: all 0.3s;"></div>
+                                        </div>
+                                    </div>
+
+                                    <div style="margin-bottom: 12px;">
+                                        <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 3px;">
+                                            <span>ОБЪЁМ</span>
+                                            <span><strong>${newVolume.toFixed(1)}</strong> / ${truck.capacity_volume} м³</span>
+                                        </div>
+                                        <div style="background: #f3f4f6; border-radius: 8px; height: 8px; overflow: hidden;">
+                                            <div style="background: ${newVolumePercent > 100 ? '#ef4444' : '#3b82f6'}; height: 100%; width: ${Math.min(newVolumePercent, 100)}%; transition: all 0.3s;"></div>
+                                        </div>
+                                    </div>
+
+                                    ${isOverloaded ? 
+                                        '<div style="color: #ef4444; font-size: 11px; font-weight: bold; text-align: center; padding: 8px; background: #fee2e2; border-radius: 6px; margin-bottom: 10px;">⚠️ ПЕРЕГРУЗ</div>' :
+                                        `<button onclick="confirmLoadTruck(${truck.id})" class="btn btn-primary" style="width: 100%; padding: 10px; font-size: 12px;">ЗАГРУЗИТЬ</button>`
+                                    }
+                                ` : `
+                                    <div style="text-align: center; color: #999; padding: 10px; font-size: 12px;">
+                                        ${truck.status === 'in_transit' ? 'Машина в рейсе' : 'Машина на ремонте'}
+                                    </div>
+                                `}
+                            </div>
+                        `;
+                    }).join('');
+
+                document.getElementById('loadTruckList').innerHTML = trucksList || '<div style="text-align: center; color: #999; padding: 40px;">Нет доступного транспорта</div>';
+                document.getElementById('loadTruckModal').classList.add('active');
+
+            } catch (error) {
+                console.error('Ошибка загрузки транспорта:', error);
+                alert('Ошибка загрузки списка транспорта');
+            }
+        }
+
+        function closeLoadTruckModal() {
+            document.getElementById('loadTruckModal').classList.remove('active');
+        }
+
+        async function confirmLoadTruck(truckId) {
+            const orderId = window.currentLoadOrderId;
+
+            try {
+                const response = await fetch(API_URL + '/orders/' + orderId + '/', {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ truck: truckId })
+                });
+
+                if (response.ok) {
+                    closeLoadTruckModal();
+                    showPlanningMessage('Груз успешно загружен!', 'success');
+                    loadSection('planning');
+                } else {
+                    showPlanningMessage('Ошибка загрузки груза', 'error');
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                showPlanningMessage('Ошибка соединения с сервером', 'error');
+            }
+        }
+
+        async function unloadOrder(orderId) {
+            if (!confirm('Выгрузить этот заказ из машины?')) return;
+
+            try {
+                const response = await fetch(API_URL + '/orders/' + orderId + '/', {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ truck: null })
+                });
+
+                if (response.ok) {
+                    showPlanningMessage('Груз выгружен', 'success');
+                    loadSection('planning');
+                } else {
+                    showPlanningMessage('Ошибка выгрузки груза', 'error');
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                showPlanningMessage('Ошибка соединения с сервером', 'error');
+            }
+        }
+
+        function showPlanningMessage(message, type) {
+            const element = document.getElementById('planningMessage');
+            if (element) {
+                element.innerHTML = '<div class="alert alert-' + type + '">' + message + '</div>';
+                setTimeout(() => { element.innerHTML = ''; }, 5000);
+            }
+        }
+
+        function showAIAssistant() {
+            alert('🤖 AI-ассистент\n\nФункционал интеграции с Google Gemini будет реализован на следующем этапе.\n\nAI сможет:\n• Оптимально распределить грузы по машинам\n• Учесть направления и маршруты\n• Минимизировать количество рейсов\n• Рассчитать экономию топлива');
+        }
+
+        async function loadRejectedOrders(container) {
+            container.innerHTML = '<div class="section active"><h2>Отклоненные заявки</h2><div class="loading">Загрузка...</div></div>';
+
+            try {
+                const response = await fetch(API_URL + '/orders/', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                if (!response.ok) throw new Error('Ошибка загрузки');
+
+                const data = await response.json();
+                const orders = Array.isArray(data) ? data : (data.results || []);
+                const rejectedOrders = orders.filter(o => o.status === 'rejected');
+
+                if (rejectedOrders.length === 0) {
+                    container.innerHTML = `
+                        <div class="section active">
+                            <h2>❌ Отклоненные заявки</h2>
+                            <div class="no-data">Нет отклоненных заявок</div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = `
+                    <div class="section active">
+                        <h2>❌ Отклоненные заявки (Архив)</h2>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Клиент</th>
+                                    <th>Маршрут</th>
+                                    <th>Дата</th>
+                                    <th>Причина отклонения</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${rejectedOrders.map(order => `
+                                    <tr>
+                                        <td><strong>${order.tracking_id}</strong></td>
+                                        <td>${order.client_name || 'Неизвестно'}</td>
+                                        <td style="font-size: 12px;">${order.origin_address} → ${order.dest_address}</td>
+                                        <td>${new Date(order.created_at).toLocaleDateString('ru-RU')}</td>
+                                        <td style="color: #dc3545;">${order.rejection_reason || 'Не указана'}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Ошибка:', error);
+                container.innerHTML = '<div class="section active"><h2>Отклоненные</h2><p style="color: red;">Ошибка загрузки</p></div>';
+            }
+        }
+
+        function assignTransport(orderId) {
+            alert('Назначение транспорта будет доступно после реализации раздела "Планирование"');
+        }
+
+        async function loadFleet(container) {
+            container.innerHTML = '<div class="section active"><h2>🚛 Автопарк</h2><div class="loading">Загрузка...</div></div>';
+
+            try {
+                const response = await fetch(API_URL + '/trucks/', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                if (!response.ok) throw new Error('Ошибка загрузки');
+
+                const data = await response.json();
+                const trucks = Array.isArray(data) ? data : (data.results || []);
+
+                container.innerHTML = `
+                    <div class="section active">
+                        <h2>🚛 Автопарк</h2>
+                        <div id="fleetMessage"></div>
+                        <button class="btn btn-primary" onclick="showAddTruckForm()" style="margin-bottom: 20px;">➕ Добавить машину</button>
+
+                        ${trucks.length === 0 ? 
+                            '<div class="no-data">Автопарк пуст. Добавьте первую машину.</div>' :
+                            '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;">' +
+                                trucks.map(truck => {
+                                    const statusColors = {
+                                        'available': '#22c55e',
+                                        'in_transit': '#3b82f6',
+                                        'maintenance': '#ef4444'
+                                    };
+                                    const statusIcons = {
+                                        'available': '🟢',
+                                        'in_transit': '🔵',
+                                        'maintenance': '🔴'
+                                    };
+                                    const statusNames = {
+                                        'available': 'Свободен',
+                                        'in_transit': 'В рейсе',
+                                        'maintenance': 'На ремонте'
+                                    };
+                                    const hasNoDriver = truck.status === 'available' && !truck.driver;
+                                    
+                                    return `
+                                        <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); ${hasNoDriver ? 'border: 3px solid #ef4444;' : ''}">
+                                            ${hasNoDriver ? '<div style="background: #ef4444; color: white; padding: 8px; border-radius: 6px; margin-bottom: 10px; text-align: center; font-weight: bold;">⚠️ Простой! Нет водителя</div>' : ''}
+                                            <div style="font-size: 24px; font-weight: bold; margin-bottom: 10px;">${truck.plate_number}</div>
+                                            <div style="color: #666; margin-bottom: 15px;">${truck.brand} ${truck.model}</div>
+                                            <div style="margin-bottom: 10px;">
+                                                <strong>Грузоподъемность:</strong> ${truck.capacity_weight} кг
+                                            </div>
+                                            <div style="margin-bottom: 10px;">
+                                                <strong>Объем:</strong> ${truck.capacity_volume} м³
+                                            </div>
+                                            <div style="margin-bottom: 15px;">
+                                                <strong>Водитель:</strong> ${truck.driver_name || 'Не назначен'}
+                                            </div>
+                                            <div style="display: inline-block; padding: 6px 12px; border-radius: 20px; background: ${statusColors[truck.status]}; color: white; font-size: 14px; margin-bottom: 15px;">
+                                                ${statusIcons[truck.status]} ${statusNames[truck.status]}
+                                            </div>
+                                            <div style="display: flex; gap: 10px;">
+                                                <button class="btn btn-primary" onclick="editTruck(${truck.id})" style="flex: 1;">Редактировать</button>
+                                                <button class="btn btn-danger" onclick="deleteTruck(${truck.id})" style="flex: 1;">Удалить</button>
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('') +
+                            '</div>'
+                        }
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Ошибка:', error);
+                container.innerHTML = '<div class="section active"><h2>Автопарк</h2><p style="color: red;">Ошибка загрузки</p></div>';
+            }
+        }
+
+        function showAddTruckForm() {
+            openTruckModal();
+        }
+
+        function hideAddTruckForm() {
+            closeTruckModal();
+        }
+
+        async function saveTruck() {
+            const plate = document.getElementById('truckPlate').value.trim();
+            const brand = document.getElementById('truckBrand').value.trim();
+            const model = document.getElementById('truckModel').value.trim();
+            const weight = parseInt(document.getElementById('truckWeight').value);
+            const volume = parseFloat(document.getElementById('truckVolume').value);
+            const status = document.getElementById('truckStatus').value;
+
+            if (!plate || !brand || !model || !weight || !volume) {
+                alert('Заполните все обязательные поля');
+                return;
+            }
+
+            try {
+                const response = await fetch(API_URL + '/trucks/', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        plate_number: plate,
+                        brand: brand,
+                        model: model,
+                        capacity_weight: weight,
+                        capacity_volume: volume,
+                        status: status
+                    })
+                });
+
+                if (response.ok) {
+                    closeTruckModal();
+                    showFleetMessage('Машина успешно добавлена!', 'success');
+                    loadSection('fleet');
+                } else {
+                    const errorData = await response.json();
+                    showFleetMessage('Ошибка: ' + (errorData.plate_number ? 'Машина с таким госномером уже существует' : 'Не удалось добавить машину'), 'error');
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                showFleetMessage('Ошибка соединения с сервером', 'error');
+            }
+        }
+
+        async function deleteTruck(truckId) {
+            if (!confirm('Удалить машину из автопарка?')) return;
+
+            try {
+                const response = await fetch(API_URL + '/trucks/' + truckId + '/', {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                if (response.ok) {
+                    showFleetMessage('Машина удалена', 'success');
+                    loadSection('fleet');
+                } else {
+                    showFleetMessage('Ошибка удаления', 'error');
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                showFleetMessage('Ошибка соединения с сервером', 'error');
+            }
+        }
+
+        function editTruck(truckId) {
+            alert('Редактирование будет доступно в следующей версии');
+        }
+
+        function showFleetMessage(message, type) {
+            const element = document.getElementById('fleetMessage');
+            if (element) {
+                element.innerHTML = '<div class="alert alert-' + type + '">' + message + '</div>';
+                setTimeout(() => { element.innerHTML = ''; }, 5000);
+            }
+        }
+
+        async function loadDrivers(container) {
+            container.innerHTML = '<div class="section active"><h2>👨‍✈️ Водители</h2><div class="loading">Загрузка...</div></div>';
+
+            try {
+                const response = await fetch(API_URL + '/drivers/', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                if (!response.ok) throw new Error('Ошибка загрузки');
+
+                const data = await response.json();
+                const drivers = Array.isArray(data) ? data : (data.results || []);
+
+                container.innerHTML = `
+                    <div class="section active">
+                        <h2>👨‍✈️ Водители</h2>
+                        <div id="driversMessage"></div>
+                        <button class="btn btn-primary" onclick="showAddDriverForm()" style="margin-bottom: 20px;">➕ Добавить водителя</button>
+
+                        ${drivers.length === 0 ? 
+                            '<div class="no-data">Нет водителей. Добавьте первого водителя.</div>' :
+                            '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;">' +
+                                drivers.map(driver => {
+                                    const hasTruck = driver.trucks && driver.trucks.length > 0;
+                                    const truckInfo = hasTruck ? driver.trucks[0] : null;
+                                    const isOrange = !hasTruck && driver.type === 'staff';
+                                    
+                                    return `
+                                        <div style="background: ${isOrange ? '#fff7ed' : 'white'}; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); ${isOrange ? 'border: 2px solid #f97316;' : 'border: 2px solid #e5e7eb;'}">
+                                            ${isOrange ? '<div style="background: #f97316; color: white; padding: 6px; border-radius: 6px; margin-bottom: 10px; text-align: center; font-weight: bold; font-size: 12px;">⚠️ Без машины</div>' : ''}
+                                            ${driver.type === 'hired' ? '<div style="background: #fef3c7; color: #92400e; padding: 6px; border-radius: 6px; margin-bottom: 10px; text-align: center; font-weight: bold; font-size: 12px;">🟡 Наемный</div>' : ''}
+                                            <div style="font-size: 18px; font-weight: bold; margin-bottom: 10px;">${driver.name}</div>
+                                            <div style="color: #666; margin-bottom: 5px;">📞 ${driver.phone}</div>
+                                            <div style="color: #666; margin-bottom: 15px;">🪪 ${driver.license_number}</div>
+                                            ${driver.personal_car ? '<div style="color: #666; margin-bottom: 5px;">🚗 ' + driver.personal_car + '</div>' : ''}
+                                            ${driver.insurance_num ? '<div style="color: #666; margin-bottom: 15px; font-size: 12px;">📄 ' + driver.insurance_num + '</div>' : ''}
+                                            ${hasTruck ? 
+                                                '<div style="background: #e0f2fe; padding: 10px; border-radius: 8px; margin-bottom: 15px;">' +
+                                                    '<strong>Назначен на:</strong><br>' +
+                                                    '<span style="font-size: 14px;">' + truckInfo.plate_number + ' (' + truckInfo.brand + ')</span>' +
+                                                '</div>' :
+                                                '<div style="color: #999; font-style: italic; margin-bottom: 15px;">Машина не назначена</div>'
+                                            }
+                                            <button class="btn btn-danger" onclick="deleteDriver(${driver.id})" style="width: 100%;">Удалить</button>
+                                        </div>
+                                    `;
+                                }).join('') +
+                            '</div>'
+                        }
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Ошибка:', error);
+                container.innerHTML = '<div class="section active"><h2>Водители</h2><p style="color: red;">Ошибка загрузки</p></div>';
+            }
+        }
+
+        function showAddDriverForm() {
+            openDriverModal();
+        }
+
+        function hideAddDriverForm() {
+            closeDriverModal();
+        }
+
+        function toggleDriverFields() {
+            const truckValue = document.getElementById('driverTruck').value;
+            const vehicleBlock = document.getElementById('vehicleDataBlock');
+            const carBrandInput = document.getElementById('driverCarBrand');
+            const carInput = document.getElementById('driverCar');
+            const insuranceInput = document.getElementById('driverInsurance');
+
+            if (truckValue === 'own') {
+                vehicleBlock.style.display = 'block';
+                carBrandInput.required = true;
+                carInput.required = true;
+                insuranceInput.required = true;
+            } else {
+                vehicleBlock.style.display = 'none';
+                carBrandInput.required = false;
+                carInput.required = false;
+                insuranceInput.required = false;
+                carBrandInput.value = '';
+                carInput.value = '';
+                insuranceInput.value = '';
+            }
+        }
+
+        async function saveDriver() {
+            const name = document.getElementById('driverName').value.trim();
+            const phone = document.getElementById('driverPhone').value.trim();
+            const license = document.getElementById('driverLicense').value.trim();
+            const type = document.querySelector('input[name="driverType"]:checked').value;
+            const truckValue = document.getElementById('driverTruck').value;
+            const carBrand = document.getElementById('driverCarBrand').value.trim();
+            const car = document.getElementById('driverCar').value.trim();
+            const insurance = document.getElementById('driverInsurance').value.trim();
+
+            if (!name || !phone || !license) {
+                alert('Заполните все обязательные поля');
+                return;
+            }
+
+            if (truckValue === 'own' && (!carBrand || !car || !insurance)) {
+                alert('Заполните все данные автомобиля');
+                return;
+            }
+
+            try {
+                const driverData = {
+                    name: name,
+                    phone: phone,
+                    license_number: license,
+                    type: type,
+                    personal_car: (truckValue === 'own') ? car : null,
+                    insurance_num: (truckValue === 'own') ? insurance : null
+                };
+
+                const response = await fetch(API_URL + '/drivers/', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(driverData)
+                });
+
+                if (response.ok) {
+                    const driver = await response.json();
+                    
+                    if (truckValue && truckValue !== 'own') {
+                        await fetch(API_URL + '/trucks/' + truckValue + '/', {
+                            method: 'PATCH',
+                            headers: {
+                                'Authorization': 'Bearer ' + token,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ driver: driver.id })
+                        });
+                    }
+
+                    closeDriverModal();
+                    showDriversMessage('Водитель успешно добавлен!', 'success');
+                    loadSection('drivers');
+                } else {
+                    showDriversMessage('Ошибка добавления водителя', 'error');
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                showDriversMessage('Ошибка соединения с сервером', 'error');
+            }
+        }
+
+        async function deleteDriver(driverId) {
+            if (!confirm('Удалить водителя?')) return;
+
+            try {
+                const response = await fetch(API_URL + '/drivers/' + driverId + '/', {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                if (response.ok) {
+                    showDriversMessage('Водитель удален', 'success');
+                    loadSection('drivers');
+                } else {
+                    const errorData = await response.json();
+                    showDriversMessage('Ошибка: ' + (errorData.error || 'Не удалось удалить'), 'error');
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                showDriversMessage('Ошибка соединения с сервером', 'error');
+            }
+        }
+
+        function showDriversMessage(message, type) {
+            const element = document.getElementById('driversMessage');
+            if (element) {
+                element.innerHTML = '<div class="alert alert-' + type + '">' + message + '</div>';
+                setTimeout(() => { element.innerHTML = ''; }, 5000);
+            }
+        }
+
+        function openTruckModal() {
+            document.getElementById('truckModal').classList.add('active');
+        }
+
+        function closeTruckModal() {
+            document.getElementById('truckModal').classList.remove('active');
+            document.getElementById('truckPlate').value = '';
+            document.getElementById('truckBrand').value = '';
+            document.getElementById('truckModel').value = '';
+            document.getElementById('truckWeight').value = '';
+            document.getElementById('truckVolume').value = '';
+            document.getElementById('truckStatus').value = 'available';
+        }
+
+        async function openDriverModal() {
+            try {
+                const response = await fetch(API_URL + '/trucks/', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                const data = await response.json();
+                const trucks = Array.isArray(data) ? data : (data.results || []);
+                const availableTrucks = trucks.filter(t => t.status === 'available' && !t.driver);
+
+                const truckSelect = document.getElementById('driverTruck');
+                truckSelect.innerHTML = 
+                    '<option value="">Не назначать машину</option>' +
+                    '<option value="own">На своей машине (ИП/Самозанятый)</option>' +
+                    (availableTrucks.length > 0 ? '<option disabled>--- Свободные фуры ---</option>' : '') +
+                    availableTrucks.map(t => '<option value="' + t.id + '">' + t.plate_number + ' — ' + t.brand + ' ' + t.model + '</option>').join('');
+
+                document.getElementById('driverModal').classList.add('active');
+            } catch (error) {
+                console.error('Ошибка загрузки машин:', error);
+                document.getElementById('driverModal').classList.add('active');
+            }
+        }
+
+        function closeDriverModal() {
+            document.getElementById('driverModal').classList.remove('active');
+            document.getElementById('driverName').value = '';
+            document.getElementById('driverPhone').value = '';
+            document.getElementById('driverLicense').value = '';
+            document.getElementById('typeStaff').checked = true;
+            document.getElementById('driverTruck').value = '';
+            document.getElementById('driverCarBrand').value = '';
+            document.getElementById('driverCar').value = '';
+            document.getElementById('driverInsurance').value = '';
+            document.getElementById('vehicleDataBlock').style.display = 'none';
+        }
+
+        async function loadPlanning(container) {
+            container.innerHTML = '<div class="section active"><h2>🗺️ Планирование загрузки</h2><div class="loading">Загрузка...</div></div>';
+
+            try {
+                const [ordersResponse, trucksResponse] = await Promise.all([
+                    fetch(API_URL + '/orders/?status=in_progress', {
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    }),
+                    fetch(API_URL + '/trucks/', {
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    })
+                ]);
+
+                const ordersData = await ordersResponse.json();
+                const trucksData = await trucksResponse.json();
+                
+                const orders = Array.isArray(ordersData) ? ordersData : (ordersData.results || []);
+                const trucks = Array.isArray(trucksData) ? trucksData : (trucksData.results || []);
+
+                container.innerHTML = `
+                    <div class="section active">
+                        <h2>🗺️ Планирование загрузки</h2>
+                        <div id="planningMessage"></div>
+                        
+                        <div style="display: grid; grid-template-columns: 350px 1fr; gap: 20px; margin-top: 20px;">
+                            <!-- Левая колонка: Доступные грузы -->
+                            <div>
+                                <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                                    <h3 style="margin: 0 0 15px 0; font-size: 16px;">📦 Нераспределенные грузы</h3>
+                                    <div style="font-size: 13px; color: #666; margin-bottom: 15px;">Очередь: ${orders.filter(o => !o.truck).length}</div>
+                                    ${orders.filter(o => !o.truck).length === 0 ? 
+                                        '<div style="text-align: center; color: #999; padding: 40px 20px;">Все грузы распределены</div>' :
+                                        '<div id="ordersList" style="max-height: 600px; overflow-y: auto;">' +
+                                            orders.filter(o => !o.truck).map(order => `
+                                                <div class="cargo-card">
+                                                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+                                                        <div>
+                                                            <div style="font-weight: bold; margin-bottom: 3px;">#${order.id} <span style="background: #22c55e; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; text-transform: uppercase;">Одобрено</span></div>
+                                                            <div style="font-size: 11px; color: #999;">${order.tracking_id}</div>
+                                                        </div>
+                                                    </div>
+                                                    <div style="font-size: 13px; color: #333; margin-bottom: 8px;">${order.cargo_type || 'Общий груз'}</div>
+                                                    <div style="font-size: 12px; color: #666; margin-bottom: 10px;">
+                                                        📍 ${order.origin} → ${order.destination}
+                                                    </div>
+                                                    <div style="display: flex; gap: 8px; font-size: 12px; margin-bottom: 12px;">
+                                                        <span style="background: #e0f2fe; padding: 6px 10px; border-radius: 6px; flex: 1; text-align: center;">
+                                                            <div style="color: #0369a1; font-weight: 600;">${order.weight} кг</div>
+                                                        </span>
+                                                        <span style="background: #fef3c7; padding: 6px 10px; border-radius: 6px; flex: 1; text-align: center;">
+                                                            <div style="color: #92400e; font-weight: 600;">${order.volume} м³</div>
+                                                        </span>
+                                                    </div>
+                                                    <button class="btn btn-primary" onclick="showLoadTruckModal(${order.id}, ${order.weight}, ${order.volume}, '${order.tracking_id}')" style="width: 100%; font-size: 13px; padding: 10px;">
+                                                        ЗАГРУЗИТЬ →
+                                                    </button>
+                                                </div>
+                                            `).join('') +
+                                        '</div>'
+                                    }
+                                    ${orders.length > 0 ? '<button class="btn btn-primary" onclick="showAIAssistant()" style="width: 100%; margin-top: 15px;">🤖 Спросить AI</button>' : ''}
+                                </div>
+                            </div>
+
+                            <!-- Правая колонка: Транспорт -->
+                            <div>
+                                <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                                    <h3 style="margin: 0 0 5px 0; font-size: 16px;">🚛 Загрузка машин</h3>
+                                    <div style="font-size: 13px; color: #666; margin-bottom: 15px;">Доступно: ${trucks.filter(t => t.status === 'available').length}</div>
+                                    ${trucks.length === 0 ? 
+                                        '<div style="text-align: center; color: #999; padding: 40px;">Нет доступного транспорта</div>' :
+                                        '<div style="display: grid; gap: 15px;">' +
+                                            trucks.sort((a, b) => {
+                                                const statusOrder = { 'available': 0, 'in_transit': 1, 'maintenance': 2 };
+                                                return statusOrder[a.status] - statusOrder[b.status];
+                                            }).map(truck => {
+                                                const loadedOrders = orders.filter(o => o.truck === truck.id);
+                                                const totalWeight = loadedOrders.reduce((sum, o) => sum + parseFloat(o.weight || 0), 0);
+                                                const totalVolume = loadedOrders.reduce((sum, o) => sum + parseFloat(o.volume || 0), 0);
+                                                const weightPercent = Math.min((totalWeight / truck.capacity_weight) * 100, 100);
+                                                const volumePercent = Math.min((totalVolume / truck.capacity_volume) * 100, 100);
+                                                const isOverloaded = weightPercent > 100 || volumePercent > 100;
+
+                                                const statusBadge = truck.status === 'available' ? 
+                                                    '<span style="background: #22c55e; color: white; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600;">ГОТОВ</span>' :
+                                                    truck.status === 'in_transit' ? 
+                                                    '<span style="background: #3b82f6; color: white; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600;">В РЕЙСЕ</span>' :
+                                                    '<span style="background: #ef4444; color: white; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600;">ЗАНЯТ</span>';
+
+                                                return `
+                                                    <div class="truck-planning-card" 
+                                                         style="border: 2px solid ${truck.status === 'available' ? '#22c55e' : '#e5e7eb'}; border-radius: 12px; padding: 15px; ${truck.status !== 'available' ? 'opacity: 0.5;' : ''}">
+                                                        
+                                                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+                                                            <div>
+                                                                <div style="font-weight: bold; font-size: 15px; margin-bottom: 4px;">${truck.plate_number}</div>
+                                                                <div style="font-size: 12px; color: #666;">${truck.brand} ${truck.model}</div>
+                                                            </div>
+                                                            ${statusBadge}
+                                                        </div>
+
+                                                        ${truck.status === 'available' ? `
+                                                            <!-- Прогресс-бары -->
+                                                            <div style="margin-bottom: 10px;">
+                                                                <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
+                                                                    <span>Вес:</span>
+                                                                    <span>${totalWeight.toFixed(0)} / ${truck.capacity_weight} кг (${weightPercent.toFixed(0)}%)</span>
+                                                                </div>
+                                                                <div style="background: #f3f4f6; border-radius: 8px; height: 12px; overflow: hidden;">
+                                                                    <div style="background: ${weightPercent > 100 ? '#ef4444' : weightPercent > 80 ? '#f59e0b' : '#22c55e'}; height: 100%; width: ${weightPercent}%; transition: all 0.3s;"></div>
+                                                                </div>
+                                                            </div>
+
+                                                            <div style="margin-bottom: 15px;">
+                                                                <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
+                                                                    <span>Объём:</span>
+                                                                    <span>${totalVolume.toFixed(1)} / ${truck.capacity_volume} м³ (${volumePercent.toFixed(0)}%)</span>
+                                                                </div>
+                                                                <div style="background: #f3f4f6; border-radius: 8px; height: 12px; overflow: hidden;">
+                                                                    <div style="background: ${volumePercent > 100 ? '#ef4444' : volumePercent > 80 ? '#f59e0b' : '#22c55e'}; height: 100%; width: ${volumePercent}%; transition: all 0.3s;"></div>
+                                                                </div>
+                                                            </div>
+
+                                                            <!-- Загруженные грузы -->
+                                                            ${loadedOrders.length > 0 ? `
+                                                                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
+                                                                    <div style="font-size: 12px; color: #666; margin-bottom: 8px; font-weight: 600;">ГРУЗЫ НА БОРТУ (${loadedOrders.length})</div>
+                                                                    ${loadedOrders.map(o => `
+                                                                        <div style="background: #f3f4f6; padding: 8px 10px; border-radius: 6px; margin-bottom: 6px; font-size: 12px; display: flex; justify-content: space-between; align-items: center;">
+                                                                            <span><strong>#${o.id}</strong> - ${o.weight}кг, ${o.volume}м³</span>
+                                                                            <button onclick="unloadOrder(${o.id})" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 16px; padding: 0;">✕</button>
+                                                                        </div>
+                                                                    `).join('')}
+                                                                </div>
+                                                            ` : ''}
+
+                                                            ${isOverloaded ? '<div style="color: #ef4444; font-size: 12px; margin-top: 10px; font-weight: bold;">⚠️ ПЕРЕГРУЗ!</div>' : ''}
+                                                        ` : `
+                                                            <div style="text-align: center; color: #999; font-size: 13px; padding: 20px;">
+                                                                ${truck.status === 'in_transit' ? '🚛 В рейсе' : '🔧 На ремонте'}
+                                                            </div>
+                                                        `}
+                                                    </div>
+                                                `;
+                                            }).join('') +
+                                        '</div>'
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+            } catch (error) {
+                console.error('Ошибка:', error);
+                container.innerHTML = '<div class="section active"><h2>Планирование</h2><p style="color: red;">Ошибка загрузки</p></div>';
+            }
+        }
+
         async function loadUsers(container) {
             container.innerHTML = `
                 <div class="section active">
@@ -1326,5 +2585,156 @@
             loadCurrentUser();
         });
     </script>
+
+    <!-- Модальное окно добавления машины -->
+    <div id="truckModal" class="modal" onclick="if(event.target === this) closeTruckModal()">
+        <div class="modal-content" style="position: relative;">
+            <button class="modal-close" onclick="closeTruckModal()">×</button>
+            <h3>Добавить транспорт</h3>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Госномер *</label>
+                    <input type="text" id="truckPlate" required placeholder="А 123 ВС">
+                </div>
+                <div class="form-group">
+                    <label>Марка *</label>
+                    <input type="text" id="truckBrand" required placeholder="КАМАЗ">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Модель *</label>
+                    <input type="text" id="truckModel" required placeholder="5320">
+                </div>
+                <div class="form-group">
+                    <label>Статус *</label>
+                    <select id="truckStatus">
+                        <option value="available">🟢 Свободен</option>
+                        <option value="in_transit">🔵 В рейсе</option>
+                        <option value="maintenance">🔴 На ремонте</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Грузоподъемность (кг) *</label>
+                    <input type="number" id="truckWeight" required min="1" placeholder="5000">
+                </div>
+                <div class="form-group">
+                    <label>Объем кузова (м³) *</label>
+                    <input type="number" id="truckVolume" required min="0.1" step="0.1" placeholder="20">
+                </div>
+            </div>
+
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" onclick="closeTruckModal()">Отмена</button>
+                <button class="btn btn-primary" onclick="saveTruck()">Добавить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно выбора транспорта -->
+    <div id="loadTruckModal" class="modal" onclick="if(event.target === this) closeLoadTruckModal()">
+        <div class="modal-content" style="position: relative; max-width: 550px;">
+            <button class="modal-close" onclick="closeLoadTruckModal()">×</button>
+            <h3>Выберите транспорт</h3>
+            <div id="loadTruckInfo" style="background: #eff6ff; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 14px;"></div>
+            <div id="loadTruckList" style="max-height: 400px; overflow-y: auto;"></div>
+        </div>
+    </div>
+
+    <!-- Модальное окно отклонения заявки -->
+    <div id="rejectModal" class="modal" onclick="if(event.target === this) closeRejectModal()">
+        <div class="modal-content" style="position: relative; max-width: 500px;">
+            <button class="modal-close" onclick="closeRejectModal()">×</button>
+            <h3>Отклонить заявку</h3>
+            <p style="color: #666; margin-bottom: 20px;">Укажите причину отклонения заявки:</p>
+            <textarea id="rejectionReason" placeholder="Например: Маршрут не обслуживается, превышен вес..." style="width: 100%; min-height: 120px; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 14px; font-family: inherit; resize: vertical;"></textarea>
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" onclick="closeRejectModal()">Отмена</button>
+                <button class="btn btn-primary" style="background: #ef4444;" onclick="confirmRejectOrder()">Отклонить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно добавления водителя -->
+    <div id="driverModal" class="modal" onclick="if(event.target === this) closeDriverModal()">
+        <div class="modal-content" style="position: relative;">
+            <button class="modal-close" onclick="closeDriverModal()">×</button>
+            <h3>Регистрация водителя</h3>
+            
+            <div class="form-row-full">
+                <div class="form-group">
+                    <label>ФИО *</label>
+                    <input type="text" id="driverName" required placeholder="Иванов Иван Иванович">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Телефон *</label>
+                    <input type="tel" id="driverPhone" required placeholder="+7 (999) ...">
+                </div>
+                <div class="form-group">
+                    <label>Паспорт *</label>
+                    <input type="text" id="driverLicense" required placeholder="Серия Номер">
+                </div>
+            </div>
+
+            <div class="form-row-full">
+                <div class="form-group">
+                    <label>Тип занятости *</label>
+                    <div class="radio-group">
+                        <div class="radio-option">
+                            <input type="radio" id="typeStaff" name="driverType" value="staff" checked>
+                            <label for="typeStaff">Постоянный</label>
+                        </div>
+                        <div class="radio-option">
+                            <input type="radio" id="typeHired" name="driverType" value="hired">
+                            <label for="typeHired">Временный</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-row-full">
+                <div class="form-group">
+                    <label>Закрепление ТС</label>
+                    <select id="driverTruck" onchange="toggleDriverFields()">
+                        <option value="">Не назначать машину</option>
+                        <option value="own">На своей машине (ИП/Самозанятый)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="vehicleDataBlock" class="vehicle-data-block" style="display: none;">
+                <h4>Данные автомобиля</h4>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Марка *</label>
+                        <input type="text" id="driverCarBrand" placeholder="Ford">
+                    </div>
+                    <div class="form-group">
+                        <label>Госномер *</label>
+                        <input type="text" id="driverCar" placeholder="А 777 АА">
+                    </div>
+                </div>
+                <div class="form-row-full">
+                    <div class="form-group">
+                        <label>Полис *</label>
+                        <input type="text" id="driverInsurance" placeholder="XXX-000000">
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" onclick="closeDriverModal()">Отмена</button>
+                <button class="btn btn-primary" onclick="saveDriver()">Добавить</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
