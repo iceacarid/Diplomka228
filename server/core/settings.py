@@ -3,9 +3,25 @@ Django settings for core project.
 """
 
 from pathlib import Path
+import os
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Загружаем переменные окружения с приоритетом .env.local
+# Это позволяет хранить секретные ключи локально, не коммитя их в Git
+env_local = BASE_DIR / '.env.local'
+env_default = BASE_DIR / '.env'
+
+if env_local.exists():
+    load_dotenv(env_local, override=True)
+    print("[OK] Загружены настройки из .env.local")
+elif env_default.exists():
+    load_dotenv(env_default)
+    print("[WARN] Загружены настройки из .env")
+else:
+    print("[WARN] Файлы .env.local и .env не найдены. Используются переменные окружения.")
 
 
 # Quick-start development settings - unsuitable for production
@@ -164,3 +180,8 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 CORS_ALLOW_CREDENTIALS = True
+
+# Google Gemini AI (опционально)
+# Для работы AI-ассистента создайте файл .env в корне server/ и добавьте:
+# GEMINI_API_KEY=your_api_key_here
+# Если ключа нет, AI вернет сообщение о недоступности

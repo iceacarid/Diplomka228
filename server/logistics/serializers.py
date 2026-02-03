@@ -13,12 +13,20 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = ('id', 'created_at', 'avatar_url')
 
     def get_avatar_url(self, obj):
+        """Возвращает URL аватара или дефолтную картинку котика"""
+        request = self.context.get('request')
+        
         if obj.avatar:
-            request = self.context.get('request')
+            # Пользовательская аватарка
             if request:
                 return request.build_absolute_uri(obj.avatar.url)
             return obj.avatar.url
-        return None
+        else:
+            # Дефолтная заглушка с котиком
+            default_avatar = '/media/avatars/default.png'
+            if request:
+                return request.build_absolute_uri(default_avatar)
+            return default_avatar
 
     def update(self, instance, validated_data):
         password = validated_data.pop('password', None)

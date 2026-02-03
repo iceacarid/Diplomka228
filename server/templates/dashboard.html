@@ -1777,8 +1777,101 @@
             }
         }
 
-        function showAIAssistant() {
-            alert('🤖 AI-ассистент\n\nФункционал интеграции с Google Gemini будет реализован на следующем этапе.\n\nAI сможет:\n• Оптимально распределить грузы по машинам\n• Учесть направления и маршруты\n• Минимизировать количество рейсов\n• Рассчитать экономию топлива');
+        async function showAIAssistant() {
+            try {
+                const [ordersResponse, trucksResponse] = await Promise.all([
+                    fetch(API_URL + '/orders/?status=in_progress', {
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    }),
+                    fetch(API_URL + '/trucks/', {
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    })
+                ]);
+
+                const ordersData = await ordersResponse.json();
+                const trucksData = await trucksResponse.json();
+                
+                const orders = Array.isArray(ordersData) ? ordersData : (ordersData.results || []);
+                const trucks = Array.isArray(trucksData) ? trucksData : (trucksData.results || []);
+
+                const unassignedOrders = orders.filter(o => !o.truck);
+                const availableTrucks = trucks.filter(t => t.status === 'available');
+
+                if (unassignedOrders.length === 0) {
+                    alert('Нет нераспределенных грузов для оптимизации');
+                    return;
+                }
+
+                if (availableTrucks.length === 0) {
+                    alert('Нет доступного транспорта');
+                    return;
+                }
+
+                document.getElementById('aiModalOrders').textContent = unassignedOrders.length;
+                document.getElementById('aiModalTrucks').textContent = availableTrucks.length;
+                document.getElementById('aiResult').innerHTML = '<div style="text-align: center; padding: 40px; color: #999;">Запрос к AI...</div>';
+                document.getElementById('aiApplyButton').style.display = 'none';
+                document.getElementById('aiModal').classList.add('active');
+
+                const trucksForAI = availableTrucks.map(t => ({
+                    id: t.id,
+                    plate: t.plate_number,
+                    brand: t.brand + ' ' + t.model,
+                    capacity_kg: t.capacity_weight,
+                    capacity_m3: t.capacity_volume
+                }));
+
+                const ordersForAI = unassignedOrders.map(o => ({
+                    id: o.id,
+                    weight: o.weight,
+                    volume: o.volume,
+                    origin: o.origin,
+                    destination: o.destination,
+                    cargo_type: o.cargo_type || 'Общий груз'
+                }));
+
+                const aiResponse = await fetch(API_URL + '/ai/optimize/', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        trucks: trucksForAI,
+                        orders: ordersForAI,
+                        prompt: 'Оптимально распредели грузы по машинам, учитывая направления и грузоподъемность'
+                    })
+                });
+
+                if (!aiResponse.ok) {
+                    throw new Error('Ошибка AI');
+                }
+
+                const aiData = await aiResponse.json();
+                const recommendation = aiData.recommendation;
+
+                document.getElementById('aiResult').innerHTML = '<div style="white-space: pre-wrap; line-height: 1.6;">' + recommendation + '</div>';
+                
+                // Показываем кнопку "Применить рекомендацию" если AI вернул результат
+                if (recommendation && !recommendation.includes('⚠️') && !recommendation.includes('недоступен')) {
+                    document.getElementById('aiApplyButton').style.display = 'block';
+                } else {
+                    document.getElementById('aiApplyButton').style.display = 'none';
+                }
+
+            } catch (error) {
+                console.error('Ошибка AI:', error);
+                document.getElementById('aiResult').innerHTML = '<div style="color: #ef4444; text-align: center; padding: 40px;">Ошибка получения рекомендаций AI. Проверьте настройки GigaChat API.</div>';
+                document.getElementById('aiApplyButton').style.display = 'none';
+            }
+        }
+
+        function closeAIModal() {
+            document.getElementById('aiModal').classList.remove('active');
+        }
+
+        function applyAIRecommendation() {
+            alert('Функция автоматического применения рекомендаций будет доступна в следующей версии.\n\nПока используйте рекомендации AI для ручного распределения грузов.');
         }
 
         async function loadRejectedOrders(container) {
@@ -2632,6 +2725,38 @@
             <div class="modal-buttons">
                 <button class="btn btn-secondary" onclick="closeTruckModal()">Отмена</button>
                 <button class="btn btn-primary" onclick="saveTruck()">Добавить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно AI-ассистента -->
+    <div id="aiModal" class="modal" onclick="if(event.target === this) closeAIModal()">
+        <div class="modal-content" style="position: relative; max-width: 700px;">
+            <button class="modal-close" onclick="closeAIModal()">×</button>
+            <h3>🤖 AI-Ассистент по оптимизации загрузки</h3>
+            
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 10px; margin-bottom: 20px; color: white;">
+                <div style="display: flex; justify-content: space-around; text-align: center;">
+                    <div>
+                        <div style="font-size: 32px; font-weight: bold;" id="aiModalOrders">0</div>
+                        <div style="font-size: 13px; opacity: 0.9;">Грузов в очереди</div>
+                    </div>
+                    <div style="border-left: 1px solid rgba(255,255,255,0.3); margin: 0 20px;"></div>
+                    <div>
+                        <div style="font-size: 32px; font-weight: bold;" id="aiModalTrucks">0</div>
+                        <div style="font-size: 13px; opacity: 0.9;">Доступных машин</div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="background: #f9fafb; border-radius: 10px; padding: 20px; margin-bottom: 20px; max-height: 400px; overflow-y: auto;">
+                <h4 style="margin: 0 0 15px 0; font-size: 14px; color: #666; text-transform: uppercase; letter-spacing: 0.5px;">Рекомендация AI:</h4>
+                <div id="aiResult" style="font-size: 14px; color: #333; line-height: 1.8;"></div>
+            </div>
+
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" onclick="closeAIModal()">Закрыть</button>
+                <button id="aiApplyButton" class="btn btn-primary" onclick="applyAIRecommendation()" style="display: none;">Применить рекомендацию</button>
             </div>
         </div>
     </div>

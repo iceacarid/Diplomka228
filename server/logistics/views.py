@@ -13,7 +13,7 @@ from .serializers import (
     CalculatorSerializer, RouteCalculationSerializer
 )
 from .permissions import IsClient, IsManager, IsAdmin, IsManagerOrAdmin, IsOwnerOrManagerOrAdmin
-from .services import GeminiService, YandexMapsService
+from .services import AIService, YandexMapsService
 
 
 def index_view(request):
@@ -338,8 +338,9 @@ def ai_optimize(request):
     if not trucks_data or not orders_data:
         return Response({'error': 'Укажите данные о транспорте и заказах'}, status=status.HTTP_400_BAD_REQUEST)
 
-    gemini_service = GeminiService()
-    recommendation = gemini_service.optimize_load(trucks_data, orders_data, custom_prompt)
+    # Используем AIService с GigaChat (российский AI от Сбера)
+    ai_service = AIService()
+    recommendation = ai_service.optimize_load(trucks_data, orders_data, custom_prompt)
 
     ai_request = AIRequest.objects.create(
         manager=request.user,
