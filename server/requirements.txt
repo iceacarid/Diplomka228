@@ -1,4 +1,4 @@
-Django==6.0.1
+Django==5.2.11
 djangorestframework==3.16.1
 django-cors-headers==4.9.0
 psycopg2-binary==2.9.11
@@ -10,3 +10,6 @@ openai>=2.16.0
 requests==2.31.0
 python-dotenv==1.0.0
 Pillow==11.0.0
+gunicorn
+dj-database-url
+whitenoise
