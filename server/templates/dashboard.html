@@ -661,6 +661,44 @@
             return cargoTypeNames[cargoType] || cargoType;
         }
 
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function formatPhoneInput(input) {
+            let v = (input.value || '').replace(/\D/g, '');
+            if (v.length > 0 && (v[0] === '8' || v[0] === '7')) v = v.slice(v[0] === '8' ? 1 : 1);
+            if (v.length > 10) v = v.slice(0, 10);
+            let s = '+7';
+            if (v.length > 0) s += ' (' + v.slice(0, 3);
+            if (v.length >= 3) s += ') ' + v.slice(3, 6);
+            if (v.length >= 6) s += '-' + v.slice(6, 8);
+            if (v.length >= 8) s += '-' + v.slice(8, 10);
+            input.value = s;
+        }
+
+        function formatPlateInput(input) {
+            let v = (input.value || '').toUpperCase().replace(/[^А-ЯA-Z0-9\s]/g, '');
+            if (v.length > 12) v = v.slice(0, 12);
+            input.value = v;
+        }
+
+        function formatLicenseCategoryInput(input) {
+            let v = (input.value || '').toUpperCase().replace(/[^A-Z0-9\s,\-\/]/g, '');
+            if (v.length > 50) v = v.slice(0, 50);
+            input.value = v;
+        }
+
+        function formatInsuranceInput(input) {
+            let v = (input.value || '').toUpperCase().replace(/[^A-ZА-Я0-9\-]/g, '');
+            if (v.length > 12) v = v.slice(0, 12);
+            if (v.length >= 4 && v.indexOf('-') === -1) v = v.slice(0, 3) + '-' + v.slice(3);
+            input.value = v;
+        }
+
         async function loadCurrentUser() {
             try {
                 const response = await fetch(`${API_URL}/auth/me/`, {
@@ -777,6 +815,66 @@
             }
         }
 
+        function getClientOrderProductDisplay(order) {
+            if (order.cargo_description && order.cargo_description.trim()) return escapeHtml(order.cargo_description);
+            if (order.cargo_type_custom && order.cargo_type_custom.trim()) return escapeHtml(order.cargo_type_custom);
+            return escapeHtml(getCargoTypeDisplay(order.cargo_type, order.cargo_type_custom));
+        }
+
+        function applyClientOrdersFilters() {
+            const container = document.getElementById('contentContainer');
+            const data = container._clientOrdersData;
+            if (!data || !Array.isArray(data)) return;
+            const searchEl = document.getElementById('clientOrdersSearch');
+            const statusEl = document.getElementById('clientOrdersStatusFilter');
+            const dateEl = document.getElementById('clientOrdersDateSort');
+            const tbody = document.getElementById('clientOrdersTableBody');
+            if (!searchEl || !statusEl || !dateEl || !tbody) return;
+
+            const search = (searchEl.value || '').trim().toLowerCase();
+            const statusFilter = (statusEl.value || '').trim();
+            const dateOrder = (dateEl.value || 'newest').trim();
+
+            let list = data.slice();
+            if (search) {
+                list = list.filter(o => {
+                    const track = (o.tracking_id || '').toLowerCase();
+                    const origin = (o.origin_address || '').toLowerCase();
+                    const dest = (o.dest_address || '').toLowerCase();
+                    const cargo = getCargoTypeDisplay(o.cargo_type, o.cargo_type_custom).toLowerCase();
+                    const custom = (o.cargo_type_custom || '').toLowerCase();
+                    const desc = (o.cargo_description || '').toLowerCase();
+                    const price = String(o.price || '');
+                    return track.includes(search) || origin.includes(search) || dest.includes(search) ||
+                           cargo.includes(search) || custom.includes(search) || desc.includes(search) || price.includes(search);
+                });
+            }
+            if (statusFilter) {
+                list = list.filter(o => o.status === statusFilter);
+            }
+            list.sort((a, b) => {
+                const da = new Date(a.created_at).getTime();
+                const db = new Date(b.created_at).getTime();
+                return dateOrder === 'oldest' ? da - db : db - da;
+            });
+
+            tbody.innerHTML = list.length === 0
+                ? '<tr><td colspan="9" style="text-align: center; padding: 24px; color: #666;">Нет заказов по заданным фильтрам</td></tr>'
+                : list.map(order => `
+                    <tr>
+                        <td><strong>${escapeHtml(order.tracking_id)}</strong></td>
+                        <td>${escapeHtml(order.origin_address)} → ${escapeHtml(order.dest_address)}</td>
+                        <td>${getClientOrderProductDisplay(order)}</td>
+                        <td>${order.weight} кг / ${order.volume} м³</td>
+                        <td>${escapeHtml(getCargoTypeDisplay(order.cargo_type, order.cargo_type_custom))}</td>
+                        <td>${order.price} ₽</td>
+                        <td><span class="status status-${order.status}">${statusNames[order.status]}</span></td>
+                        <td>${order.status === 'rejected' && order.rejection_reason ? '<span style="color: #dc3545;">' + escapeHtml(order.rejection_reason) + '</span>' : '—'}</td>
+                        <td>${new Date(order.created_at).toLocaleDateString('ru-RU')}</td>
+                    </tr>
+                `).join('');
+        }
+
         async function loadClientOrders(container) {
             container.innerHTML = '<div class="section active"><h2>Мои заказы</h2><div class="loading">Загрузка...</div></div>';
 
@@ -788,7 +886,8 @@
                 if (response.ok) {
                     const orders = await response.json();
                     const ordersArray = Array.isArray(orders) ? orders : (orders.results || []);
-                    
+                    container._clientOrdersData = ordersArray;
+
                     if (ordersArray.length === 0) {
                         container.innerHTML = `
                             <div class="section active">
@@ -801,35 +900,50 @@
                     } else {
                         container.innerHTML = `
                             <div class="section active">
-                                <h2>Мои заказы</h2>
+                                <div class="section-header-row" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
+                                    <h2 style="margin: 0;">Мои заказы</h2>
+                                    <input type="text" id="clientOrdersSearch" placeholder="Поиск по ID, маршруту, грузу, стоимости..." style="max-width: 320px; padding: 8px 12px; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 14px;" oninput="applyClientOrdersFilters()">
+                                </div>
+                                <div class="section-filters" style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 16px;">
+                                    <label style="display: flex; align-items: center; gap: 6px; font-size: 14px; color: #555;">
+                                        Статус:
+                                        <select id="clientOrdersStatusFilter" style="padding: 6px 10px; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 14px;" onchange="applyClientOrdersFilters()">
+                                            <option value="">Все</option>
+                                            <option value="pending">На рассмотрении</option>
+                                            <option value="in_progress">В работе</option>
+                                            <option value="shipped">В пути</option>
+                                            <option value="delivered">Доставлено</option>
+                                            <option value="rejected">Отклонено</option>
+                                        </select>
+                                    </label>
+                                    <label style="display: flex; align-items: center; gap: 6px; font-size: 14px; color: #555;">
+                                        Дата:
+                                        <select id="clientOrdersDateSort" style="padding: 6px 10px; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 14px;" onchange="applyClientOrdersFilters()">
+                                            <option value="newest">Сначала новые</option>
+                                            <option value="oldest">Сначала старые</option>
+                                        </select>
+                                    </label>
+                                </div>
                                 <table>
                                     <thead>
                                         <tr>
                                             <th>Tracking ID</th>
                                             <th>Маршрут</th>
-                                            <th>Вес/Объём</th>
+                                            <th>Товар</th>
+                                            <th>Вес/объём</th>
                                             <th>Тип груза</th>
                                             <th>Стоимость</th>
                                             <th>Статус</th>
+                                            <th>Причина отклонения</th>
                                             <th>Дата</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
-                                        ${ordersArray.map(order => `
-                                            <tr>
-                                                <td><strong>${order.tracking_id}</strong></td>
-                                                <td>${order.origin_address} → ${order.dest_address}</td>
-                                                <td>${order.weight} кг / ${order.volume} м³</td>
-                                                <td>${getCargoTypeDisplay(order.cargo_type, order.cargo_type_custom)}</td>
-                                                <td>${order.price} ₽</td>
-                                                <td><span class="status status-${order.status}">${statusNames[order.status]}</span></td>
-                                                <td>${new Date(order.created_at).toLocaleDateString('ru-RU')}</td>
-                                            </tr>
-                                        `).join('')}
+                                    <tbody id="clientOrdersTableBody">
                                     </tbody>
                                 </table>
                             </div>
                         `;
+                        applyClientOrdersFilters();
                     }
                 } else {
                     container.innerHTML = '<div class="section active"><h2>Мои заказы</h2><div class="no-data">Ошибка загрузки заказов</div></div>';
@@ -1008,6 +1122,10 @@
                             <input type="text" id="cargoTypeCustom" placeholder="Например: Живые цветы, Мебель и т.д.">
                         </div>
                         <div class="form-group">
+                            <label>Что везём (описание товара) *</label>
+                            <textarea id="cargoDescription" required rows="3" placeholder="Например: шкаф, колонки, мебель из ИКЕА, бытовая техника — подробно укажите, что за груз"></textarea>
+                        </div>
+                        <div class="form-group">
                             <label>Стоимость (рассчитывается автоматически)</label>
                             <input type="text" id="calculatedOrderPrice" readonly placeholder="Введите все данные для расчета" style="background: #f0f0f0;">
                         </div>
@@ -1105,8 +1223,9 @@
             const volume = parseFloat(document.getElementById('orderVolume').value);
             const cargoType = document.getElementById('cargoType').value;
             const cargoTypeCustom = document.getElementById('cargoTypeCustom').value;
+            const cargoDescription = document.getElementById('cargoDescription').value.trim();
 
-            if (!origin || !dest || !weight || !volume || !cargoType) {
+            if (!origin || !dest || !weight || !volume || !cargoType || !cargoDescription) {
                 showNewOrderMessage('Заполните все поля', 'error');
                 return;
             }
@@ -1127,6 +1246,7 @@
                 weight: weight,
                 volume: volume,
                 cargo_type: cargoType,
+                cargo_description: cargoDescription,
                 price: window.calculatedPrice
             };
 
@@ -1209,7 +1329,7 @@
                                 </div>
                                 <div class="form-group">
                                     <label>Телефон</label>
-                                    <input type="tel" id="profilePhone" value="${userPhone}" placeholder="+7XXX-XXX-XX-XX">
+                                    <input type="tel" id="profilePhone" value="${userPhone}" placeholder="+7 (999) 123-45-67" maxlength="18" oninput="formatPhoneInput(this)">
                                 </div>
                                 <div class="form-group">
                                     <label>Роль</label>
@@ -1229,17 +1349,23 @@
                     <h3>Изменить пароль</h3>
                     <form id="passwordForm" onsubmit="event.preventDefault(); updatePassword();" style="max-width: 500px;">
                         <div class="form-group">
-                            <label>Новый пароль</label>
-                            <input type="password" id="newPassword" minlength="6" placeholder="Минимум 6 символов">
+                            <label>Текущий пароль *</label>
+                            <input type="password" id="oldPassword" placeholder="Введите текущий пароль" autocomplete="current-password">
                         </div>
                         <div class="form-group">
-                            <label>Подтвердите пароль</label>
-                            <input type="password" id="confirmPassword" minlength="6">
+                            <label>Новый пароль *</label>
+                            <input type="password" id="newPassword" minlength="6" placeholder="Минимум 6 символов" autocomplete="new-password">
+                        </div>
+                        <div class="form-group">
+                            <label>Подтвердите новый пароль *</label>
+                            <input type="password" id="confirmPassword" minlength="6" placeholder="Повторите новый пароль" autocomplete="new-password">
                         </div>
                         <button type="submit" class="btn btn-primary">Изменить пароль</button>
                     </form>
                 </div>
             `;
+            const profilePhoneEl = document.getElementById('profilePhone');
+            if (profilePhoneEl && profilePhoneEl.value) formatPhoneInput(profilePhoneEl);
         }
 
         async function uploadAvatar(event) {
@@ -1316,21 +1442,24 @@
         }
 
         async function updatePassword() {
+            const oldPassword = document.getElementById('oldPassword').value;
             const newPassword = document.getElementById('newPassword').value;
             const confirmPassword = document.getElementById('confirmPassword').value;
 
+            if (!oldPassword) {
+                showProfileMessage('Введите текущий пароль', 'error');
+                return;
+            }
             if (!newPassword || !confirmPassword) {
-                showProfileMessage('Заполните оба поля пароля', 'error');
+                showProfileMessage('Заполните новый пароль и подтверждение', 'error');
                 return;
             }
-
             if (newPassword !== confirmPassword) {
-                showProfileMessage('Пароли не совпадают', 'error');
+                showProfileMessage('Новый пароль и подтверждение не совпадают', 'error');
                 return;
             }
-
             if (newPassword.length < 6) {
-                showProfileMessage('Пароль должен быть минимум 6 символов', 'error');
+                showProfileMessage('Новый пароль должен быть минимум 6 символов', 'error');
                 return;
             }
 
@@ -1341,14 +1470,16 @@
                         'Authorization': 'Bearer ' + token,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ password: newPassword })
+                    body: JSON.stringify({ old_password: oldPassword, new_password: newPassword })
                 });
 
                 if (response.ok) {
                     showProfileMessage('Пароль успешно изменён!', 'success');
                     document.getElementById('passwordForm').reset();
                 } else {
-                    showProfileMessage('Ошибка изменения пароля', 'error');
+                    const data = await response.json().catch(() => ({}));
+                    const msg = (data.old_password && data.old_password[0]) || (data.new_password && data.new_password[0]) || 'Ошибка изменения пароля';
+                    showProfileMessage(msg, 'error');
                 }
             } catch (error) {
                 console.error('Ошибка:', error);
@@ -1456,6 +1587,61 @@
             }
         }
 
+        function applyManagerOrdersFilters() {
+            const container = document.getElementById('contentContainer');
+            const data = container._managerOrdersData;
+            if (!data || !Array.isArray(data)) return;
+            const searchEl = document.getElementById('managerOrdersSearch');
+            const statusEl = document.getElementById('managerOrdersStatusFilter');
+            const dateEl = document.getElementById('managerOrdersDateSort');
+            const tbody = document.getElementById('managerOrdersTableBody');
+            if (!searchEl || !statusEl || !dateEl || !tbody) return;
+
+            const search = (searchEl.value || '').trim().toLowerCase();
+            const statusFilter = (statusEl.value || '').trim();
+            const dateOrder = (dateEl.value || 'newest').trim();
+
+            let list = data.slice();
+            if (search) {
+                list = list.filter(o => {
+                    const track = (o.tracking_id || '').toLowerCase();
+                    const client = (o.client_name || '').toLowerCase();
+                    const origin = (o.origin_address || '').toLowerCase();
+                    const dest = (o.dest_address || '').toLowerCase();
+                    const cargo = (getCargoTypeDisplay(o.cargo_type, o.cargo_type_custom) + ' ' + (o.cargo_description || '')).toLowerCase();
+                    return track.includes(search) || client.includes(search) || origin.includes(search) || dest.includes(search) || cargo.includes(search);
+                });
+            }
+            if (statusFilter) list = list.filter(o => o.status === statusFilter);
+            list.sort((a, b) => {
+                const da = new Date(a.created_at).getTime();
+                const db = new Date(b.created_at).getTime();
+                return dateOrder === 'oldest' ? da - db : db - da;
+            });
+
+            tbody.innerHTML = list.length === 0
+                ? '<tr><td colspan="8" style="text-align: center; padding: 24px; color: #666;">Нет заявок по заданным фильтрам</td></tr>'
+                : list.map(order => `
+                    <tr style="${order.status === 'pending' ? 'background: #fffbeb;' : ''}">
+                        <td><strong>${escapeHtml(order.tracking_id)}</strong></td>
+                        <td>${escapeHtml(order.client_name || 'Неизвестно')}</td>
+                        <td style="font-size: 12px;">${escapeHtml(order.origin_address)} → ${escapeHtml(order.dest_address)}</td>
+                        <td>${order.weight} кг / ${order.volume} м³</td>
+                        <td>${escapeHtml(getCargoTypeDisplay(order.cargo_type, order.cargo_type_custom))}</td>
+                        <td>${order.price} ₽</td>
+                        <td><span class="status status-${order.status}">${statusNames[order.status]}</span></td>
+                        <td>
+                            ${order.status === 'pending' ?
+                                '<button class="btn btn-success" onclick="acceptOrder(' + order.id + ')" style="margin: 2px;">Принять</button>' +
+                                '<button class="btn btn-danger" onclick="showRejectModal(' + order.id + ')" style="margin: 2px;">Отклонить</button>'
+                            : order.status === 'in_progress' ?
+                                '<button class="btn btn-primary" onclick="assignTransport(' + order.id + ')" style="margin: 2px;">Назначить</button>'
+                            : '—'}
+                        </td>
+                    </tr>
+                `).join('');
+        }
+
         async function loadManagerOrders(container) {
             container.innerHTML = '<div class="section active"><h2>Заявки</h2><div class="loading">Загрузка...</div></div>';
 
@@ -1468,21 +1654,35 @@
 
                 const data = await response.json();
                 const orders = Array.isArray(data) ? data : (data.results || []);
-                const activeOrders = orders.filter(o => o.status !== 'rejected' && o.status !== 'delivered');
-
-                if (activeOrders.length === 0) {
-                    container.innerHTML = `
-                        <div class="section active">
-                            <h2>📦 Заявки</h2>
-                            <div class="no-data">Нет активных заявок</div>
-                        </div>
-                    `;
-                    return;
-                }
+                container._managerOrdersData = orders;
+                window.allOrders = orders;
 
                 container.innerHTML = `
                     <div class="section active">
-                        <h2>📦 Заявки</h2>
+                        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
+                            <h2 style="margin: 0;">📦 Заявки</h2>
+                            <input type="text" id="managerOrdersSearch" placeholder="Поиск по ID, клиенту, маршруту, грузу..." style="max-width: 320px; padding: 8px 12px; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 14px;" oninput="applyManagerOrdersFilters()">
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 16px;">
+                            <label style="display: flex; align-items: center; gap: 6px; font-size: 14px; color: #555;">
+                                Статус:
+                                <select id="managerOrdersStatusFilter" style="padding: 6px 10px; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 14px;" onchange="applyManagerOrdersFilters()">
+                                    <option value="">Все</option>
+                                    <option value="pending">На рассмотрении</option>
+                                    <option value="in_progress">В работе</option>
+                                    <option value="shipped">В пути</option>
+                                    <option value="delivered">Доставлено</option>
+                                    <option value="rejected">Отклонено</option>
+                                </select>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 6px; font-size: 14px; color: #555;">
+                                Дата:
+                                <select id="managerOrdersDateSort" style="padding: 6px 10px; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 14px;" onchange="applyManagerOrdersFilters()">
+                                    <option value="newest">Сначала новые</option>
+                                    <option value="oldest">Сначала старые</option>
+                                </select>
+                            </label>
+                        </div>
                         <div id="managerOrdersMessage"></div>
                         <table>
                             <thead>
@@ -1497,32 +1697,12 @@
                                     <th>Действия</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                ${activeOrders.map(order => `
-                                    <tr style="${order.status === 'pending' ? 'background: #fffbeb;' : ''}">
-                                        <td><strong>${order.tracking_id}</strong></td>
-                                        <td>${order.client_name || 'Неизвестно'}</td>
-                                        <td style="font-size: 12px;">${order.origin_address} → ${order.dest_address}</td>
-                                        <td>${order.weight} кг / ${order.volume} м³</td>
-                                        <td>${getCargoTypeDisplay(order.cargo_type, order.cargo_type_custom)}</td>
-                                        <td>${order.price} ₽</td>
-                                        <td><span class="status status-${order.status}">${statusNames[order.status]}</span></td>
-                                        <td>
-                                            ${order.status === 'pending' ? 
-                                                '<button class="btn btn-success" onclick="acceptOrder(' + order.id + ')" style="margin: 2px;">Принять</button>' +
-                                                '<button class="btn btn-danger" onclick="showRejectModal(' + order.id + ')" style="margin: 2px;">Отклонить</button>' 
-                                            : order.status === 'in_progress' ?
-                                                '<button class="btn btn-primary" onclick="assignTransport(' + order.id + ')" style="margin: 2px;">Назначить</button>'
-                                            : '—'}
-                                        </td>
-                                    </tr>
-                                `).join('')}
+                            <tbody id="managerOrdersTableBody">
                             </tbody>
                         </table>
                     </div>
                 `;
-
-                window.allOrders = orders;
+                applyManagerOrdersFilters();
             } catch (error) {
                 console.error('Ошибка:', error);
                 container.innerHTML = '<div class="section active"><h2>Заявки</h2><p style="color: red;">Ошибка загрузки заявок</p></div>';
@@ -1874,6 +2054,48 @@
             alert('Функция автоматического применения рекомендаций будет доступна в следующей версии.\n\nПока используйте рекомендации AI для ручного распределения грузов.');
         }
 
+        function applyRejectedOrdersFilters() {
+            const container = document.getElementById('contentContainer');
+            const data = container._rejectedOrdersData;
+            if (!data || !Array.isArray(data)) return;
+            const searchEl = document.getElementById('rejectedOrdersSearch');
+            const dateEl = document.getElementById('rejectedOrdersDateSort');
+            const tbody = document.getElementById('rejectedOrdersTableBody');
+            if (!searchEl || !dateEl || !tbody) return;
+
+            const search = (searchEl.value || '').trim().toLowerCase();
+            const dateOrder = (dateEl.value || 'newest').trim();
+
+            let list = data.slice();
+            if (search) {
+                list = list.filter(o => {
+                    const track = (o.tracking_id || '').toLowerCase();
+                    const client = (o.client_name || '').toLowerCase();
+                    const origin = (o.origin_address || '').toLowerCase();
+                    const dest = (o.dest_address || '').toLowerCase();
+                    const reason = (o.rejection_reason || '').toLowerCase();
+                    return track.includes(search) || client.includes(search) || origin.includes(search) || dest.includes(search) || reason.includes(search);
+                });
+            }
+            list.sort((a, b) => {
+                const da = new Date(a.created_at).getTime();
+                const db = new Date(b.created_at).getTime();
+                return dateOrder === 'oldest' ? da - db : db - da;
+            });
+
+            tbody.innerHTML = list.length === 0
+                ? '<tr><td colspan="5" style="text-align: center; padding: 24px; color: #666;">Нет заявок по заданным фильтрам</td></tr>'
+                : list.map(order => `
+                    <tr>
+                        <td><strong>${escapeHtml(order.tracking_id)}</strong></td>
+                        <td>${escapeHtml(order.client_name || 'Неизвестно')}</td>
+                        <td style="font-size: 12px;">${escapeHtml(order.origin_address)} → ${escapeHtml(order.dest_address)}</td>
+                        <td>${new Date(order.created_at).toLocaleDateString('ru-RU')}</td>
+                        <td style="color: #dc3545;">${order.rejection_reason ? escapeHtml(order.rejection_reason) : 'Не указана'}</td>
+                    </tr>
+                `).join('');
+        }
+
         async function loadRejectedOrders(container) {
             container.innerHTML = '<div class="section active"><h2>Отклоненные заявки</h2><div class="loading">Загрузка...</div></div>';
 
@@ -1887,6 +2109,7 @@
                 const data = await response.json();
                 const orders = Array.isArray(data) ? data : (data.results || []);
                 const rejectedOrders = orders.filter(o => o.status === 'rejected');
+                container._rejectedOrdersData = rejectedOrders;
 
                 if (rejectedOrders.length === 0) {
                     container.innerHTML = `
@@ -1900,7 +2123,19 @@
 
                 container.innerHTML = `
                     <div class="section active">
-                        <h2>❌ Отклоненные заявки (Архив)</h2>
+                        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
+                            <h2 style="margin: 0;">❌ Отклоненные заявки</h2>
+                            <input type="text" id="rejectedOrdersSearch" placeholder="Поиск по ID, клиенту, маршруту, причине..." style="max-width: 320px; padding: 8px 12px; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 14px;" oninput="applyRejectedOrdersFilters()">
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 16px;">
+                            <label style="display: flex; align-items: center; gap: 6px; font-size: 14px; color: #555;">
+                                Дата:
+                                <select id="rejectedOrdersDateSort" style="padding: 6px 10px; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 14px;" onchange="applyRejectedOrdersFilters()">
+                                    <option value="newest">Сначала новые</option>
+                                    <option value="oldest">Сначала старые</option>
+                                </select>
+                            </label>
+                        </div>
                         <table>
                             <thead>
                                 <tr>
@@ -1911,20 +2146,12 @@
                                     <th>Причина отклонения</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                ${rejectedOrders.map(order => `
-                                    <tr>
-                                        <td><strong>${order.tracking_id}</strong></td>
-                                        <td>${order.client_name || 'Неизвестно'}</td>
-                                        <td style="font-size: 12px;">${order.origin_address} → ${order.dest_address}</td>
-                                        <td>${new Date(order.created_at).toLocaleDateString('ru-RU')}</td>
-                                        <td style="color: #dc3545;">${order.rejection_reason || 'Не указана'}</td>
-                                    </tr>
-                                `).join('')}
+                            <tbody id="rejectedOrdersTableBody">
                             </tbody>
                         </table>
                     </div>
                 `;
+                applyRejectedOrdersFilters();
             } catch (error) {
                 console.error('Ошибка:', error);
                 container.innerHTML = '<div class="section active"><h2>Отклоненные</h2><p style="color: red;">Ошибка загрузки</p></div>';
@@ -1932,21 +2159,27 @@
         }
 
         function assignTransport(orderId) {
-            alert('Назначение транспорта будет доступно после реализации раздела "Планирование"');
+            window.pendingAssignOrderId = parseInt(orderId, 10);
+            document.querySelectorAll('.menu-link').forEach(l => l.classList.remove('active'));
+            const planningLink = document.querySelector('[data-section="planning"]');
+            if (planningLink) planningLink.classList.add('active');
+            loadSection('planning');
         }
 
         async function loadFleet(container) {
             container.innerHTML = '<div class="section active"><h2>🚛 Автопарк</h2><div class="loading">Загрузка...</div></div>';
 
             try {
-                const response = await fetch(API_URL + '/trucks/', {
-                    headers: { 'Authorization': 'Bearer ' + token }
-                });
-
-                if (!response.ok) throw new Error('Ошибка загрузки');
-
-                const data = await response.json();
-                const trucks = Array.isArray(data) ? data : (data.results || []);
+                const [trucksRes, driversRes] = await Promise.all([
+                    fetch(API_URL + '/trucks/', { headers: { 'Authorization': 'Bearer ' + token } }),
+                    fetch(API_URL + '/drivers/', { headers: { 'Authorization': 'Bearer ' + token } })
+                ]);
+                if (!trucksRes.ok) throw new Error('Ошибка загрузки');
+                const trucksData = await trucksRes.json();
+                const trucks = Array.isArray(trucksData) ? trucksData : (trucksData.results || []);
+                const driversData = await driversRes.json().catch(() => []);
+                const drivers = Array.isArray(driversData) ? driversData : (driversData.results || []);
+                const freeDrivers = drivers.filter(d => d.is_available && !trucks.some(t => t.driver === d.id));
 
                 container.innerHTML = `
                     <div class="section active">
@@ -1958,37 +2191,34 @@
                             '<div class="no-data">Автопарк пуст. Добавьте первую машину.</div>' :
                             '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;">' +
                                 trucks.map(truck => {
-                                    const statusColors = {
-                                        'available': '#22c55e',
-                                        'in_transit': '#3b82f6',
-                                        'maintenance': '#ef4444'
-                                    };
-                                    const statusIcons = {
-                                        'available': '🟢',
-                                        'in_transit': '🔵',
-                                        'maintenance': '🔴'
-                                    };
-                                    const statusNames = {
-                                        'available': 'Свободен',
-                                        'in_transit': 'В рейсе',
-                                        'maintenance': 'На ремонте'
-                                    };
+                                    const statusColors = { 'available': '#22c55e', 'in_transit': '#3b82f6', 'maintenance': '#ef4444' };
+                                    const statusIcons = { 'available': '🟢', 'in_transit': '🔵', 'maintenance': '🔴' };
+                                    const statusNames = { 'available': 'Свободен', 'in_transit': 'В рейсе', 'maintenance': 'На ремонте' };
                                     const hasNoDriver = truck.status === 'available' && !truck.driver;
-                                    
+                                    const driverOptions = hasNoDriver && freeDrivers.length > 0
+                                        ? '<option value="">— Выберите водителя —</option>' + freeDrivers.map(d => '<option value="' + d.id + '">' + (d.name || 'ID ' + d.id) + '</option>').join('')
+                                        : '';
                                     return `
                                         <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); ${hasNoDriver ? 'border: 3px solid #ef4444;' : ''}">
                                             ${hasNoDriver ? '<div style="background: #ef4444; color: white; padding: 8px; border-radius: 6px; margin-bottom: 10px; text-align: center; font-weight: bold;">⚠️ Простой! Нет водителя</div>' : ''}
                                             <div style="font-size: 24px; font-weight: bold; margin-bottom: 10px;">${truck.plate_number}</div>
                                             <div style="color: #666; margin-bottom: 15px;">${truck.brand} ${truck.model}</div>
-                                            <div style="margin-bottom: 10px;">
-                                                <strong>Грузоподъемность:</strong> ${truck.capacity_weight} кг
-                                            </div>
-                                            <div style="margin-bottom: 10px;">
-                                                <strong>Объем:</strong> ${truck.capacity_volume} м³
-                                            </div>
+                                            <div style="margin-bottom: 10px;"><strong>Грузоподъемность:</strong> ${truck.capacity_weight} кг</div>
+                                            <div style="margin-bottom: 10px;"><strong>Объем:</strong> ${truck.capacity_volume} м³</div>
                                             <div style="margin-bottom: 15px;">
                                                 <strong>Водитель:</strong> ${truck.driver_name || 'Не назначен'}
                                             </div>
+                                            ${hasNoDriver && freeDrivers.length > 0 ? `
+                                                <div style="margin-bottom: 12px;">
+                                                    <label style="font-size: 12px; color: #666;">Свободные водители:</label>
+                                                    <div style="display: flex; gap: 8px; align-items: center; margin-top: 6px;">
+                                                        <select id="driverSelect_${truck.id}" style="flex: 1; padding: 8px; border: 1px solid #e0e0e0; border-radius: 6px;">
+                                                            ${driverOptions}
+                                                        </select>
+                                                        <button type="button" class="btn btn-primary" onclick="assignDriverToTruck(${truck.id})">Закрепить</button>
+                                                    </div>
+                                                </div>
+                                            ` : ''}
                                             <div style="display: inline-block; padding: 6px 12px; border-radius: 20px; background: ${statusColors[truck.status]}; color: white; font-size: 14px; margin-bottom: 15px;">
                                                 ${statusIcons[truck.status]} ${statusNames[truck.status]}
                                             </div>
@@ -2009,6 +2239,32 @@
             }
         }
 
+        async function assignDriverToTruck(truckId) {
+            const sel = document.getElementById('driverSelect_' + truckId);
+            if (!sel || !sel.value) {
+                showFleetMessage('Выберите водителя', 'error');
+                return;
+            }
+            const driverId = parseInt(sel.value, 10);
+            try {
+                const response = await fetch(API_URL + '/trucks/' + truckId + '/', {
+                    method: 'PATCH',
+                    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ driver: driverId })
+                });
+                if (response.ok) {
+                    showFleetMessage('Водитель закреплён за машиной', 'success');
+                    loadSection('fleet');
+                } else {
+                    const err = await response.json().catch(() => ({}));
+                    showFleetMessage(err.driver ? (Array.isArray(err.driver) ? err.driver[0] : err.driver) : 'Ошибка назначения', 'error');
+                }
+            } catch (e) {
+                console.error(e);
+                showFleetMessage('Ошибка соединения с сервером', 'error');
+            }
+        }
+
         function showAddTruckForm() {
             openTruckModal();
         }
@@ -2021,7 +2277,7 @@
             const plate = document.getElementById('truckPlate').value.trim();
             const brand = document.getElementById('truckBrand').value.trim();
             const model = document.getElementById('truckModel').value.trim();
-            const weight = parseInt(document.getElementById('truckWeight').value);
+            const weight = parseInt(document.getElementById('truckWeight').value, 10);
             const volume = parseFloat(document.getElementById('truckVolume').value);
             const status = document.getElementById('truckStatus').value;
 
@@ -2030,30 +2286,38 @@
                 return;
             }
 
+            const driverSel = document.getElementById('truckDriverSelect');
+            const driverId = driverSel && driverSel.value ? parseInt(driverSel.value, 10) : null;
+            const payload = {
+                plate_number: plate,
+                brand: brand,
+                model: model,
+                capacity_weight: weight,
+                capacity_volume: volume,
+                status: status,
+                driver: driverId
+            };
+            const isEdit = window.editingTruckId;
+            const url = isEdit ? API_URL + '/trucks/' + window.editingTruckId + '/' : API_URL + '/trucks/';
+            const method = isEdit ? 'PATCH' : 'POST';
+
             try {
-                const response = await fetch(API_URL + '/trucks/', {
-                    method: 'POST',
+                const response = await fetch(url, {
+                    method: method,
                     headers: {
                         'Authorization': 'Bearer ' + token,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({
-                        plate_number: plate,
-                        brand: brand,
-                        model: model,
-                        capacity_weight: weight,
-                        capacity_volume: volume,
-                        status: status
-                    })
+                    body: JSON.stringify(payload)
                 });
 
                 if (response.ok) {
                     closeTruckModal();
-                    showFleetMessage('Машина успешно добавлена!', 'success');
+                    showFleetMessage(isEdit ? 'Машина успешно обновлена!' : 'Машина успешно добавлена!', 'success');
                     loadSection('fleet');
                 } else {
                     const errorData = await response.json();
-                    showFleetMessage('Ошибка: ' + (errorData.plate_number ? 'Машина с таким госномером уже существует' : 'Не удалось добавить машину'), 'error');
+                    showFleetMessage('Ошибка: ' + (errorData.plate_number ? (Array.isArray(errorData.plate_number) ? errorData.plate_number[0] : errorData.plate_number) : (isEdit ? 'Не удалось обновить' : 'Не удалось добавить машину')), 'error');
                 }
             } catch (error) {
                 console.error('Ошибка:', error);
@@ -2082,8 +2346,36 @@
             }
         }
 
-        function editTruck(truckId) {
-            alert('Редактирование будет доступно в следующей версии');
+        async function editTruck(truckId) {
+            try {
+                const response = await fetch(API_URL + '/trucks/' + truckId + '/', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (!response.ok) throw new Error('Ошибка загрузки');
+                const truck = await response.json();
+                window.editingTruckId = truckId;
+                document.getElementById('truckPlate').value = truck.plate_number || '';
+                document.getElementById('truckBrand').value = truck.brand || '';
+                document.getElementById('truckModel').value = truck.model || '';
+                document.getElementById('truckWeight').value = truck.capacity_weight || '';
+                document.getElementById('truckVolume').value = truck.capacity_volume || '';
+                document.getElementById('truckStatus').value = truck.status || 'available';
+                const brandEl = document.getElementById('truckBrand');
+                const modelEl = document.getElementById('truckModel');
+                brandEl.readOnly = true;
+                modelEl.readOnly = true;
+                brandEl.style.background = '#f0f0f0';
+                modelEl.style.background = '#f0f0f0';
+                const titleEl = document.getElementById('truckModalTitle');
+                const btnEl = document.getElementById('truckModalSubmitBtn');
+                if (titleEl) titleEl.textContent = 'Редактировать транспорт';
+                if (btnEl) btnEl.textContent = 'Сохранить';
+                document.getElementById('truckModal').classList.add('active');
+                await fillTruckDriverSelect(truckId, truck.driver || null);
+            } catch (e) {
+                console.error(e);
+                showFleetMessage('Ошибка загрузки данных машины', 'error');
+            }
         }
 
         function showFleetMessage(message, type) {
@@ -2196,9 +2488,17 @@
                 alert('Заполните все обязательные поля');
                 return;
             }
-
+            const phoneDigits = phone.replace(/\D/g, '');
+            if (phoneDigits.length < 10) {
+                alert('Введите корректный номер телефона (10 цифр)');
+                return;
+            }
             if (truckValue === 'own' && (!carBrand || !car || !insurance)) {
-                alert('Заполните все данные автомобиля');
+                alert('Заполните все данные автомобиля (марка, госномер, полис)');
+                return;
+            }
+            if (truckValue === 'own' && insurance.replace(/[^0-9A-ZА-Я]/g, '').length < 7) {
+                alert('Полис ОСАГО: укажите номер в формате XXX-XXXXXX');
                 return;
             }
 
@@ -2277,11 +2577,30 @@
             }
         }
 
-        function openTruckModal() {
+        async function openTruckModal() {
+            window.editingTruckId = null;
+            const titleEl = document.getElementById('truckModalTitle');
+            const btnEl = document.getElementById('truckModalSubmitBtn');
+            if (titleEl) titleEl.textContent = 'Добавить транспорт';
+            if (btnEl) btnEl.textContent = 'Добавить';
+            document.getElementById('truckPlate').value = '';
+            document.getElementById('truckBrand').value = '';
+            document.getElementById('truckModel').value = '';
+            document.getElementById('truckWeight').value = '';
+            document.getElementById('truckVolume').value = '';
+            document.getElementById('truckStatus').value = 'available';
+            const brandEl = document.getElementById('truckBrand');
+            const modelEl = document.getElementById('truckModel');
+            brandEl.readOnly = false;
+            modelEl.readOnly = false;
+            brandEl.style.background = '';
+            modelEl.style.background = '';
             document.getElementById('truckModal').classList.add('active');
+            await fillTruckDriverSelect(null, null);
         }
 
         function closeTruckModal() {
+            window.editingTruckId = null;
             document.getElementById('truckModal').classList.remove('active');
             document.getElementById('truckPlate').value = '';
             document.getElementById('truckBrand').value = '';
@@ -2289,6 +2608,39 @@
             document.getElementById('truckWeight').value = '';
             document.getElementById('truckVolume').value = '';
             document.getElementById('truckStatus').value = 'available';
+            const sel = document.getElementById('truckDriverSelect');
+            if (sel) { sel.innerHTML = '<option value="">— Не назначать —</option>'; sel.value = ''; }
+            document.getElementById('truckBrand').readOnly = false;
+            document.getElementById('truckModel').readOnly = false;
+            document.getElementById('truckBrand').style.background = '';
+            document.getElementById('truckModel').style.background = '';
+        }
+
+        async function fillTruckDriverSelect(currentTruckId, currentDriverId) {
+            const sel = document.getElementById('truckDriverSelect');
+            if (!sel) return;
+            try {
+                const [driversRes, trucksRes] = await Promise.all([
+                    fetch(API_URL + '/drivers/', { headers: { 'Authorization': 'Bearer ' + token } }),
+                    fetch(API_URL + '/trucks/', { headers: { 'Authorization': 'Bearer ' + token } })
+                ]);
+                const driversData = await driversRes.json();
+                const trucksData = await trucksRes.json();
+                const drivers = Array.isArray(driversData) ? driversData : (driversData.results || []);
+                const trucks = Array.isArray(trucksData) ? trucksData : (trucksData.results || []);
+                const freeDrivers = drivers.filter(d => {
+                    if (!d.is_available) return false;
+                    const onTruck = trucks.find(t => t.driver === d.id);
+                    if (!onTruck) return true;
+                    return currentTruckId && onTruck.id === currentTruckId;
+                });
+                sel.innerHTML = '<option value="">— Не назначать —</option>' +
+                    freeDrivers.map(d => '<option value="' + d.id + '">' + (d.name || 'ID ' + d.id) + '</option>').join('');
+                sel.value = currentDriverId ? String(currentDriverId) : '';
+            } catch (e) {
+                console.error(e);
+                sel.innerHTML = '<option value="">— Не назначать —</option>';
+            }
         }
 
         async function openDriverModal() {
@@ -2370,7 +2722,7 @@
                                                     </div>
                                                     <div style="font-size: 13px; color: #333; margin-bottom: 8px;">${order.cargo_type || 'Общий груз'}</div>
                                                     <div style="font-size: 12px; color: #666; margin-bottom: 10px;">
-                                                        📍 ${order.origin} → ${order.destination}
+                                                        📍 ${(order.origin_address || order.origin || '')} → ${(order.dest_address || order.destination || '')}
                                                     </div>
                                                     <div style="display: flex; gap: 8px; font-size: 12px; margin-bottom: 12px;">
                                                         <span style="background: #e0f2fe; padding: 6px 10px; border-radius: 6px; flex: 1; text-align: center;">
@@ -2480,6 +2832,12 @@
                     </div>
                 `;
 
+                const pendingId = window.pendingAssignOrderId;
+                if (pendingId) {
+                    window.pendingAssignOrderId = null;
+                    const order = orders.find(o => o.id === pendingId);
+                    if (order) showLoadTruckModal(order.id, order.weight, order.volume, order.tracking_id || '');
+                }
             } catch (error) {
                 console.error('Ошибка:', error);
                 container.innerHTML = '<div class="section active"><h2>Планирование</h2><p style="color: red;">Ошибка загрузки</p></div>';
@@ -2683,12 +3041,12 @@
     <div id="truckModal" class="modal" onclick="if(event.target === this) closeTruckModal()">
         <div class="modal-content" style="position: relative;">
             <button class="modal-close" onclick="closeTruckModal()">×</button>
-            <h3>Добавить транспорт</h3>
+            <h3 id="truckModalTitle">Добавить транспорт</h3>
             
             <div class="form-row">
                 <div class="form-group">
                     <label>Госномер *</label>
-                    <input type="text" id="truckPlate" required placeholder="А 123 ВС">
+                    <input type="text" id="truckPlate" required placeholder="А 123 ВС 77" maxlength="12" oninput="formatPlateInput(this)">
                 </div>
                 <div class="form-group">
                     <label>Марка *</label>
@@ -2711,6 +3069,16 @@
                 </div>
             </div>
 
+            <div class="form-row-full">
+                <div class="form-group">
+                    <label>Водитель</label>
+                    <select id="truckDriverSelect">
+                        <option value="">— Не назначать —</option>
+                    </select>
+                    <small style="color: #666;">Показываются только свободные водители</small>
+                </div>
+            </div>
+
             <div class="form-row">
                 <div class="form-group">
                     <label>Грузоподъемность (кг) *</label>
@@ -2724,7 +3092,7 @@
 
             <div class="modal-buttons">
                 <button class="btn btn-secondary" onclick="closeTruckModal()">Отмена</button>
-                <button class="btn btn-primary" onclick="saveTruck()">Добавить</button>
+                <button class="btn btn-primary" id="truckModalSubmitBtn" onclick="saveTruck()">Добавить</button>
             </div>
         </div>
     </div>
@@ -2801,11 +3169,11 @@
             <div class="form-row">
                 <div class="form-group">
                     <label>Телефон *</label>
-                    <input type="tel" id="driverPhone" required placeholder="+7 (999) ...">
+                    <input type="tel" id="driverPhone" required placeholder="+7 (999) 123-45-67" maxlength="18" oninput="formatPhoneInput(this)">
                 </div>
                 <div class="form-group">
-                    <label>Паспорт *</label>
-                    <input type="text" id="driverLicense" required placeholder="Серия Номер">
+                    <label>Категория прав (допуск к управлению) *</label>
+                    <input type="text" id="driverLicense" required placeholder="B, C, CE" maxlength="50" oninput="formatLicenseCategoryInput(this)" title="Только латинские буквы, цифры, запятая, дефис">
                 </div>
             </div>
 
@@ -2844,13 +3212,13 @@
                     </div>
                     <div class="form-group">
                         <label>Госномер *</label>
-                        <input type="text" id="driverCar" placeholder="А 777 АА">
+                        <input type="text" id="driverCar" placeholder="А 123 ВС 77" maxlength="12" oninput="formatPlateInput(this)">
                     </div>
                 </div>
                 <div class="form-row-full">
                     <div class="form-group">
-                        <label>Полис *</label>
-                        <input type="text" id="driverInsurance" placeholder="XXX-000000">
+                        <label>Полис ОСАГО *</label>
+                        <input type="text" id="driverInsurance" placeholder="XXX-000000" maxlength="12" oninput="formatInsuranceInput(this)">
                     </div>
                 </div>
             </div>

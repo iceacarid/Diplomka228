@@ -89,7 +89,29 @@ class CurrentUserView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     def patch(self, request):
-        serializer = UserSerializer(request.user, data=request.data, partial=True, context={'request': request})
+        data = request.data.copy()
+        # Смена пароля: требуем текущий пароль и новый (два раза проверяется на фронте)
+        new_password = data.pop('new_password', None) or data.pop('password', None)
+        old_password = data.pop('old_password', None)
+        if new_password is not None:
+            if not old_password:
+                return Response(
+                    {'old_password': ['Укажите текущий пароль']},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            if not request.user.check_password(old_password):
+                return Response(
+                    {'old_password': ['Неверный текущий пароль']},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            if len(new_password) < 6:
+                return Response(
+                    {'new_password': ['Пароль должен быть минимум 6 символов']},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            request.user.set_password(new_password)
+            request.user.save()
+        serializer = UserSerializer(request.user, data=data, partial=True, context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -152,6 +174,12 @@ class TruckViewSet(viewsets.ModelViewSet):
         if status_filter:
             queryset = queryset.filter(status=status_filter)
         return queryset
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        # Один водитель — одна машина: снять его с других машин
+        if instance.driver_id:
+            Truck.objects.filter(driver_id=instance.driver_id).exclude(pk=instance.pk).update(driver_id=None)
 
 
 class OrderViewSet(viewsets.ModelViewSet):

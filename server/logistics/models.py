@@ -141,6 +141,7 @@ class Order(models.Model):
     volume = models.FloatField(verbose_name='Объём груза (м³)')
     cargo_type = models.CharField(max_length=30, choices=CARGO_TYPE_CHOICES, default='general', verbose_name='Тип груза')
     cargo_type_custom = models.CharField(max_length=255, blank=True, null=True, verbose_name='Тип груза (свой вариант)')
+    cargo_description = models.TextField(blank=True, null=True, verbose_name='Описание товара (что везём)')
     price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Стоимость (₽)')
     eta = models.DateTimeField(null=True, blank=True, verbose_name='Примерное время прибытия')
     rejection_reason = models.TextField(blank=True, null=True, verbose_name='Причина отклонения')

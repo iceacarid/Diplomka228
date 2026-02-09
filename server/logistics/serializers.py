@@ -116,33 +116,48 @@ class DriverSerializer(serializers.ModelSerializer):
 
 
 class TruckSerializer(serializers.ModelSerializer):
-    driver_name = serializers.CharField(source='driver.name', read_only=True)
+    driver_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Truck
         fields = '__all__'
 
+    def get_driver_name(self, obj):
+        if obj.driver_id and obj.driver:
+            return obj.driver.name or ''
+        return ''
+
 
 class OrderListSerializer(serializers.ModelSerializer):
+    """Данные заказов читаются из БД (Order), все поля — из модели."""
     client_name = serializers.CharField(source='client.name', read_only=True)
-    manager_name = serializers.CharField(source='manager.name', read_only=True)
-    truck_plate = serializers.CharField(source='truck.plate_number', read_only=True)
-    driver_name = serializers.CharField(source='driver.name', read_only=True)
+    manager_name = serializers.SerializerMethodField()
+    truck_plate = serializers.SerializerMethodField()
+    driver_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
         fields = ('id', 'tracking_id', 'client', 'client_name', 'manager', 'manager_name', 
                   'truck', 'truck_plate', 'driver', 'driver_name', 'status', 
-                  'origin_address', 'dest_address', 'weight', 'volume', 'cargo_type', 'cargo_type_custom', 'price', 
-                  'eta', 'created_at')
+                  'origin_address', 'dest_address', 'weight', 'volume', 'cargo_type', 'cargo_type_custom', 'cargo_description', 'price', 
+                  'eta', 'rejection_reason', 'created_at')
         read_only_fields = ('tracking_id', 'created_at')
+
+    def get_manager_name(self, obj):
+        return obj.manager.name if obj.manager else ''
+
+    def get_truck_plate(self, obj):
+        return obj.truck.plate_number if obj.truck else ''
+
+    def get_driver_name(self, obj):
+        return obj.driver.name if obj.driver else ''
 
 
 class OrderDetailSerializer(serializers.ModelSerializer):
     client = UserSerializer(read_only=True)
-    manager = UserSerializer(read_only=True)
-    truck = TruckSerializer(read_only=True)
-    driver = DriverSerializer(read_only=True)
+    manager = UserSerializer(read_only=True, allow_null=True)
+    truck = TruckSerializer(read_only=True, allow_null=True)
+    driver = DriverSerializer(read_only=True, allow_null=True)
 
     class Meta:
         model = Order
@@ -151,14 +166,15 @@ class OrderDetailSerializer(serializers.ModelSerializer):
 
 
 class OrderCreateSerializer(serializers.ModelSerializer):
+    """Все переданные поля сохраняются в БД через Order.objects.create()."""
     class Meta:
         model = Order
-        fields = ('origin_address', 'dest_address', 'weight', 'volume', 'cargo_type', 'cargo_type_custom', 'price')
+        fields = ('origin_address', 'dest_address', 'weight', 'volume', 'cargo_type', 'cargo_type_custom', 'cargo_description', 'price')
 
     def create(self, validated_data):
         validated_data['client'] = self.context['request'].user
         validated_data['status'] = 'pending'
-        return super().create(validated_data)
+        return super().create(validated_data)  # сохраняет в БД все поля из validated_data
 
 
 class FavoriteAddrSerializer(serializers.ModelSerializer):

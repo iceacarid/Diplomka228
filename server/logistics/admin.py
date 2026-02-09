@@ -45,9 +45,9 @@ class TruckAdmin(admin.ModelAdmin):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ('tracking_id', 'client', 'status', 'origin_address', 'dest_address', 'price', 'created_at')
+    list_display = ('tracking_id', 'client', 'status', 'cargo_description', 'origin_address', 'dest_address', 'price', 'created_at')
     list_filter = ('status', 'created_at')
-    search_fields = ('tracking_id', 'client__name', 'origin_address', 'dest_address')
+    search_fields = ('tracking_id', 'client__name', 'origin_address', 'dest_address', 'cargo_description')
     readonly_fields = ('tracking_id', 'created_at')
     ordering = ('-created_at',)
 
