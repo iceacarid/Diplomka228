@@ -325,14 +325,21 @@ def calculate_price(request):
     try:
         tariff = Tariff.objects.filter(is_active=True).first()
         if not tariff:
-            return Response({'error': 'Тариф не найден'}, status=status.HTTP_404_NOT_FOUND)
+            # Пустая БД: используем значения по умолчанию, чтобы калькулятор работал
+            price_per_km = 50.0
+            weight_coef = 1.0
+            tariff_name = 'По умолчанию (добавьте тариф в админке)'
+        else:
+            price_per_km = float(tariff.price_per_km)
+            weight_coef = float(tariff.weight_coef)
+            tariff_name = tariff.name
 
-        price = (distance * float(tariff.price_per_km)) + (weight * float(tariff.weight_coef))
+        price = (distance * price_per_km) + (weight * weight_coef)
 
         return Response({
             'price': round(price, 2),
             'distance_km': distance,
-            'tariff_name': tariff.name,
+            'tariff_name': tariff_name,
             'estimated_delivery_days': max(1, int(distance / 500))
         })
     except Exception as e:

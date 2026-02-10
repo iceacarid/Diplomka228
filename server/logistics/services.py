@@ -1072,8 +1072,8 @@ class YandexMapsService:
         except requests.exceptions.Timeout:
             print("Таймаут при расчёте маршрута")
             return self._fallback_route_calculation(coordinates, len(points))
-        except requests.exceptions.RequestException as e:
-            print(f"Ошибка HTTP при расчёте маршрута: {e}")
+        except requests.exceptions.RequestException:
+            print("Ошибка при расчёте маршрута (Yandex Router API: проверьте ключ и доступ). Используется примерный расчёт.")
             return self._fallback_route_calculation(coordinates, len(points))
         except (KeyError, ValueError) as e:
             print(f"Ошибка парсинга маршрута: {e}")

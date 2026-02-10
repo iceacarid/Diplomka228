@@ -17,12 +17,15 @@ env_default = BASE_DIR / '.env'
 
 if env_local.exists():
     load_dotenv(env_local, override=True)
-    print("[OK] Загружены настройки из .env.local")
+    if not os.getenv('RENDER'):
+        print("[OK] Загружены настройки из .env.local")
 elif env_default.exists():
     load_dotenv(env_default)
-    print("[WARN] Загружены настройки из .env")
+    if not os.getenv('RENDER'):
+        print("[WARN] Загружены настройки из .env")
 else:
-    print("[WARN] Файлы .env.local и .env не найдены. Используются переменные окружения.")
+    if not os.getenv('RENDER'):
+        print("[WARN] Файлы .env.local и .env не найдены. Используются переменные окружения.")
 
 
 # Quick-start development settings - unsuitable for production
