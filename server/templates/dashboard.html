@@ -2202,11 +2202,13 @@
                                     const statusIcons = { 'available': '🟢', 'in_transit': '🔵', 'maintenance': '🔴' };
                                     const statusNames = { 'available': 'Свободен', 'in_transit': 'В рейсе', 'maintenance': 'На ремонте' };
                                     const hasNoDriver = truck.status === 'available' && !truck.driver;
+                                    const isPrivate = truck.is_company_owned === false;
                                     const driverOptions = hasNoDriver && freeDrivers.length > 0
                                         ? '<option value="">— Выберите водителя —</option>' + freeDrivers.map(d => '<option value="' + d.id + '">' + (d.name || 'ID ' + d.id) + '</option>').join('')
                                         : '';
                                     return `
-                                        <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); ${hasNoDriver ? 'border: 3px solid #ef4444;' : ''}">
+                                        <div style="background: ${isPrivate ? '#fefce8' : 'white'}; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border: ${isPrivate ? '2px solid #eab308' : (hasNoDriver ? '3px solid #ef4444' : '2px solid #e5e7eb')};">
+                                            ${isPrivate ? '<div style="background: #eab308; color: #1c1917; padding: 6px; border-radius: 6px; margin-bottom: 10px; text-align: center; font-weight: bold; font-size: 12px;">🚗 Не машина компании</div>' : ''}
                                             ${hasNoDriver ? '<div style="background: #ef4444; color: white; padding: 8px; border-radius: 6px; margin-bottom: 10px; text-align: center; font-weight: bold;">⚠️ Простой! Нет водителя</div>' : ''}
                                             <div style="font-size: 24px; font-weight: bold; margin-bottom: 10px;">${truck.plate_number}</div>
                                             <div style="color: #666; margin-bottom: 15px;">${truck.brand} ${truck.model}</div>
@@ -2434,7 +2436,7 @@
                                                     '<strong>Назначен на:</strong><br>' +
                                                     '<span style="font-size: 14px;">' + truckInfo.plate_number + ' (' + truckInfo.brand + ')</span>' +
                                                 '</div>' :
-                                                '<div style="color: #999; font-style: italic; margin-bottom: 15px;">Машина не назначена</div>'
+                                                (driver.personal_car ? '<div style="color: #059669; margin-bottom: 15px;">🚗 На своей машине (' + driver.personal_car + ')</div>' : '<div style="color: #999; font-style: italic; margin-bottom: 15px;">Машина не назначена</div>')
                                             }
                                             <button class="btn btn-danger" onclick="deleteDriver(${driver.id})" style="width: 100%;">Удалить</button>
                                         </div>
@@ -2500,8 +2502,15 @@
                 alert('Введите корректный номер телефона (10 цифр)');
                 return;
             }
-            if (truckValue === 'own' && (!carBrand || !car || !insurance)) {
-                alert('Заполните все данные автомобиля (марка, госномер, полис)');
+            const carModel = document.getElementById('driverCarModel').value.trim();
+            const capacityWeight = document.getElementById('driverCapacityWeight').value.trim();
+            const capacityVolume = document.getElementById('driverCapacityVolume').value.trim();
+            if (truckValue === 'own' && (!carBrand || !carModel || !car || !capacityWeight || !capacityVolume || !insurance)) {
+                alert('Заполните все данные автомобиля: марка, модель, госномер, грузоподъёмность, объём, полис');
+                return;
+            }
+            if (truckValue === 'own' && (parseInt(capacityWeight, 10) < 100 || parseFloat(capacityVolume) < 1)) {
+                alert('Грузоподъёмность не менее 100 кг, объём не менее 1 м³');
                 return;
             }
             if (truckValue === 'own' && insurance.replace(/[^0-9A-ZА-Я]/g, '').length < 7) {
@@ -2531,7 +2540,29 @@
                 if (response.ok) {
                     const driver = await response.json();
                     
-                    if (truckValue && truckValue !== 'own') {
+                    if (truckValue === 'own') {
+                        const truckRes = await fetch(API_URL + '/trucks/', {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': 'Bearer ' + token,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                plate_number: car.replace(/\s/g, ''),
+                                brand: carBrand,
+                                model: carModel,
+                                capacity_weight: parseInt(capacityWeight, 10),
+                                capacity_volume: parseFloat(capacityVolume),
+                                status: 'available',
+                                driver: driver.id,
+                                is_company_owned: false
+                            })
+                        });
+                        if (!truckRes.ok) {
+                            const err = await truckRes.json().catch(() => ({}));
+                            showDriversMessage('Водитель добавлен, но машина не создана: ' + (err.plate_number ? err.plate_number[0] : 'ошибка'), 'error');
+                        }
+                    } else if (truckValue) {
                         await fetch(API_URL + '/trucks/' + truckValue + '/', {
                             method: 'PATCH',
                             headers: {
@@ -2543,8 +2574,9 @@
                     }
 
                     closeDriverModal();
-                    showDriversMessage('Водитель успешно добавлен!', 'success');
+                    showDriversMessage('Водитель успешно добавлен!' + (truckValue === 'own' ? ' Машина добавлена в автопарк.' : ''), 'success');
                     loadSection('drivers');
+                    if (truckValue === 'own') loadSection('fleet');
                 } else {
                     showDriversMessage('Ошибка добавления водителя', 'error');
                 }
@@ -2683,7 +2715,10 @@
             document.getElementById('typeStaff').checked = true;
             document.getElementById('driverTruck').value = '';
             document.getElementById('driverCarBrand').value = '';
+            document.getElementById('driverCarModel').value = '';
             document.getElementById('driverCar').value = '';
+            document.getElementById('driverCapacityWeight').value = '';
+            document.getElementById('driverCapacityVolume').value = '';
             document.getElementById('driverInsurance').value = '';
             document.getElementById('vehicleDataBlock').style.display = 'none';
         }
@@ -3213,15 +3248,29 @@
             </div>
 
             <div id="vehicleDataBlock" class="vehicle-data-block" style="display: none;">
-                <h4>Данные автомобиля</h4>
+                <h4>Данные автомобиля (машина будет добавлена в автопарк)</h4>
                 <div class="form-row">
                     <div class="form-group">
                         <label>Марка *</label>
                         <input type="text" id="driverCarBrand" placeholder="Ford">
                     </div>
                     <div class="form-group">
+                        <label>Модель *</label>
+                        <input type="text" id="driverCarModel" placeholder="Transit">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
                         <label>Госномер *</label>
                         <input type="text" id="driverCar" placeholder="А 123 ВС 77" maxlength="12" oninput="formatPlateInput(this)">
+                    </div>
+                    <div class="form-group">
+                        <label>Грузоподъёмность (кг) *</label>
+                        <input type="number" id="driverCapacityWeight" placeholder="3500" min="100" max="50000" step="100">
+                    </div>
+                    <div class="form-group">
+                        <label>Объём кузова (м³) *</label>
+                        <input type="number" id="driverCapacityVolume" placeholder="20" min="1" max="100" step="0.1">
                     </div>
                 </div>
                 <div class="form-row-full">

@@ -9,7 +9,7 @@ google-genai==1.61.0
 openai>=2.16.0
 requests==2.31.0
 python-dotenv==1.0.0
-Pillow==11.0.0
+Pillow>=11.0.0
 gunicorn
 dj-database-url
 whitenoise

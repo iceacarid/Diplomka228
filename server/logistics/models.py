@@ -97,6 +97,7 @@ class Truck(models.Model):
     capacity_volume = models.FloatField(verbose_name='Объём кузова (м³)')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='available', verbose_name='Статус')
     driver = models.ForeignKey(Driver, on_delete=models.SET_NULL, null=True, blank=True, related_name='trucks', verbose_name='Водитель')
+    is_company_owned = models.BooleanField(default=True, verbose_name='Машина компании')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания')
 
     class Meta:
