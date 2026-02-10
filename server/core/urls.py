@@ -22,5 +22,5 @@ urlpatterns = [
     path('api/', include('logistics.urls')),
 ]
 
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Раздача медиа (аватарки и загрузки) — и в DEBUG, и на хосте
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

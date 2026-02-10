@@ -1309,7 +1309,8 @@
                     <div style="display: flex; gap: 30px; margin-bottom: 30px;">
                         <div>
                             <img src="${avatarUrl}" alt="Аватар" id="avatarPreview" 
-                                 style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid #007bff;">
+                                 style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid #007bff;"
+                                 onerror="this.src='https://via.placeholder.com/150?text=Avatar'; this.onerror=null;">
                             <div style="margin-top: 10px;">
                                 <input type="file" id="avatarInput" accept="image/*" style="display: none;" onchange="uploadAvatar(event)">
                                 <button class="btn btn-primary" onclick="document.getElementById('avatarInput').click()">Изменить фото</button>
@@ -2179,7 +2180,13 @@
                 const trucks = Array.isArray(trucksData) ? trucksData : (trucksData.results || []);
                 const driversData = await driversRes.json().catch(() => []);
                 const drivers = Array.isArray(driversData) ? driversData : (driversData.results || []);
-                const freeDrivers = drivers.filter(d => d.is_available && !trucks.some(t => t.driver === d.id));
+                function plateNorm(p) { return (p || '').toString().replace(/\s/g, '').toUpperCase(); }
+                const freeDrivers = drivers.filter(d => {
+                    if (!d.is_available) return false;
+                    if (trucks.some(t => t.driver === d.id)) return false;
+                    if (d.personal_car && trucks.some(t => plateNorm(t.plate_number) === plateNorm(d.personal_car))) return false;
+                    return true;
+                });
 
                 container.innerHTML = `
                     <div class="section active">
@@ -2628,11 +2635,13 @@
                 const trucksData = await trucksRes.json();
                 const drivers = Array.isArray(driversData) ? driversData : (driversData.results || []);
                 const trucks = Array.isArray(trucksData) ? trucksData : (trucksData.results || []);
+                function plateNorm(p) { return (p || '').toString().replace(/\s/g, '').toUpperCase(); }
                 const freeDrivers = drivers.filter(d => {
                     if (!d.is_available) return false;
                     const onTruck = trucks.find(t => t.driver === d.id);
-                    if (!onTruck) return true;
-                    return currentTruckId && onTruck.id === currentTruckId;
+                    if (onTruck) return currentTruckId && onTruck.id === currentTruckId;
+                    if (d.personal_car && trucks.some(t => plateNorm(t.plate_number) === plateNorm(d.personal_car))) return false;
+                    return true;
                 });
                 sel.innerHTML = '<option value="">— Не назначать —</option>' +
                     freeDrivers.map(d => '<option value="' + d.id + '">' + (d.name || 'ID ' + d.id) + '</option>').join('');
