@@ -3,6 +3,9 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenRefreshView
 from .views import (
     RegisterView, LoginView, LogoutView, CurrentUserView,
+    VerifyEmailView, ResendOTPView,
+    PasswordResetRequestView, PasswordResetConfirmView,
+    TwoFactorLoginVerifyView, TwoFactorRequestView, TwoFactorConfirmView, TwoFactorConfirmLinkView,
     UserViewSet, DriverViewSet, TruckViewSet, OrderViewSet,
     FavoriteAddrViewSet, TariffViewSet,
     track_order, calculate_price, calculate_route, ai_optimize, ai_history,
@@ -21,7 +24,15 @@ urlpatterns = [
     path('test/', test_api_view, name='test-api'),
     
     path('auth/register/', RegisterView.as_view(), name='register'),
+    path('auth/verify-email/', VerifyEmailView.as_view(), name='verify-email'),
+    path('auth/resend-otp/', ResendOTPView.as_view(), name='resend-otp'),
+    path('auth/password-reset/', PasswordResetRequestView.as_view(), name='password-reset'),
+    path('auth/password-reset/confirm/', PasswordResetConfirmView.as_view(), name='password-reset-confirm'),
     path('auth/login/', LoginView.as_view(), name='login'),
+    path('auth/2fa/verify/', TwoFactorLoginVerifyView.as_view(), name='2fa-login-verify'),
+    path('auth/2fa/request/', TwoFactorRequestView.as_view(), name='2fa-request'),
+    path('auth/2fa/confirm/', TwoFactorConfirmView.as_view(), name='2fa-confirm'),
+    path('auth/2fa/confirm-link/', TwoFactorConfirmLinkView.as_view(), name='2fa-confirm-link'),
     path('auth/logout/', LogoutView.as_view(), name='logout'),
     path('auth/me/', CurrentUserView.as_view(), name='current-user'),
     path('auth/refresh/', TokenRefreshView.as_view(), name='token-refresh'),

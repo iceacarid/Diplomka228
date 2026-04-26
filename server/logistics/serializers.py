@@ -1,6 +1,7 @@
+import re
 from rest_framework import serializers
 from django.contrib.auth import authenticate
-from .models import User, Driver, Truck, Order, FavoriteAddr, Tariff, AIRequest
+from .models import User, Driver, Truck, Order, FavoriteAddr, Tariff, AIRequest, EmailOTP
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -9,7 +10,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('id', 'email', 'name', 'phone', 'avatar', 'avatar_url', 'role', 'password', 'created_at', 'is_active')
+        fields = ('id', 'email', 'name', 'phone', 'avatar', 'avatar_url', 'role', 'password', 'created_at', 'is_active', 'two_factor_enabled')
         read_only_fields = ('id', 'created_at', 'avatar_url')
 
     def get_avatar_url(self, obj):
@@ -54,23 +55,85 @@ class UserSerializer(serializers.ModelSerializer):
         return instance
 
 
+def validate_strong_password(value):
+    """Серверная валидация пароля: регистры символов + спецсимволы.
+    Требования:
+      - минимум 8 символов
+      - хотя бы одна ЗАГЛАВНАЯ буква (A-Z)
+      - хотя бы одна строчная буква (a-z)
+      - хотя бы одна цифра (0-9)
+      - хотя бы один спецсимвол (!@#$%^&*()_+и др.)
+    Пароль хранится в БД в виде хеша PBKDF2-SHA256 (Django set_password / AbstractBaseUser).
+    """
+    errors = []
+    if len(value) < 8:
+        errors.append('Минимум 8 символов.')
+    if not re.search(r'[A-Z]', value):
+        errors.append('Минимум одна заглавная буква (A-Z).')
+    if not re.search(r'[a-z]', value):
+        errors.append('Минимум одна строчная буква (a-z).')
+    if not re.search(r'\d', value):
+        errors.append('Минимум одна цифра (0-9).')
+    if not re.search(r'[!@#$%^&*()\-_=+\[\]{}|;:,.<>?/\\\'"`~]', value):
+        errors.append('Минимум один специальный символ (!@#$%^&* и др.).')
+    if errors:
+        raise serializers.ValidationError(errors)
+    return value
+
+
 class RegisterSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True, required=True, min_length=6)
+    # Валидация: регистры + спецсимволы (серверная сторона)
+    password = serializers.CharField(write_only=True, required=True)
 
     class Meta:
         model = User
         fields = ('email', 'name', 'phone', 'password')
 
+    def validate_password(self, value):
+        return validate_strong_password(value)
+
     def create(self, validated_data):
         password = validated_data.pop('password')
+        # is_active=False — аккаунт активируется после подтверждения email (2FA)
         user = User.objects.create_user(
             email=validated_data['email'],
             password=password,
             name=validated_data['name'],
             phone=validated_data.get('phone'),
-            role='client'
+            role='client',
+            is_active=False,
         )
         return user
+
+
+class OTPVerifySerializer(serializers.Serializer):
+    """Подтверждение email через OTP-код (двухфакторная аутентификация)."""
+    email = serializers.EmailField(required=True)
+    code = serializers.CharField(required=True, min_length=6, max_length=6)
+    purpose = serializers.ChoiceField(
+        choices=['registration', 'password_reset'], required=True
+    )
+
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    """Запрос на восстановление пароля — отправляет OTP на email."""
+    email = serializers.EmailField(required=True)
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    """Подтверждение нового пароля через OTP-код."""
+    email = serializers.EmailField(required=True)
+    code = serializers.CharField(required=True, min_length=6, max_length=6)
+    new_password = serializers.CharField(required=True, write_only=True)
+
+    def validate_new_password(self, value):
+        return validate_strong_password(value)
+
+
+class TwoFactorVerifySerializer(serializers.Serializer):
+    """Проверка OTP-кода двухфакторной аутентификации при входе."""
+    email = serializers.EmailField(required=True)
+    code = serializers.CharField(required=True, min_length=6, max_length=6)
 
 
 class LoginSerializer(serializers.Serializer):

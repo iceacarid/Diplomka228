@@ -3,6 +3,7 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, Permis
 from django.utils import timezone
 import random
 import string
+import secrets
 
 
 class CustomUserManager(BaseUserManager):
@@ -44,6 +45,14 @@ class User(AbstractBaseUser, PermissionsMixin):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания')
     is_active = models.BooleanField(default=True, verbose_name='Активен')
     is_staff = models.BooleanField(default=False, verbose_name='Персонал')
+    # Блокировка аккаунта (Практическая работа №2)
+    failed_login_attempts = models.IntegerField(default=0, verbose_name='Неудачных попыток входа')
+    lockout_until = models.DateTimeField(null=True, blank=True, verbose_name='Заблокирован до')
+    # Двухфакторная аутентификация при входе (Практическая работа №3)
+    two_factor_enabled = models.BooleanField(default=False, verbose_name='2FA включена')
+    two_factor_action_token = models.CharField(max_length=64, null=True, blank=True, verbose_name='Токен подтверждения 2FA')
+    two_factor_action = models.CharField(max_length=10, null=True, blank=True, verbose_name='Действие 2FA')
+    two_factor_action_expires_at = models.DateTimeField(null=True, blank=True, verbose_name='Токен действия истекает')
 
     objects = CustomUserManager()
 
@@ -216,3 +225,37 @@ class AIRequest(models.Model):
 
     def __str__(self):
         return f"AI запрос {self.id} - {self.manager.name}"
+
+
+class EmailOTP(models.Model):
+    """OTP-коды для двухфакторной аутентификации (регистрация и сброс пароля).
+    Пароли в БД хранятся с хешированием PBKDF2-SHA256 (Django set_password).
+    OTP генерируется через secrets.randbelow() — криптографически стойкий ГПСЧ.
+    """
+    PURPOSE_CHOICES = (
+        ('registration', 'Подтверждение регистрации'),
+        ('password_reset', 'Сброс пароля'),
+        ('two_factor', 'Двухфакторный вход'),
+    )
+
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='otps', verbose_name='Пользователь'
+    )
+    code = models.CharField(max_length=6, verbose_name='Код')
+    purpose = models.CharField(max_length=20, choices=PURPOSE_CHOICES, verbose_name='Назначение')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Создан')
+    expires_at = models.DateTimeField(verbose_name='Истекает')
+    is_used = models.BooleanField(default=False, verbose_name='Использован')
+
+    class Meta:
+        verbose_name = 'OTP код'
+        verbose_name_plural = 'OTP коды'
+        db_table = 'email_otps'
+
+    def __str__(self):
+        return f"OTP [{self.purpose}] для {self.user.email}"
+
+    @staticmethod
+    def generate_code():
+        """Генерирует 6-значный криптографически стойкий код."""
+        return str(secrets.randbelow(1_000_000)).zfill(6)

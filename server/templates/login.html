@@ -3,7 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Вход - ФураЕдет</title>
+    <meta name="description" content="Вход в личный кабинет ФураЕдет — система управления грузоперевозками.">
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="canonical" href="https://furaedет.ru/login">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://furaedет.ru/login">
+    <meta property="og:title" content="Вход — ФураЕдет">
+    <meta property="og:description" content="Войдите в личный кабинет для управления грузоперевозками.">
+    <meta property="og:site_name" content="ФураЕдет">
+    <title>Вход — ФураЕдет</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -113,6 +121,12 @@
             border: 1px solid #f5c6cb;
         }
 
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffc107;
+        }
+
         .test-accounts {
             background: #e7f3ff;
             border: 1px solid #b3d9ff;
@@ -134,16 +148,9 @@
     </style>
 </head>
 <body>
-    <div class="form-container">
-        <h1>🚛 ФураЕдет</h1>
+    <main class="form-container" role="main">
+        <h1>ФураЕдет</h1>
         <h2 style="text-align: center; color: #666;">Вход в систему</h2>
-
-        <div class="test-accounts">
-            <h3>Тестовые аккаунты:</h3>
-            <p><strong>Админ:</strong> admin@fura.ru / admin123</p>
-            <p><strong>Менеджер:</strong> manager@fura.ru / manager123</p>
-            <p><strong>Клиент:</strong> client@fura.ru / client123</p>
-        </div>
 
         <div id="alertBox" class="alert"></div>
 
@@ -165,9 +172,10 @@
 
         <div class="links">
             <p>Нет аккаунта? <a href="/register">Зарегистрироваться</a></p>
+            <p><a href="/forgot-password">Забыли пароль?</a></p>
             <p><a href="/">← Вернуться на главную</a></p>
         </div>
-    </div>
+    </main>
 
     <script>
         const API_URL = (window.location.origin || 'http://127.0.0.1:8000') + '/api';
@@ -196,7 +204,7 @@
         function showAlert(message, type = 'error') {
             const alertBox = document.getElementById('alertBox');
             alertBox.className = `alert alert-${type} show`;
-            alertBox.textContent = message;
+            alertBox.innerHTML = message;
         }
 
         async function handleLogin(event) {
@@ -230,21 +238,29 @@
                     localStorage.setItem('token', data.access);
                     localStorage.setItem('refresh', data.refresh);
                     localStorage.setItem('user', JSON.stringify(data.user));
-                    
+
                     showAlert('Вход выполнен успешно! Перенаправление...', 'success');
-                    
+
                     setTimeout(() => {
                         window.location.href = '/';
                     }, 1000);
                 } else {
-                    if (data.email) {
-                        showFieldError('email', data.email[0]);
+                    if (response.status === 429 && data.locked) {
+                        // Аккаунт заблокирован
+                        showAlert(data.error || 'Аккаунт временно заблокирован. Попробуйте позже.');
+                    } else if (response.status === 403 && data.unverified) {
+                        // Email не подтверждён
+                        showAlert('Email не подтверждён. Проверьте почту и введите код подтверждения. Или <a href="/register">зарегистрируйтесь</a> повторно.', 'warning');
+                    } else if (data.email) {
+                        showFieldError('email', Array.isArray(data.email) ? data.email[0] : data.email);
                     } else if (data.password) {
-                        showFieldError('password', data.password[0]);
+                        showFieldError('password', Array.isArray(data.password) ? data.password[0] : data.password);
+                    } else if (data.non_field_errors) {
+                        showAlert(Array.isArray(data.non_field_errors) ? data.non_field_errors[0] : data.non_field_errors);
                     } else {
                         showAlert(data.detail || data.error || 'Неверный email или пароль');
                     }
-                    
+
                     submitBtn.disabled = false;
                     submitBtn.textContent = 'Войти';
                 }

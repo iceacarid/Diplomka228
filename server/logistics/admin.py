@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import User, Driver, Truck, Order, FavoriteAddr, Tariff, AIRequest
+from .models import User, Driver, Truck, Order, FavoriteAddr, Tariff, AIRequest, EmailOTP
 
 
 @admin.register(User)
@@ -14,6 +14,7 @@ class UserAdmin(BaseUserAdmin):
         (None, {'fields': ('email', 'password')}),
         ('Личная информация', {'fields': ('name', 'phone', 'role')}),
         ('Права доступа', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
+        ('Безопасность', {'fields': ('failed_login_attempts', 'lockout_until')}),
         ('Важные даты', {'fields': ('last_login', 'created_at')}),
     )
 
@@ -24,7 +25,7 @@ class UserAdmin(BaseUserAdmin):
         }),
     )
 
-    readonly_fields = ('created_at', 'last_login')
+    readonly_fields = ('created_at', 'last_login', 'failed_login_attempts', 'lockout_until')
 
 
 @admin.register(Driver)
@@ -70,5 +71,14 @@ class TariffAdmin(admin.ModelAdmin):
 @admin.register(AIRequest)
 class AIRequestAdmin(admin.ModelAdmin):
     list_display = ('id', 'manager', 'created_at')
+    readonly_fields = ('created_at',)
+    ordering = ('-created_at',)
+
+
+@admin.register(EmailOTP)
+class EmailOTPAdmin(admin.ModelAdmin):
+    list_display = ('user', 'purpose', 'code', 'is_used', 'created_at', 'expires_at')
+    list_filter = ('purpose', 'is_used')
+    search_fields = ('user__email', 'user__name')
     readonly_fields = ('created_at',)
     ordering = ('-created_at',)

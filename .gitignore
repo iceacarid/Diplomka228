@@ -74,9 +74,22 @@ htmlcov/
 *.temp
 .cursor/
 
-# Frontend (будет добавлен позже)
+# Frontend
 client/
 client_backup/
+frontend/node_modules/
+frontend/dist/
+
+# Laravel
+backend/vendor/
+backend/.env
+backend/storage/logs/*.log
+backend/storage/framework/cache/data/*
+backend/storage/framework/sessions/*
+backend/storage/framework/views/*
+
+# Claude
+.claude/
 
 # Django
 *.pyc

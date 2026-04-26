@@ -3,7 +3,78 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ФураЕдет - Система грузоперевозок</title>
+    <meta name="description" content="ФураЕдет — сервис грузоперевозок: расчёт стоимости, отслеживание заказов, заказ фуры онлайн. Надёжные перевозки по России.">
+    <meta name="keywords" content="грузоперевозки, фура, доставка грузов, расчёт стоимости перевозки, логистика, заказ грузовика, транспортная компания, доставка по России">
+    <meta name="robots" content="index, follow">
+    <meta name="author" content="ФураЕдет">
+
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://furaedет.ru/">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://furaedет.ru/">
+    <meta property="og:title" content="ФураЕдет — Система грузоперевозок по России">
+    <meta property="og:description" content="Закажите грузоперевозку онлайн: расчёт стоимости за 1 минуту, отслеживание груза в реальном времени, надёжные водители по всей России.">
+    <meta property="og:image" content="/static/og-image.png">
+    <meta property="og:locale" content="ru_RU">
+    <meta property="og:site_name" content="ФураЕдет">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="ФураЕдет — Грузоперевозки по России">
+    <meta name="twitter:description" content="Расчёт стоимости, заказ фуры и отслеживание груза онлайн.">
+    <meta name="twitter:image" content="/static/og-image.png">
+
+    <title>ФураЕдет — Система грузоперевозок</title>
+
+    <!-- JSON-LD: структурированные данные для поисковиков -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "ФураЕдет",
+      "url": "https://furaedет.ru",
+      "logo": "/static/logo.png",
+      "description": "Сервис грузоперевозок: расчёт стоимости доставки, заказ фуры и отслеживание грузов по России",
+      "areaServed": "RU",
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "contactType": "customer service",
+        "availableLanguage": "ru"
+      }
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "ФураЕдет",
+      "url": "https://furaedет.ru",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://furaedет.ru/?q={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
+
+    <!-- Яндекс.Метрика — замените XXXXXXXX на ваш номер счётчика -->
+    <script type="text/javascript">
+       (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+       m[i].l=1*new Date();
+       for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
+       k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})
+       (window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
+       ym(XXXXXXXX, "init", {
+            clickmap:true,
+            trackLinks:true,
+            accurateTrackBounce:true,
+            webvisor:true
+       });
+    </script>
+    <noscript><div><img src="https://mc.yandex.ru/watch/XXXXXXXX" style="position:absolute; left:-9999px;" alt="Яндекс.Метрика" width="1" height="1" /></div></noscript>
+
     <style>
         * {
             margin: 0;
@@ -276,7 +347,8 @@
         </nav>
     </header>
 
-    <section class="hero">
+    <main>
+    <section class="hero" aria-label="Главный экран">
         <h1>Грузоперевозки по России</h1>
         <p>Быстро, надёжно, выгодно. Рассчитайте стоимость доставки за 1 минуту!</p>
         <div style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
@@ -285,9 +357,9 @@
         </div>
     </section>
 
-    <div class="container">
+    <section class="container" aria-labelledby="calc-heading">
         <div class="calculator" id="calculator">
-            <h2>📦 Калькулятор стоимости</h2>
+            <h2 id="calc-heading">📦 Калькулятор стоимости</h2>
             <div class="form-grid">
                 <div class="form-group">
                     <label>Город отправления</label>
@@ -315,7 +387,69 @@
                 <p><strong>Примерное время доставки:</strong> <span id="eta">-</span> дней</p>
             </div>
         </div>
-    </div>
+    </section>
+
+    <!-- Секция отслеживания груза -->
+    <section class="container" id="tracking" aria-labelledby="tracking-heading">
+        <div class="calculator">
+            <h2 id="tracking-heading">📍 Отследить груз</h2>
+            <p style="color:#666; margin-bottom:1.5rem;">Введите трекинг-номер заказа для проверки статуса доставки.</p>
+            <div class="form-grid" style="grid-template-columns: 1fr auto;">
+                <div class="form-group">
+                    <label for="trackingId">Трекинг-номер заказа</label>
+                    <input type="text" id="trackingId" placeholder="Например: FE-123456">
+                </div>
+                <div class="form-group" style="justify-content:flex-end;">
+                    <label style="visibility:hidden">Действие</label>
+                    <button class="btn" onclick="trackOrder()" aria-label="Отследить груз по номеру заказа">Найти</button>
+                </div>
+            </div>
+            <div class="result" id="trackingResult">
+                <h3>Статус заказа</h3>
+                <p><strong>Номер:</strong> <span id="trackNum">-</span></p>
+                <p><strong>Маршрут:</strong> <span id="trackRoute">-</span></p>
+                <p><strong>Статус:</strong> <span id="trackStatus">-</span></p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Секция преимуществ (SEO: контент с ключевыми словами) -->
+    <section class="container" aria-labelledby="features-heading">
+        <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:1.5rem; margin-bottom:2rem;">
+            <article style="background:white; border-radius:12px; padding:1.5rem; box-shadow:0 2px 10px rgba(0,0,0,0.07); text-align:center;">
+                <div style="font-size:2.5rem; margin-bottom:0.8rem;" aria-hidden="true">🚛</div>
+                <h3 style="color:#0D1B2A; margin-bottom:0.5rem;">Грузоперевозки по России</h3>
+                <p style="color:#666; font-size:0.95rem;">Доставка грузов фурами по всей России. Маршруты рассчитываются автоматически.</p>
+            </article>
+            <article style="background:white; border-radius:12px; padding:1.5rem; box-shadow:0 2px 10px rgba(0,0,0,0.07); text-align:center;">
+                <div style="font-size:2.5rem; margin-bottom:0.8rem;" aria-hidden="true">📦</div>
+                <h3 style="color:#0D1B2A; margin-bottom:0.5rem;">Онлайн-расчёт стоимости</h3>
+                <p style="color:#666; font-size:0.95rem;">Рассчитайте стоимость доставки за 1 минуту — укажите маршрут и вес груза.</p>
+            </article>
+            <article style="background:white; border-radius:12px; padding:1.5rem; box-shadow:0 2px 10px rgba(0,0,0,0.07); text-align:center;">
+                <div style="font-size:2.5rem; margin-bottom:0.8rem;" aria-hidden="true">📍</div>
+                <h3 style="color:#0D1B2A; margin-bottom:0.5rem;">Отслеживание в реальном времени</h3>
+                <p style="color:#666; font-size:0.95rem;">Следите за местонахождением груза онлайн по трекинг-номеру заказа.</p>
+            </article>
+            <article style="background:white; border-radius:12px; padding:1.5rem; box-shadow:0 2px 10px rgba(0,0,0,0.07); text-align:center;">
+                <div style="font-size:2.5rem; margin-bottom:0.8rem;" aria-hidden="true">🤖</div>
+                <h3 style="color:#0D1B2A; margin-bottom:0.5rem;">ИИ-оптимизация логистики</h3>
+                <p style="color:#666; font-size:0.95rem;">Искусственный интеллект подберёт оптимальный маршрут и схему загрузки.</p>
+            </article>
+        </div>
+    </section>
+    </main>
+
+    <footer style="background:#0D1B2A; color:#FAF8F0; padding:2rem; margin-top:2rem; text-align:center;" role="contentinfo">
+        <nav aria-label="Навигация в подвале">
+            <a href="/" style="color:#F7B500; text-decoration:none; margin:0 1rem;">Главная</a>
+            <a href="/login" style="color:#FAF8F0; text-decoration:none; margin:0 1rem;">Войти</a>
+            <a href="/register" style="color:#FAF8F0; text-decoration:none; margin:0 1rem;">Регистрация</a>
+            <a href="robots.txt" style="color:#FAF8F0; text-decoration:none; margin:0 1rem;">Robots.txt</a>
+            <a href="sitemap.xml" style="color:#FAF8F0; text-decoration:none; margin:0 1rem;">Sitemap</a>
+        </nav>
+        <p style="margin-top:1rem; color:#aaa; font-size:0.9rem;">&copy; 2025 ФураЕдет. Все права защищены. Грузоперевозки по России.</p>
+    </footer>
 
     <script>
         const API_URL = (window.location.origin || 'http://127.0.0.1:8000') + '/api';
@@ -501,6 +635,37 @@
 
         function goToAdmin() {
             window.location.href = '/dashboard';
+        }
+
+        async function trackOrder() {
+            const trackingId = document.getElementById('trackingId').value.trim();
+            if (!trackingId) {
+                alert('Введите трекинг-номер заказа');
+                return;
+            }
+            try {
+                const response = await fetch(`${API_URL}/orders/track/${encodeURIComponent(trackingId)}/`);
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('trackNum').textContent = data.tracking_id || trackingId;
+                    document.getElementById('trackRoute').textContent =
+                        (data.origin_address || '—') + ' → ' + (data.destination_address || '—');
+                    const statusMap = {
+                        draft: 'Черновик',
+                        pending: 'Ожидает подтверждения',
+                        in_progress: 'В пути',
+                        shipped: 'Отгружен',
+                        delivered: 'Доставлен',
+                        rejected: 'Отклонён',
+                    };
+                    document.getElementById('trackStatus').textContent = statusMap[data.status] || data.status;
+                    document.getElementById('trackingResult').classList.add('show');
+                } else {
+                    alert('Заказ с таким номером не найден');
+                }
+            } catch (error) {
+                alert('Ошибка соединения с сервером');
+            }
         }
     </script>
 </body>

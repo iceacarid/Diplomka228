@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Личный кабинет - ФураЕдет</title>
+    <meta name="description" content="Личный кабинет ФураЕдет — управление заказами, профилем, автопарком и водителями.">
+    <meta name="keywords" content="личный кабинет, заказы, профиль, ФураЕдет, грузоперевозки">
+    <title>Личный кабинет — ФураЕдет</title>
     <style>
         * {
             margin: 0;
@@ -623,6 +625,7 @@
         let currentUser = null;
         let allUsers = [];
         let currentEditUserId = null;
+        let _2faFlashMessage = null;
 
         if (!token) {
             window.location.href = '/login';
@@ -708,8 +711,32 @@
                 if (response.ok) {
                     currentUser = await response.json();
                     document.getElementById('userName').textContent = currentUser.name;
-                    loadMenu();
-                    loadDefaultSection();
+
+                    // Обработка подтверждения 2FA по ссылке из письма
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const twoFaConfirmed = urlParams.get('2fa_confirmed');
+                    const twoFaError = urlParams.get('2fa_error');
+                    if (twoFaConfirmed || twoFaError) {
+                        window.history.replaceState({}, '', '/dashboard');
+                        if (twoFaConfirmed === 'enable') {
+                            localStorage.removeItem('2fa_pending_email');
+                            localStorage.removeItem('2fa_pending_action');
+                            _2faFlashMessage = { text: '✔ Двухфакторная аутентификация успешно включена!', type: 'success' };
+                        } else if (twoFaConfirmed === 'disable') {
+                            localStorage.removeItem('2fa_pending_email');
+                            localStorage.removeItem('2fa_pending_action');
+                            _2faFlashMessage = { text: '2FA успешно отключена.', type: 'success' };
+                        } else if (twoFaError === 'expired') {
+                            _2faFlashMessage = { text: 'Ссылка устарела. Запросите подтверждение повторно.', type: 'error' };
+                        } else {
+                            _2faFlashMessage = { text: 'Неверная или уже использованная ссылка.', type: 'error' };
+                        }
+                        loadMenu();
+                        loadSection('profile');
+                    } else {
+                        loadMenu();
+                        loadDefaultSection();
+                    }
                 } else {
                     window.location.href = '/login';
                 }
@@ -1308,7 +1335,7 @@
                     
                     <div style="display: flex; gap: 30px; margin-bottom: 30px;">
                         <div>
-                            <img src="${avatarUrl}" alt="Аватар" id="avatarPreview" 
+                            <img src="${avatarUrl}" alt="Аватар пользователя" id="avatarPreview" title="Фото профиля" loading="lazy"
                                  style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid #007bff;"
                                  onerror="this.src='https://via.placeholder.com/150?text=Avatar'; this.onerror=null;">
                             <div style="margin-top: 10px;">
@@ -1346,7 +1373,7 @@
                     </div>
                     
                     <hr style="margin: 30px 0;">
-                    
+
                     <h3>Изменить пароль</h3>
                     <form id="passwordForm" onsubmit="event.preventDefault(); updatePassword();" style="max-width: 500px;">
                         <div class="form-group">
@@ -1363,10 +1390,24 @@
                         </div>
                         <button type="submit" class="btn btn-primary">Изменить пароль</button>
                     </form>
+
+                    <hr style="margin: 30px 0;">
+
+                    <h3>Двухфакторная аутентификация (2FA)</h3>
+                    <div style="max-width: 520px; margin-top: 15px;">
+                        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 12px; flex-wrap: wrap;">
+                            <div id="twoFactorBadge" style="padding: 7px 20px; border-radius: 20px; font-weight: bold; font-size: 14px; min-width: 210px; text-align: center;"></div>
+                            <button id="twoFactorToggleBtn" class="btn" onclick="request2FA()" style="min-width: 185px;"></button>
+                        </div>
+                        <p style="color: #666; font-size: 13px;">
+                            При включённой 2FA каждый вход потребует перехода по ссылке, отправленной на ваш email.
+                        </p>
+                    </div>
                 </div>
             `;
             const profilePhoneEl = document.getElementById('profilePhone');
             if (profilePhoneEl && profilePhoneEl.value) formatPhoneInput(profilePhoneEl);
+            render2FAStatus();
         }
 
         async function uploadAvatar(event) {
@@ -1496,6 +1537,88 @@
                 setTimeout(() => {
                     element.innerHTML = '';
                 }, 5000);
+            }
+        }
+
+        // --- 2FA в профиле ---
+
+        function render2FAStatus() {
+            const badge = document.getElementById('twoFactorBadge');
+            const btn = document.getElementById('twoFactorToggleBtn');
+            if (!badge || !btn) return;
+
+            const pendingEmail = localStorage.getItem('2fa_pending_email');
+            const pendingAction = localStorage.getItem('2fa_pending_action');
+
+            // Автосброс устаревшего pending (подтверждено с другого устройства)
+            if (pendingEmail === currentUser.email) {
+                if (pendingAction === 'enable' && currentUser.two_factor_enabled) {
+                    localStorage.removeItem('2fa_pending_email');
+                    localStorage.removeItem('2fa_pending_action');
+                } else if (pendingAction === 'disable' && !currentUser.two_factor_enabled) {
+                    localStorage.removeItem('2fa_pending_email');
+                    localStorage.removeItem('2fa_pending_action');
+                }
+            }
+
+            const isPendingEnable = localStorage.getItem('2fa_pending_email') === currentUser.email
+                                 && localStorage.getItem('2fa_pending_action') === 'enable';
+
+            if (currentUser.two_factor_enabled) {
+                badge.style.cssText = 'background:#d4edda;color:#155724;border:2px solid #28a745;padding:7px 20px;border-radius:20px;font-weight:bold;font-size:14px;min-width:210px;text-align:center;display:inline-block;';
+                badge.textContent = '✔ Подтверждена';
+                btn.textContent = 'Отключить 2FA';
+                btn.className = 'btn btn-danger';
+                btn.disabled = false;
+            } else if (isPendingEnable) {
+                badge.style.cssText = 'background:#fff3cd;color:#856404;border:2px solid #ffc107;padding:7px 20px;border-radius:20px;font-weight:bold;font-size:14px;min-width:210px;text-align:center;display:inline-block;';
+                badge.textContent = '⏳ Ждёт подтверждения';
+                btn.textContent = 'Отправить письмо повторно';
+                btn.className = 'btn btn-warning';
+                btn.disabled = false;
+            } else {
+                badge.style.cssText = 'background:#e9ecef;color:#495057;border:2px solid #adb5bd;padding:7px 20px;border-radius:20px;font-weight:bold;font-size:14px;min-width:210px;text-align:center;display:inline-block;';
+                badge.textContent = '✖ Не включена';
+                btn.textContent = 'Включить 2FA';
+                btn.className = 'btn btn-success';
+                btn.disabled = false;
+            }
+
+            if (_2faFlashMessage) {
+                showProfileMessage(_2faFlashMessage.text, _2faFlashMessage.type);
+                _2faFlashMessage = null;
+            }
+        }
+
+        async function request2FA() {
+            const pendingAction = localStorage.getItem('2fa_pending_action');
+            const action = currentUser.two_factor_enabled ? 'disable'
+                         : pendingAction === 'enable' ? 'enable'   // повторная отправка
+                         : 'enable';
+            const btn = document.getElementById('twoFactorToggleBtn');
+            btn.disabled = true;
+            btn.textContent = 'Отправка...';
+            try {
+                const res = await fetch(API_URL + '/auth/2fa/request/', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    if (action === 'enable') {
+                        localStorage.setItem('2fa_pending_email', currentUser.email);
+                        localStorage.setItem('2fa_pending_action', 'enable');
+                    }
+                    render2FAStatus();
+                    showProfileMessage(data.message || 'Письмо со ссылкой отправлено на ваш email.', 'success');
+                } else {
+                    render2FAStatus();
+                    showProfileMessage(data.error || 'Ошибка запроса 2FA.', 'error');
+                }
+            } catch {
+                render2FAStatus();
+                showProfileMessage('Ошибка соединения с сервером.', 'error');
             }
         }
 
