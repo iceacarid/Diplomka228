@@ -1,0 +1,16 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Buttons</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { background: var(--navy); padding: 24px; font-family: var(--font-body); }
+  .row { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; }
+  .btn-primary { padding: 13px 28px; background: var(--gold); color: var(--navy); font-weight: 700; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; border: none; border-radius: 2px; cursor: pointer; }
+  .btn-ghost { padding: 12px 26px; background: transparent; color: rgba(255,255,255,0.7); font-weight: 600; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; border: 1px solid rgba(255,255,255,0.15); border-radius: 2px; cursor: pointer; }
+  .btn-card { padding: 11px 22px; background: var(--navy); color: white; border: none; border-radius: 10px; font-weight: 700; font-size: 13px; cursor: pointer; }
+  .label { font-family: var(--font-mono); font-size: 9px; color: rgba(255,255,255,0.4); letter-spacing: 0.12em; width: 80px; text-transform: uppercase; }
+</style></head>
+<body>
+  <div class="row"><span class="label">Primary</span><button class="btn-primary">Начать работу →</button><button class="btn-primary" style="opacity:0.5">Считаем...</button></div>
+  <div class="row"><span class="label">Ghost</span><button class="btn-ghost">Узнать больше</button></div>
+  <div class="row"><span class="label">Card</span><button class="btn-card">Сохранить</button></div>
+</body></html>

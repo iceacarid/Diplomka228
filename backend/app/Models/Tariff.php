@@ -12,6 +12,7 @@ class Tariff extends Model
         'name',
         'price_per_km',
         'weight_coef',
+        'volume_coef',
         'is_active',
     ];
 
@@ -20,6 +21,7 @@ class Tariff extends Model
         return [
             'price_per_km' => 'decimal:2',
             'weight_coef'  => 'decimal:2',
+            'volume_coef'  => 'decimal:2',
             'is_active'    => 'boolean',
         ];
     }

@@ -1,4 +1,6 @@
-import { createContext, useContext, useState, useCallback } from 'react'
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useContext, useState, useCallback, useEffect } from 'react'
+import axios from 'axios'
 
 const AuthContext = createContext(null)
 
@@ -6,6 +8,18 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
     try { return JSON.parse(localStorage.getItem('user')) } catch { return null }
   })
+
+  // Sync role from server on load — catches role changes made while user was logged in
+  useEffect(() => {
+    const token = localStorage.getItem('token')
+    if (!token) return
+    axios.get('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } })
+      .then(({ data }) => {
+        localStorage.setItem('user', JSON.stringify(data))
+        setUser(data)
+      })
+      .catch(() => {})
+  }, [])
 
   const login = useCallback((userData, token) => {
     localStorage.setItem('token', token)

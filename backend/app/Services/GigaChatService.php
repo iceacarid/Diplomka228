@@ -1,0 +1,142 @@
+<?php
+
+namespace App\Services;
+
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
+
+class GigaChatService
+{
+    private const AUTH_URL = 'https://ngw.devices.sberbank.ru:9443/api/v2/oauth';
+    private const API_URL  = 'https://gigachat.devices.sberbank.ru/api/v1';
+    private const TOKEN_TTL = 1700; // 28 min — token valid 30 min
+
+    public function getAccessToken(): ?string
+    {
+        if (Cache::has('gigachat_access_token')) {
+            return Cache::get('gigachat_access_token');
+        }
+        $token = $this->fetchToken();
+        if ($token) {
+            Cache::put('gigachat_access_token', $token, self::TOKEN_TTL);
+        }
+        return $token;
+    }
+
+    private function fetchToken(): ?string
+    {
+        $authKey = config('services.gigachat.auth_key');
+        if (!$authKey) {
+            Log::warning('GigaChat: GIGACHAT_AUTH_KEY not configured');
+            return null;
+        }
+
+        try {
+            $response = Http::withoutVerifying()
+                ->withHeaders([
+                    'Content-Type'  => 'application/x-www-form-urlencoded',
+                    'Accept'        => 'application/json',
+                    'RqUID'         => Str::uuid()->toString(),
+                    'Authorization' => 'Basic ' . $authKey,
+                ])
+                ->timeout(15)
+                ->asForm()
+                ->post(self::AUTH_URL, ['scope' => 'GIGACHAT_API_PERS']);
+
+            $token = $response->json('access_token');
+            if (!$token) {
+                Log::warning('GigaChat: empty token', ['body' => substr($response->body(), 0, 300)]);
+            }
+            return $token;
+        } catch (\Exception $e) {
+            Log::warning('GigaChat token fetch failed: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    public function chat(string $systemPrompt, string $userMessage): ?string
+    {
+        $token = $this->getAccessToken();
+        if (!$token) return null;
+
+        try {
+            $response = Http::withoutVerifying()
+                ->withToken($token)
+                ->withHeaders(['Accept' => 'application/json'])
+                ->timeout(60)
+                ->post(self::API_URL . '/chat/completions', [
+                    'model'       => 'GigaChat',
+                    'temperature' => 0.2,
+                    'max_tokens'  => 2048,
+                    'messages'    => [
+                        ['role' => 'system', 'content' => $systemPrompt],
+                        ['role' => 'user',   'content' => $userMessage],
+                    ],
+                ]);
+
+            $text = $response->json('choices.0.message.content');
+
+            if (!$text) {
+                Log::warning('GigaChat: empty response', ['body' => substr($response->body(), 0, 500)]);
+                Cache::forget('gigachat_access_token');
+            }
+
+            return $text;
+        } catch (\Exception $e) {
+            Log::warning('GigaChat chat failed: ' . $e->getMessage());
+            Cache::forget('gigachat_access_token');
+            return null;
+        }
+    }
+
+    /**
+     * Ask GigaChat to distribute orders across trucks.
+     * Returns decoded array with keys: plan[], unassigned[]
+     * or null on failure.
+     */
+    public function optimizeDistribution(array $trucks, array $orders): ?array
+    {
+        $trucksJson = json_encode($trucks, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        $ordersJson = json_encode($orders, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+
+        $system = <<<PROMPT
+Ты — опытный логист-аналитик. Оптимально распредели нераспределённые грузы по доступным фурам.
+
+Правила:
+1. Суммарный вес всех грузов в фуре НЕ должен превышать capacity_weight этой фуры.
+2. Суммарный объём в фуре НЕ должен превышать capacity_volume (если capacity_volume > 0).
+3. Группируй грузы по схожим направлениям маршрута.
+4. Максимизируй загрузку фур.
+5. Если груз не умещается ни в одну фуру — только тогда помести в unassigned.
+
+СТРОГИЕ ТРЕБОВАНИЯ К ФОРМАТУ:
+- Каждый truck_id встречается в "plan" РОВНО ОДИН РАЗ.
+- Все заказы для одной фуры перечисли в одном объекте в массиве order_ids.
+- Используй ТОЛЬКО те id, которые есть во входных данных. Не придумывай новые id.
+- Отвечай ТОЛЬКО валидным JSON без markdown, без текста вне JSON.
+
+Формат (строго):
+{"plan":[{"truck_id":1,"order_ids":[5,8],"justification":"обоснование на русском"}],"unassigned":[{"order_id":3,"reason":"причина на русском"}]}
+PROMPT;
+
+        $user = "Фуры:\n{$trucksJson}\n\nГрузы:\n{$ordersJson}\n\nРаспредели оптимально. Только JSON.";
+
+        $raw = $this->chat($system, $user);
+        if (!$raw) return null;
+
+        // Strip markdown code fences GigaChat sometimes adds
+        $clean = preg_replace('/^```(?:json)?\s*/i', '', trim($raw));
+        $clean = preg_replace('/\s*```\s*$/m', '', $clean);
+
+        $decoded = json_decode(trim($clean), true);
+
+        if (json_last_error() !== JSON_ERROR_NONE || !isset($decoded['plan'])) {
+            Log::warning('GigaChat: invalid JSON structure', ['raw' => substr($raw, 0, 600)]);
+            return null;
+        }
+
+        return $decoded;
+    }
+}

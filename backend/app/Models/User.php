@@ -74,16 +74,14 @@ class User extends Authenticatable
     }
 
     // Helpers
-    public function isClient(): bool   { return $this->role === 'client'; }
-    public function isManager(): bool  { return $this->role === 'manager'; }
-    public function isAdmin(): bool    { return $this->role === 'admin'; }
+    public function isClient(): bool        { return $this->role === 'client'; }
+    public function isManager(): bool       { return $this->role === 'manager'; }
+    public function isAdmin(): bool         { return $this->role === 'admin'; }
+    public function isCourier(): bool       { return $this->role === 'courier'; }
     public function isManagerOrAdmin(): bool { return in_array($this->role, ['manager', 'admin']); }
 
-    public function avatarUrl(): string
+    public function avatarUrl(): ?string
     {
-        if ($this->avatar) {
-            return asset('storage/' . $this->avatar);
-        }
-        return asset('storage/avatars/default.png');
+        return $this->avatar ? asset('storage/' . $this->avatar) : null;
     }
 }

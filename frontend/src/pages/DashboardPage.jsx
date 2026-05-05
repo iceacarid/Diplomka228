@@ -1,7 +1,9 @@
+/* eslint-disable no-empty */
 import { useState } from 'react'
 import { Routes, Route, NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import api from '../api/axios'
+import { Icons } from '../components/Icons'
 import OrdersTab from './dashboard/OrdersTab'
 import DriversTab from './dashboard/DriversTab'
 import TrucksTab from './dashboard/TrucksTab'
@@ -9,11 +11,82 @@ import ProfileTab from './dashboard/ProfileTab'
 import AiTab from './dashboard/AiTab'
 import TariffsTab from './dashboard/TariffsTab'
 import UsersTab from './dashboard/UsersTab'
+import ClientHome from './dashboard/ClientHome'
+import ClientOrders from './dashboard/ClientOrders'
+import ClientNewOrder from './dashboard/ClientNewOrder'
+import ClientSupport from './dashboard/ClientSupport'
+import ClientChats from './dashboard/ClientChats'
+import ManagerChats from './dashboard/ManagerChats'
+import ManagerHome from './dashboard/ManagerHome'
+import AdminHome from './dashboard/AdminHome'
+import AdminAppeals from './dashboard/AdminAppeals'
+import AdminCouriers from './dashboard/AdminCouriers'
+
+function getInitials(name) {
+  if (!name) return '?'
+  return name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
+}
+
+const ROLE_LABEL = { client: 'CLIENT', manager: 'MANAGER', admin: 'ADMIN' }
+
+const STAFF_NAV = [
+  { to: '/dashboard',         label: 'Сводка',          icon: 'Home',     roles: ['manager', 'admin'], end: true },
+  { to: '/dashboard/orders',  label: 'Заказы',          icon: 'Package',  roles: ['client', 'manager', 'admin'] },
+  { to: '/dashboard/drivers', label: 'Водители',       icon: 'User',     roles: ['manager', 'admin'] },
+  { to: '/dashboard/trucks',  label: 'Транспорт',      icon: 'Truck',    roles: ['manager', 'admin'] },
+  { to: '/dashboard/tariffs', label: 'Тарифы',         icon: 'Wallet',   roles: ['admin'] },
+  { to: '/dashboard/users',   label: 'Пользователи',   icon: 'Users',    roles: ['manager', 'admin'] },
+  { to: '/dashboard/chats',    label: 'Чаты',           icon: 'Chat',     roles: ['manager', 'admin'] },
+  { to: '/dashboard/appeals',  label: 'Апелляции',      icon: 'LifeBuoy', roles: ['admin'] },
+  { to: '/dashboard/couriers', label: 'Курьеры',         icon: 'User',     roles: ['admin'] },
+  { to: '/dashboard/ai',      label: 'AI Оптимизация', icon: 'Sparkles', roles: ['manager', 'admin'] },
+  { to: '/dashboard/profile', label: 'Профиль',        icon: 'Settings', roles: ['client', 'manager', 'admin'] },
+]
+
+const CLIENT_NAV = [
+  { to: '/dashboard',             label: 'Сводка',       icon: 'Home',     end: true },
+  { to: '/dashboard/my-orders',   label: 'Мои заявки',   icon: 'Package'  },
+  { to: '/dashboard/new-order',   label: 'Новая заявка', icon: 'Plus'     },
+  { to: '/dashboard/profile',     label: 'Профиль',      icon: 'Settings' },
+  { to: '/dashboard/support',     label: 'Поддержка',    icon: 'LifeBuoy' },
+  { to: '/dashboard/chats',       label: 'Чаты',         icon: 'Chat'     },
+]
+
+function SidebarLink({ item }) {
+  const [hovered, setHovered] = useState(false)
+  const IconComp = Icons[item.icon]
+  return (
+    <NavLink
+      to={item.to}
+      end={item.end}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={({ isActive }) => ({
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        padding: '10px 12px',
+        background: isActive ? 'rgba(240,165,0,0.10)' : hovered ? 'rgba(255,255,255,0.04)' : 'transparent',
+        color: isActive ? 'var(--gold)' : 'rgba(255,255,255,0.65)',
+        textDecoration: 'none',
+        borderRadius: 6,
+        fontSize: 13,
+        fontWeight: 500,
+        fontFamily: 'var(--font-body)',
+        borderLeft: isActive ? '2px solid var(--gold)' : '2px solid transparent',
+        transition: 'all 0.15s var(--ease-out)',
+      })}
+    >
+      {IconComp && <IconComp size={17} />}
+      <span>{item.label}</span>
+    </NavLink>
+  )
+}
 
 export default function DashboardPage() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [logoutHover, setLogoutHover] = useState(false)
 
   const handleLogout = async () => {
     try { await api.post('/auth/logout') } catch {}
@@ -21,76 +94,107 @@ export default function DashboardPage() {
     navigate('/login')
   }
 
-  const navItems = [
-    { to: '/dashboard/orders', label: 'Заказы', icon: '📦', roles: ['client', 'manager', 'admin'] },
-    { to: '/dashboard/drivers', label: 'Водители', icon: '🧑‍✈️', roles: ['manager', 'admin'] },
-    { to: '/dashboard/trucks', label: 'Транспорт', icon: '🚚', roles: ['manager', 'admin'] },
-    { to: '/dashboard/tariffs', label: 'Тарифы', icon: '💰', roles: ['admin'] },
-    { to: '/dashboard/users', label: 'Пользователи', icon: '👥', roles: ['manager', 'admin'] },
-    { to: '/dashboard/ai', label: 'AI Оптимизация', icon: '🤖', roles: ['manager', 'admin'] },
-    { to: '/dashboard/profile', label: 'Профиль', icon: '👤', roles: ['client', 'manager', 'admin'] },
-  ].filter((item) => item.roles.includes(user?.role))
+  const isClient = user?.role === 'client'
+  const navItems = isClient
+    ? CLIENT_NAV
+    : STAFF_NAV.filter(item => item.roles.includes(user?.role))
 
   return (
-    <div className="flex h-screen bg-gray-100">
-      {/* Sidebar */}
-      <aside className={`bg-blue-900 text-white flex flex-col transition-all duration-200 ${sidebarOpen ? 'w-64' : 'w-16'}`}>
-        <div className="flex items-center justify-between p-4 border-b border-blue-700">
-          {sidebarOpen && <span className="font-bold text-lg">ФураЕдет</span>}
-          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="text-blue-300 hover:text-white p-1">
-            {sidebarOpen ? '◀' : '▶'}
-          </button>
+    <div style={{ display: 'flex', height: '100vh', background: 'var(--navy)', overflow: 'hidden' }}>
+      <aside style={{
+        width: 240,
+        background: 'var(--navy-2)',
+        borderRight: '1px solid rgba(255,255,255,0.05)',
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100vh',
+        position: 'sticky',
+        top: 0,
+        flexShrink: 0,
+      }}>
+        <div style={{ padding: '24px 22px 20px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+          <a href="/" style={{ textDecoration: 'none', display: 'inline-block' }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'white', letterSpacing: '0.1em', cursor: 'pointer' }}>
+              ФУРА<span style={{ color: 'var(--gold)' }}>ЕДЕТ</span>
+            </div>
+          </a>
+          <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.32em', color: 'rgba(240,165,0,0.55)', marginTop: 3, fontFamily: 'var(--font-body)', textTransform: 'uppercase' }}>
+            {ROLE_LABEL[user?.role] || 'CLIENT'}
+          </div>
         </div>
 
-        {/* User info */}
-        {sidebarOpen && (
-          <div className="px-4 py-3 border-b border-blue-700">
-            <div className="flex items-center gap-3">
-              <img src={user?.avatar_url || '/default-avatar.png'} alt="avatar"
-                className="w-9 h-9 rounded-full object-cover bg-blue-700" />
-              <div className="overflow-hidden">
-                <p className="font-semibold text-sm truncate">{user?.name}</p>
-                <p className="text-blue-300 text-xs capitalize">{user?.role}</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Nav */}
-        <nav className="flex-1 py-4 space-y-1 px-2">
+        <nav style={{ flex: 1, padding: 12, display: 'flex', flexDirection: 'column', gap: 2, overflowY: 'auto' }}>
           {navItems.map((item) => (
-            <NavLink key={item.to} to={item.to}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-lg transition text-sm
-                 ${isActive ? 'bg-blue-700 text-white' : 'text-blue-200 hover:bg-blue-800 hover:text-white'}`
-              }>
-              <span className="text-lg">{item.icon}</span>
-              {sidebarOpen && <span>{item.label}</span>}
-            </NavLink>
+            <SidebarLink key={item.to} item={item} />
           ))}
         </nav>
 
-        {/* Logout */}
-        <div className="p-3 border-t border-blue-700">
-          <button onClick={handleLogout}
-            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-blue-200 hover:bg-blue-800 hover:text-white transition text-sm">
-            <span className="text-lg">🚪</span>
-            {sidebarOpen && <span>Выйти</span>}
+        <div style={{ padding: 14, borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{
+            width: 36, height: 36, borderRadius: '50%',
+            background: 'var(--gold)', color: 'var(--navy)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontFamily: 'var(--font-display)', fontSize: 16, letterSpacing: 1, flexShrink: 0,
+          }}>
+            {getInitials(user?.name)}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {user?.name}
+            </div>
+            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {user?.email}
+            </div>
+          </div>
+          <button
+            onClick={handleLogout}
+            title="Выйти"
+            onMouseEnter={() => setLogoutHover(true)}
+            onMouseLeave={() => setLogoutHover(false)}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: logoutHover ? 'var(--red)' : 'rgba(255,255,255,0.4)',
+              cursor: 'pointer',
+              padding: 6,
+              borderRadius: 4,
+              display: 'flex',
+              transition: 'color 0.15s',
+            }}
+          >
+            <Icons.Logout size={16} />
           </button>
         </div>
       </aside>
 
-      {/* Main content */}
-      <main className="flex-1 overflow-auto">
+      <main style={{ flex: 1, overflowY: 'auto', background: 'var(--navy)' }}>
         <Routes>
-          <Route path="orders" element={<OrdersTab />} />
-          <Route path="drivers" element={<DriversTab />} />
-          <Route path="trucks" element={<TrucksTab />} />
-          <Route path="tariffs" element={<TariffsTab />} />
-          <Route path="users" element={<UsersTab />} />
-          <Route path="ai" element={<AiTab />} />
-          <Route path="profile" element={<ProfileTab />} />
-          <Route index element={<OrdersTab />} />
+          {isClient ? (
+            <>
+              <Route path="my-orders"  element={<ClientOrders />} />
+              <Route path="new-order"  element={<ClientNewOrder />} />
+              <Route path="profile"    element={<ProfileTab />} />
+              <Route path="support"    element={<ClientSupport />} />
+              <Route path="chats"      element={<ClientChats />} />
+              <Route index             element={<ClientHome />} />
+            </>
+          ) : (
+            <>
+              <Route path="orders"  element={<OrdersTab />} />
+              <Route path="drivers" element={<DriversTab />} />
+              <Route path="trucks"  element={<TrucksTab />} />
+              <Route path="tariffs" element={<TariffsTab />} />
+              <Route path="users"   element={<UsersTab />} />
+              <Route path="chats"   element={<ManagerChats />} />
+              <Route path="appeals"  element={<AdminAppeals />} />
+              <Route path="couriers" element={<AdminCouriers />} />
+              <Route path="ai"      element={<AiTab />} />
+              <Route path="profile" element={<ProfileTab />} />
+              <Route index element={
+                user?.role === 'manager' ? <ManagerHome /> : <AdminHome />
+              } />
+            </>
+          )}
         </Routes>
       </main>
     </div>

@@ -44,6 +44,10 @@ return [
         'key' => env('YANDEX_MAPS_API_KEY'),
     ],
 
+    'twogis' => [
+        'key' => env('TWOGIS_API_KEY'),
+    ],
+
     'gemini' => [
         'key' => env('GEMINI_API_KEY'),
     ],
@@ -54,6 +58,10 @@ return [
 
     'deepseek' => [
         'key' => env('DEEPSEEK_API_KEY'),
+    ],
+
+    'gigachat' => [
+        'auth_key' => env('GIGACHAT_AUTH_KEY'),
     ],
 
 ];

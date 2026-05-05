@@ -1,73 +1,148 @@
+/* eslint-disable no-empty, react-hooks/set-state-in-effect */
 import { useState, useEffect } from 'react'
 import api from '../../api/axios'
+import { Icons } from '../../components/Icons'
+import { Card, Btn, Field, Select, Modal, PageHeader, StatusPill, Alert, Loading, Empty } from '../../components/ui'
+
+const AVAIL_MAP = {
+  available: { bg: 'rgba(18,183,106,0.14)', fg: 'var(--green)', label: 'Доступен' },
+  busy:      { bg: 'rgba(240,68,56,0.14)',  fg: 'var(--red)',   label: 'Занят' },
+}
+
+const TYPE_MAP = {
+  staff:  { bg: 'rgba(46,144,250,0.14)',  fg: 'var(--blue)',  label: 'Штатный' },
+  hired:  { bg: 'rgba(122,90,248,0.14)',  fg: 'var(--violet)', label: 'Наёмный' },
+}
 
 export default function DriversTab() {
   const [drivers, setDrivers] = useState([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState(null)
+  const [search,      setSearch]      = useState('')
+  const [filterAvail, setFilterAvail] = useState('all')
+  const [filterType,  setFilterType]  = useState('all')
 
   const load = async () => {
     setLoading(true)
-    try { const { data } = await api.get('/drivers'); setDrivers(data) } catch {}
+    try {
+      const { data } = await api.get('/drivers')
+      setDrivers(data)
+    } catch {}
     setLoading(false)
   }
 
   useEffect(() => { load() }, [])
 
+  const q = search.toLowerCase()
+  const visible = drivers.filter(d => {
+    if (q && !`${d.name} ${d.phone} ${d.license_number}`.toLowerCase().includes(q)) return false
+    if (filterAvail !== 'all' && String(d.is_available) !== filterAvail) return false
+    if (filterType  !== 'all' && d.type !== filterType) return false
+    return true
+  })
+
   const handleDelete = async (id) => {
     if (!confirm('Удалить водителя?')) return
-    try { await api.delete(`/drivers/${id}`); load() } catch (err) {
+    try {
+      await api.delete(`/drivers/${id}`)
+      load()
+    } catch (err) {
       alert(err.response?.data?.error || 'Ошибка')
     }
   }
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">Водители</h2>
-        <button onClick={() => { setEditing(null); setShowForm(true) }}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition text-sm font-medium">
-          + Добавить водителя
-        </button>
+    <div style={{ padding: '0 0 40px' }}>
+      <PageHeader
+        eyebrow="Персонал"
+        title="Водители"
+        action={
+          <Btn icon={<Icons.Plus size={14} />} onClick={() => { setEditing(null); setShowForm(true) }}>
+            Добавить водителя
+          </Btn>
+        }
+      />
+
+      <div style={{ padding: '0 32px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+        {/* Search + filters */}
+        <Card padding={14} style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 200 }}>
+            <Icons.Search size={14} style={{ color: 'rgba(255,255,255,0.35)', flexShrink: 0 }} />
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Поиск по имени, телефону, правам..."
+              style={{ background: 'transparent', border: 'none', color: 'white', outline: 'none', fontSize: 13, fontFamily: 'var(--font-body)', flex: 1 }}
+            />
+            {search && (
+              <button onClick={() => setSearch('')} style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: 0 }}>✕</button>
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {[['all','Все'], ['true','Доступен'], ['false','Занят']].map(([v, l]) => (
+              <button key={v} onClick={() => setFilterAvail(v)} style={{ padding: '5px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700, fontFamily: 'var(--font-body)', cursor: 'pointer', border: filterAvail === v ? '1px solid var(--gold)' : '1px solid rgba(255,255,255,0.1)', background: filterAvail === v ? 'rgba(240,165,0,0.12)' : 'transparent', color: filterAvail === v ? 'var(--gold)' : 'rgba(255,255,255,0.5)' }}>{l}</button>
+            ))}
+            <div style={{ width: 1, background: 'rgba(255,255,255,0.08)', alignSelf: 'stretch' }} />
+            {[['all','Все типы'], ['staff','Штатный'], ['hired','Наёмный']].map(([v, l]) => (
+              <button key={v} onClick={() => setFilterType(v)} style={{ padding: '5px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700, fontFamily: 'var(--font-body)', cursor: 'pointer', border: filterType === v ? '1px solid var(--gold)' : '1px solid rgba(255,255,255,0.1)', background: filterType === v ? 'rgba(240,165,0,0.12)' : 'transparent', color: filterType === v ? 'var(--gold)' : 'rgba(255,255,255,0.5)' }}>{l}</button>
+            ))}
+          </div>
+          {(search || filterAvail !== 'all' || filterType !== 'all') && (
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', fontFamily: 'var(--font-mono)' }}>
+              {visible.length} из {drivers.length}
+            </div>
+          )}
+        </Card>
+
+        {loading ? (
+          <Loading />
+        ) : visible.length === 0 ? (
+          <Empty text={drivers.length === 0 ? 'Водителей пока нет' : 'Ничего не найдено'} />
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 14 }}>
+            {visible.map((d) => (
+              <Card key={d.id} padding={20} hover>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
+                  <div>
+                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, letterSpacing: 0.5, marginBottom: 4 }}>{d.name}</div>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 8 }}>{d.phone}</div>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
+                      Права: {d.license_number}
+                    </div>
+                  </div>
+                  <StatusPill status={d.is_available ? 'available' : 'busy'} map={AVAIL_MAP} />
+                </div>
+                <div style={{ marginBottom: 16 }}>
+                  <StatusPill status={d.type} map={TYPE_MAP} />
+                </div>
+                <div style={{ display: 'flex', gap: 10, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                  <button
+                    onClick={() => { setEditing(d); setShowForm(true) }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.55)', cursor: 'pointer', fontSize: 12, fontFamily: 'var(--font-body)', transition: 'color 0.15s' }}
+                    onMouseEnter={(e) => e.currentTarget.style.color = 'white'}
+                    onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.55)'}
+                  >
+                    <Icons.Edit size={14} /> Изменить
+                  </button>
+                  <button
+                    onClick={() => handleDelete(d.id)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.55)', cursor: 'pointer', fontSize: 12, fontFamily: 'var(--font-body)', transition: 'color 0.15s' }}
+                    onMouseEnter={(e) => e.currentTarget.style.color = 'var(--red)'}
+                    onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.55)'}
+                  >
+                    <Icons.Trash size={14} /> Удалить
+                  </button>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
 
-      {loading ? (
-        <div className="text-center py-12 text-gray-400">Загрузка...</div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {drivers.map((d) => (
-            <div key={d.id} className="bg-white rounded-xl shadow-sm p-5">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="font-semibold text-gray-800">{d.name}</h3>
-                  <p className="text-sm text-gray-500">{d.phone}</p>
-                  <p className="text-sm text-gray-500">Права: {d.license_number}</p>
-                  <span className={`text-xs px-2 py-0.5 rounded-full mt-1 inline-block ${d.type === 'staff' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>
-                    {d.type === 'staff' ? 'Штатный' : 'Наёмный'}
-                  </span>
-                </div>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${d.is_available ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                  {d.is_available ? 'Доступен' : 'Занят'}
-                </span>
-              </div>
-              <div className="flex gap-2 mt-4">
-                <button onClick={() => { setEditing(d); setShowForm(true) }}
-                  className="text-sm text-blue-600 hover:underline">Изменить</button>
-                <button onClick={() => handleDelete(d.id)}
-                  className="text-sm text-red-600 hover:underline">Удалить</button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
       {showForm && (
-        <DriverForm
-          initial={editing}
-          onClose={() => setShowForm(false)}
-          onSaved={load}
-        />
+        <DriverForm initial={editing} onClose={() => setShowForm(false)} onSaved={load} />
+
       )}
     </div>
   )
@@ -79,12 +154,12 @@ function DriverForm({ initial, onClose, onSaved }) {
     phone: initial?.phone || '',
     license_number: initial?.license_number || '',
     type: initial?.type || 'staff',
-    personal_car: initial?.personal_car || '',
-    insurance_num: initial?.insurance_num || '',
     is_available: initial?.is_available ?? true,
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -102,36 +177,29 @@ function DriverForm({ initial, onClose, onSaved }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
-        <div className="flex justify-between mb-4">
-          <h3 className="font-bold text-lg">{initial ? 'Изменить водителя' : 'Новый водитель'}</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
-        </div>
-        {error && <div className="bg-red-50 text-red-700 rounded px-3 py-2 text-sm mb-3">{error}</div>}
-        <form onSubmit={handleSubmit} className="space-y-3 text-sm">
-          <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
-            placeholder="ФИО" className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          <input required value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })}
-            placeholder="Телефон" className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          <input required value={form.license_number} onChange={(e) => setForm({ ...form, license_number: e.target.value })}
-            placeholder="Номер прав" className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <option value="staff">Штатный</option>
-            <option value="hired">Наёмный</option>
-          </select>
-          <label className="flex items-center gap-2">
-            <input type="checkbox" checked={form.is_available}
-              onChange={(e) => setForm({ ...form, is_available: e.target.checked })} />
-            Доступен
-          </label>
-          <button type="submit" disabled={loading}
-            className="w-full bg-blue-600 text-white py-2.5 rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50">
-            {loading ? 'Сохраняем...' : 'Сохранить'}
-          </button>
-        </form>
-      </div>
-    </div>
+    <Modal onClose={onClose} title={initial ? 'Изменить водителя' : 'Новый водитель'} maxWidth={440}>
+      {error && <Alert type="error">{error}</Alert>}
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <Field label="ФИО" required value={form.name} onChange={set('name')} />
+        <Field label="Телефон" required value={form.phone} onChange={set('phone')} />
+        <Field label="Номер прав" required value={form.license_number} onChange={set('license_number')} />
+        <Select label="Тип" value={form.type} onChange={set('type')}>
+          <option value="staff">Штатный</option>
+          <option value="hired">Наёмный</option>
+        </Select>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 13, color: 'rgba(255,255,255,0.7)', fontFamily: 'var(--font-body)' }}>
+          <input
+            type="checkbox"
+            checked={form.is_available}
+            onChange={(e) => setForm((f) => ({ ...f, is_available: e.target.checked }))}
+            style={{ accentColor: 'var(--gold)', width: 16, height: 16 }}
+          />
+          Доступен
+        </label>
+        <Btn type="submit" disabled={loading} style={{ width: '100%', justifyContent: 'center', marginTop: 8 }}>
+          {loading ? 'Сохраняем...' : 'Сохранить'}
+        </Btn>
+      </form>
+    </Modal>
   )
 }

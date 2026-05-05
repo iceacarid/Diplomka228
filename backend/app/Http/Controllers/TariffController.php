@@ -9,7 +9,13 @@ class TariffController extends Controller
 {
     public function index()
     {
-        return response()->json(Tariff::where('is_active', true)->get());
+        $tariff = Tariff::where('is_active', true)->first()
+            ?? Tariff::firstOrCreate(
+                ['name' => 'Базовый'],
+                ['price_per_km' => 55.00, 'weight_coef' => 12.00, 'volume_coef' => 50.00, 'is_active' => true]
+            );
+
+        return response()->json([$tariff]);
     }
 
     public function store(Request $request)
@@ -21,6 +27,7 @@ class TariffController extends Controller
             'name'         => 'required|string|max:100',
             'price_per_km' => 'required|numeric|min:0',
             'weight_coef'  => 'required|numeric|min:0',
+            'volume_coef'  => 'required|numeric|min:0',
             'is_active'    => 'boolean',
         ]);
         return response()->json(Tariff::create($data), 201);
@@ -35,6 +42,7 @@ class TariffController extends Controller
             'name'         => 'sometimes|string|max:100',
             'price_per_km' => 'sometimes|numeric|min:0',
             'weight_coef'  => 'sometimes|numeric|min:0',
+            'volume_coef'  => 'sometimes|numeric|min:0',
             'is_active'    => 'boolean',
         ]);
         $tariff->update($data);

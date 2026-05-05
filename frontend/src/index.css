@@ -1,22 +1,73 @@
 @import "tailwindcss";
 
 :root {
-  --navy:   #0A1628;
-  --navy2:  #0F2040;
-  --navy3:  #162B55;
-  --gold:   #F0A500;
-  --gold2:  #FFB800;
-  --gold-dim: rgba(240,165,0,0.12);
-  --white:  #FFFFFF;
-  --off:    #F5F3EE;
-  --gray1:  #E8E6E0;
-  --gray2:  #A8A49B;
-  --gray3:  #6B6760;
-  --green:  #12B76A;
-  --red:    #F04438;
-  --font-display: 'Bebas Neue', sans-serif;
-  --font-body:    'DM Sans', sans-serif;
-  --font-mono:    'JetBrains Mono', monospace;
+  --navy:        #0A1628;
+  --navy-2:      #0F2040;
+  --navy-3:      #162B55;
+  --navy-deep:   #060D1A;
+
+  --gold:        #F0A500;
+  --gold-2:      #FFB800;
+  --gold-dim:    rgba(240,165,0,0.12);
+  --gold-line:   rgba(240,165,0,0.25);
+
+  --white:       #FFFFFF;
+  --off-white:   #F5F3EE;
+  --gray-1:      #E8E6E0;
+  --gray-2:      #A8A49B;
+  --gray-3:      #6B6760;
+  --ink:         #1A1F2C;
+
+  --green:       #12B76A;
+  --green-bg:    #E6F8EE;
+  --red:         #F04438;
+  --red-bg:      #FEEDEC;
+  --amber:       #F79009;
+  --amber-bg:    #FEF6E5;
+  --blue:        #2E90FA;
+  --blue-bg:     #EAF4FE;
+  --violet:      #7A5AF8;
+  --violet-bg:   #EFEAFE;
+
+  --fg-1:        rgba(255,255,255,1);
+  --fg-2:        rgba(255,255,255,0.72);
+  --fg-3:        rgba(255,255,255,0.45);
+  --fg-4:        rgba(255,255,255,0.28);
+  --fg-line:     rgba(255,255,255,0.07);
+  --fg-line-2:   rgba(255,255,255,0.12);
+
+  --font-display: 'Bebas Neue', 'Impact', sans-serif;
+  --font-body:    'DM Sans', system-ui, -apple-system, sans-serif;
+  --font-mono:    'JetBrains Mono', 'Menlo', monospace;
+
+  --r-1:  2px;
+  --r-2:  6px;
+  --r-3:  10px;
+  --r-4:  14px;
+  --r-5:  20px;
+  --r-pill: 999px;
+
+  --shadow-1: 0 1px 2px rgba(10,22,40,0.04), 0 1px 3px rgba(10,22,40,0.06);
+  --shadow-2: 0 4px 16px rgba(10,22,40,0.06), 0 2px 4px rgba(10,22,40,0.04);
+  --shadow-3: 0 8px 32px rgba(10,22,40,0.10), 0 4px 8px rgba(10,22,40,0.04);
+  --shadow-hero: 20px 20px 60px rgba(0,0,0,0.55);
+  --shadow-gold: 0 0 0 1px var(--gold), 0 0 60px rgba(240,165,0,0.20);
+
+  --s-1: 4px;  --s-2: 8px;   --s-3: 12px; --s-4: 16px;
+  --s-5: 20px; --s-6: 24px;  --s-7: 32px; --s-8: 48px;
+  --s-9: 64px; --s-10: 80px;
+
+  --t-fast: 0.15s; --t-base: 0.25s; --t-slow: 0.45s;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --navy2: var(--navy-2);
+  --navy3: var(--navy-3);
+  --gold2: var(--gold-2);
+  --off: var(--off-white);
+  --gray1: var(--gray-1);
+  --gray2: var(--gray-2);
+  --gray3: var(--gray-3);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -31,3 +82,19 @@ body { font-family: var(--font-body); background: var(--navy); color: var(--whit
 @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
 .animate-in { animation: fadeUp 0.5s ease both; }
+
+.fe-display-1 { font-family: var(--font-display); font-size: clamp(64px, 8vw, 108px); line-height: 0.88; letter-spacing: 3px; text-transform: uppercase; }
+.fe-display-2 { font-family: var(--font-display); font-size: clamp(48px, 5.5vw, 72px); line-height: 0.92; letter-spacing: 2px; text-transform: uppercase; }
+.fe-display-3 { font-family: var(--font-display); font-size: 56px; line-height: 1; letter-spacing: 1px; text-transform: uppercase; }
+.fe-h1        { font-family: var(--font-display); font-size: 38px; line-height: 1; letter-spacing: 1px; text-transform: uppercase; }
+.fe-h2        { font-family: var(--font-display); font-size: 28px; line-height: 1.05; letter-spacing: 0.5px; text-transform: uppercase; }
+.fe-h3        { font-family: var(--font-body); font-size: 18px; font-weight: 700; letter-spacing: -0.01em; }
+.fe-body      { font-family: var(--font-body); font-size: 15px; font-weight: 400; line-height: 1.6; }
+.fe-body-sm   { font-family: var(--font-body); font-size: 13px; font-weight: 400; line-height: 1.55; }
+.fe-caption   { font-family: var(--font-body); font-size: 12px; font-weight: 500; line-height: 1.4; }
+.fe-eyebrow   { font-family: var(--font-body); font-size: 10px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; }
+.fe-label     { font-family: var(--font-body); font-size: 9px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; }
+.fe-mono      { font-family: var(--font-mono); font-size: 12px; font-weight: 500; letter-spacing: 0.04em; }
+
+.fe-wordmark { font-family: var(--font-display); font-weight: 400; letter-spacing: 0.1em; text-transform: uppercase; }
+.fe-wordmark .accent { color: var(--gold); }

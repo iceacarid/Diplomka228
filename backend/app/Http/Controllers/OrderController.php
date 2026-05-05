@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CargoType;
+use App\Models\Chat;
 use App\Models\Driver;
+use App\Models\Message;
 use App\Models\Order;
 use App\Models\Truck;
 use Illuminate\Http\Request;
@@ -12,7 +15,7 @@ class OrderController extends Controller
     public function index(Request $request)
     {
         $user  = $request->user();
-        $query = Order::with(['client', 'manager', 'truck', 'driver']);
+        $query = Order::with(['client', 'manager', 'courier', 'truck', 'driver']);
 
         if ($user->role === 'client') {
             $query->where('client_id', $user->id);
@@ -33,17 +36,34 @@ class OrderController extends Controller
             'origin_address'    => 'required|string|max:500',
             'dest_address'      => 'required|string|max:500',
             'weight'            => 'required|numeric|min:0',
-            'volume'            => 'required|numeric|min:0',
-            'cargo_type'        => 'required|in:general,fragile,flammable,perishable,hazardous,oversized,temperature_controlled,other',
+            'volume'            => 'nullable|numeric|min:0',
+            'cargo_type'        => 'required|string|exists:cargo_types,slug',
             'cargo_type_custom' => 'nullable|string|max:255',
             'cargo_description' => 'nullable|string',
             'price'             => 'required|numeric|min:0',
+            'pickup_date'       => 'nullable|date',
         ]);
 
         $data['client_id'] = $request->user()->id;
         $data['status']    = 'pending';
 
         $order = Order::create($data);
+
+        // Авто-создание чата с бот-приветствием
+        $chat = Chat::create(['order_id' => $order->id]);
+        Message::create([
+            'chat_id'     => $chat->id,
+            'sender_id'   => null,
+            'sender_role' => 'bot',
+            'body'        => implode("\n", [
+                "Ваша заявка {$order->tracking_id} успешно создана!",
+                "",
+                "⚠️ Заполнение формы ниже обязательно.",
+                "Без этого ваш заказ не будет обработан менеджером.",
+            ]),
+            'type' => 'bot_greeting',
+        ]);
+
         return response()->json($this->orderData($order->load(['client', 'manager', 'truck', 'driver'])), 201);
     }
 
@@ -59,11 +79,18 @@ class OrderController extends Controller
     public function update(Request $request, Order $order)
     {
         $data = $request->validate([
-            'status'           => 'sometimes|in:draft,pending,in_progress,shipped,delivered,rejected',
+            'status'           => 'sometimes|in:draft,pending,in_progress,confirmed,courier_assigned,picked_up,at_warehouse,missed_pickup,shipped,delivered,rejected',
             'rejection_reason' => 'nullable|string',
             'eta'              => 'nullable|date',
+            'pickup_date'      => 'nullable|date',
         ]);
         $order->update($data);
+
+        // Авто-архивация чата при доставке
+        if (isset($data['status']) && $data['status'] === 'delivered') {
+            \App\Models\Chat::where('order_id', $order->id)->update(['status' => 'archived']);
+        }
+
         return response()->json($this->orderData($order->load(['client', 'manager', 'truck', 'driver'])));
     }
 
@@ -79,7 +106,22 @@ class OrderController extends Controller
         if ($order->status !== 'pending') {
             return response()->json(['error' => 'Заказ уже обработан.'], 400);
         }
-        $order->update(['status' => 'in_progress', 'manager_id' => $request->user()->id]);
+        $manager = $request->user();
+        $order->update(['status' => 'in_progress', 'manager_id' => $manager->id]);
+
+        // Закрепляем чат за менеджером
+        $chat = \App\Models\Chat::where('order_id', $order->id)->first();
+        if ($chat) {
+            $chat->update(['manager_id' => $manager->id]);
+            Message::create([
+                'chat_id'     => $chat->id,
+                'sender_id'   => null,
+                'sender_role' => 'bot',
+                'body'        => "Менеджер {$manager->name} принял заявку в работу. Ожидайте уточнения деталей.",
+                'type'        => 'text',
+            ]);
+        }
+
         return response()->json($this->orderData($order->load(['client', 'manager', 'truck', 'driver'])));
     }
 
@@ -90,11 +132,26 @@ class OrderController extends Controller
             return response()->json(['error' => 'Заказ уже обработан.'], 400);
         }
         $request->validate(['rejection_reason' => 'required|string']);
+        $manager = $request->user();
         $order->update([
             'status'           => 'rejected',
             'rejection_reason' => $request->rejection_reason,
-            'manager_id'       => $request->user()->id,
+            'manager_id'       => $manager->id,
         ]);
+
+        $chat = \App\Models\Chat::where('order_id', $order->id)->first();
+        if ($chat) {
+            $chat->update(['manager_id' => $manager->id, 'status' => 'archived']);
+            Message::create([
+                'chat_id'     => $chat->id,
+                'sender_id'   => null,
+                'sender_role' => 'bot',
+                'body'        => $request->rejection_reason,
+                'type'        => 'text',
+                'metadata'    => ['event' => 'order_rejected', 'manager_name' => $manager->name],
+            ]);
+        }
+
         return response()->json($this->orderData($order->load(['client', 'manager', 'truck', 'driver'])));
     }
 
@@ -123,6 +180,50 @@ class OrderController extends Controller
         return response()->json($this->orderData($order->load(['client', 'manager', 'truck', 'driver'])));
     }
 
+    /** POST /api/orders/{id}/reschedule-confirm — менеджер подтверждает перенос забора */
+    public function rescheduleConfirm(Request $request, Order $order)
+    {
+        $user = $request->user();
+        if (!in_array($user->role, ['manager', 'admin'])) {
+            return response()->json(['error' => 'Нет доступа.'], 403);
+        }
+        if ($order->status !== 'missed_pickup') {
+            return response()->json(['error' => 'Заявка не требует переноса.'], 400);
+        }
+
+        $data = $request->validate([
+            'pickup_date' => 'required|date|after_or_equal:today',
+            'pickup_time' => 'nullable|regex:/^\d{2}:\d{2}$/',
+        ]);
+
+        $order->update([
+            'pickup_date'            => $data['pickup_date'],
+            'pickup_time'            => $data['pickup_time'] ?? null,
+            'status'                 => 'confirmed',
+            'courier_id'             => null,
+            'courier_blocked'        => false,
+            'courier_blocked_reason' => null,
+        ]);
+
+        $timeStr  = isset($data['pickup_time']) ? " в {$data['pickup_time']}" : '';
+        $dateLabel = \Carbon\Carbon::parse($data['pickup_date'])->translatedFormat('d.m.Y');
+
+        $chat = \App\Models\Chat::where('order_id', $order->id)->first();
+        if ($chat) {
+            Message::create([
+                'chat_id'     => $chat->id,
+                'sender_id'   => null,
+                'sender_role' => 'bot',
+                'body'        => "✅ Менеджер {$user->name} согласовал новую дату забора груза: {$dateLabel}{$timeStr}. Заявка снова доступна для курьеров.",
+                'type'        => 'text',
+                'metadata'    => ['event' => 'reschedule_confirmed'],
+            ]);
+            $chat->touch();
+        }
+
+        return response()->json($this->orderData($order->load(['client', 'manager', 'truck', 'driver'])));
+    }
+
     /** GET /api/orders/track/{tracking_id} — публичный */
     public function track(string $trackingId)
     {
@@ -137,13 +238,19 @@ class OrderController extends Controller
 
     private function orderData(Order $order): array
     {
+        if (!$order->relationLoaded('chat')) {
+            $order->load('chat');
+        }
         return [
             'id'                => $order->id,
+            'chat_id'           => $order->chat?->id,
             'tracking_id'       => $order->tracking_id,
             'client_id'         => $order->client_id,
             'client_name'       => $order->client?->name ?? '',
             'manager_id'        => $order->manager_id,
             'manager_name'      => $order->manager?->name ?? '',
+            'courier_id'        => $order->courier_id,
+            'courier_name'      => $order->courier?->name ?? '',
             'truck_id'          => $order->truck_id,
             'truck_plate'       => $order->truck?->plate_number ?? '',
             'driver_id'         => $order->driver_id,
@@ -157,9 +264,13 @@ class OrderController extends Controller
             'cargo_type_custom' => $order->cargo_type_custom,
             'cargo_description' => $order->cargo_description,
             'price'             => $order->price,
-            'eta'               => $order->eta,
-            'rejection_reason'  => $order->rejection_reason,
-            'created_at'        => $order->created_at,
+            'eta'                    => $order->eta,
+            'pickup_date'            => $order->pickup_date?->toDateString(),
+            'pickup_time'            => $order->pickup_time,
+            'courier_blocked'        => (bool) $order->courier_blocked,
+            'courier_blocked_reason' => $order->courier_blocked_reason,
+            'rejection_reason'       => $order->rejection_reason,
+            'created_at'             => $order->created_at,
         ];
     }
 }

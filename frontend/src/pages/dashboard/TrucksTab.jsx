@@ -1,19 +1,23 @@
+/* eslint-disable no-empty, react-hooks/set-state-in-effect */
 import { useState, useEffect } from 'react'
 import api from '../../api/axios'
+import { Icons } from '../../components/Icons'
+import { Card, Btn, Field, Select, Modal, PageHeader, StatusPill, Alert, Loading, Empty } from '../../components/ui'
 
-const STATUS_LABELS = { available: 'Свободен', in_transit: 'В рейсе', maintenance: 'На ремонте' }
-const STATUS_COLORS = {
-  available: 'bg-green-100 text-green-700',
-  in_transit: 'bg-blue-100 text-blue-700',
-  maintenance: 'bg-yellow-100 text-yellow-700',
+const TRUCK_STATUS_MAP = {
+  available:   { bg: 'rgba(18,183,106,0.14)',  fg: 'var(--green)', label: 'Свободен' },
+  in_transit:  { bg: 'rgba(240,165,0,0.14)',   fg: 'var(--gold)',  label: 'В рейсе' },
+  maintenance: { bg: 'rgba(240,68,56,0.14)',   fg: 'var(--red)',   label: 'На ремонте' },
 }
 
 export default function TrucksTab() {
-  const [trucks, setTrucks] = useState([])
+  const [trucks,  setTrucks]  = useState([])
   const [drivers, setDrivers] = useState([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
-  const [editing, setEditing] = useState(null)
+  const [editing,  setEditing] = useState(null)
+  const [search,       setSearch]       = useState('')
+  const [filterStatus, setFilterStatus] = useState('all')
 
   const load = async () => {
     setLoading(true)
@@ -27,53 +31,117 @@ export default function TrucksTab() {
 
   useEffect(() => { load() }, [])
 
+  const q = search.toLowerCase()
+  const visible = trucks.filter(t => {
+    if (q && !`${t.plate_number} ${t.brand} ${t.model} ${t.driver_name || ''}`.toLowerCase().includes(q)) return false
+    if (filterStatus !== 'all' && t.status !== filterStatus) return false
+    return true
+  })
+
   const handleDelete = async (id) => {
     if (!confirm('Удалить транспорт?')) return
-    try { await api.delete(`/trucks/${id}`); load() } catch (err) {
+    try {
+      await api.delete(`/trucks/${id}`)
+      load()
+    } catch (err) {
       alert(err.response?.data?.error || 'Ошибка')
     }
   }
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">Транспорт</h2>
-        <button onClick={() => { setEditing(null); setShowForm(true) }}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition text-sm font-medium">
-          + Добавить транспорт
-        </button>
-      </div>
+    <div style={{ padding: '0 0 40px' }}>
+      <PageHeader
+        eyebrow="Парк"
+        title="Транспорт"
+        action={
+          <Btn icon={<Icons.Plus size={14} />} onClick={() => { setEditing(null); setShowForm(true) }}>
+            Добавить транспорт
+          </Btn>
+        }
+      />
 
-      {loading ? (
-        <div className="text-center py-12 text-gray-400">Загрузка...</div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {trucks.map((t) => (
-            <div key={t.id} className="bg-white rounded-xl shadow-sm p-5">
-              <div className="flex justify-between items-start mb-3">
-                <div>
-                  <h3 className="font-semibold text-gray-800">{t.brand} {t.model}</h3>
-                  <p className="text-sm font-mono text-blue-700">{t.plate_number}</p>
-                </div>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_COLORS[t.status]}`}>
-                  {STATUS_LABELS[t.status]}
-                </span>
-              </div>
-              <div className="text-sm text-gray-500 space-y-1">
-                <p>Грузоподъёмность: {t.capacity_weight.toLocaleString('ru')} кг</p>
-                <p>Объём: {t.capacity_volume} м³</p>
-                {t.driver_name && <p>Водитель: {t.driver_name}</p>}
-              </div>
-              <div className="flex gap-2 mt-4">
-                <button onClick={() => { setEditing(t); setShowForm(true) }}
-                  className="text-sm text-blue-600 hover:underline">Изменить</button>
-                <button onClick={() => handleDelete(t.id)}
-                  className="text-sm text-red-600 hover:underline">Удалить</button>
-              </div>
+      <div style={{ padding: '0 32px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+        {/* Search + filters */}
+        <Card padding={14} style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 200 }}>
+            <Icons.Search size={14} style={{ color: 'rgba(255,255,255,0.35)', flexShrink: 0 }} />
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Поиск по номеру, марке, модели, водителю..."
+              style={{ background: 'transparent', border: 'none', color: 'white', outline: 'none', fontSize: 13, fontFamily: 'var(--font-body)', flex: 1 }}
+            />
+            {search && (
+              <button onClick={() => setSearch('')} style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: 0 }}>✕</button>
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {[['all','Все'], ['available','Свободен'], ['in_transit','В рейсе'], ['maintenance','Ремонт']].map(([v, l]) => (
+              <button key={v} onClick={() => setFilterStatus(v)} style={{ padding: '5px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700, fontFamily: 'var(--font-body)', cursor: 'pointer', border: filterStatus === v ? '1px solid var(--gold)' : '1px solid rgba(255,255,255,0.1)', background: filterStatus === v ? 'rgba(240,165,0,0.12)' : 'transparent', color: filterStatus === v ? 'var(--gold)' : 'rgba(255,255,255,0.5)' }}>{l}</button>
+            ))}
+          </div>
+          {(search || filterStatus !== 'all') && (
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', fontFamily: 'var(--font-mono)' }}>
+              {visible.length} из {trucks.length}
             </div>
-          ))}
-        </div>
-      )}
+          )}
+        </Card>
+
+        {loading ? (
+          <Loading />
+        ) : visible.length === 0 ? (
+          <Empty text={trucks.length === 0 ? 'Транспорта пока нет' : 'Ничего не найдено'} />
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 14 }}>
+            {visible.map((t) => (
+              <Card key={t.id} padding={20} hover>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                  <div>
+                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, letterSpacing: 0.5, marginBottom: 4 }}>
+                      {t.brand} {t.model}
+                    </div>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 600, color: 'var(--gold)', marginBottom: 4 }}>
+                      {t.plate_number}
+                    </div>
+                  </div>
+                  <StatusPill status={t.status} map={TRUCK_STATUS_MAP} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 14 }}>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)' }}>
+                    Грузоподъёмность: <span style={{ color: 'rgba(255,255,255,0.85)', fontFamily: 'var(--font-mono)' }}>{t.capacity_weight.toLocaleString('ru')} кг</span>
+                  </div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)' }}>
+                    Объём: <span style={{ color: 'rgba(255,255,255,0.85)', fontFamily: 'var(--font-mono)' }}>{t.capacity_volume} м³</span>
+                  </div>
+                  {t.driver_name && (
+                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)' }}>
+                      Водитель: <span style={{ color: 'rgba(255,255,255,0.85)' }}>{t.driver_name}</span>
+                    </div>
+                  )}
+                </div>
+                <div style={{ display: 'flex', gap: 10, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                  <button
+                    onClick={() => { setEditing(t); setShowForm(true) }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.55)', cursor: 'pointer', fontSize: 12, fontFamily: 'var(--font-body)', transition: 'color 0.15s' }}
+                    onMouseEnter={(e) => e.currentTarget.style.color = 'white'}
+                    onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.55)'}
+                  >
+                    <Icons.Edit size={14} /> Изменить
+                  </button>
+                  <button
+                    onClick={() => handleDelete(t.id)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.55)', cursor: 'pointer', fontSize: 12, fontFamily: 'var(--font-body)', transition: 'color 0.15s' }}
+                    onMouseEnter={(e) => e.currentTarget.style.color = 'var(--red)'}
+                    onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.55)'}
+                  >
+                    <Icons.Trash size={14} /> Удалить
+                  </button>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
 
       {showForm && (
         <TruckForm initial={editing} drivers={drivers} onClose={() => setShowForm(false)} onSaved={load} />
@@ -96,12 +164,19 @@ function TruckForm({ initial, drivers, onClose, onSaved }) {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
     setError('')
     try {
-      const payload = { ...form, capacity_weight: parseInt(form.capacity_weight), capacity_volume: parseFloat(form.capacity_volume), driver_id: form.driver_id || null }
+      const payload = {
+        ...form,
+        capacity_weight: parseInt(form.capacity_weight),
+        capacity_volume: parseFloat(form.capacity_volume),
+        driver_id: form.driver_id || null,
+      }
       if (initial) await api.put(`/trucks/${initial.id}`, payload)
       else await api.post('/trucks', payload)
       onSaved()
@@ -112,43 +187,34 @@ function TruckForm({ initial, drivers, onClose, onSaved }) {
     setLoading(false)
   }
 
-  const inp = 'w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500'
-
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
-        <div className="flex justify-between mb-4">
-          <h3 className="font-bold text-lg">{initial ? 'Изменить транспорт' : 'Новый транспорт'}</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+    <Modal onClose={onClose} title={initial ? 'Изменить транспорт' : 'Новый транспорт'} maxWidth={460}>
+      {error && <Alert type="error">{error}</Alert>}
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <Field label="Госномер" required value={form.plate_number} onChange={set('plate_number')} />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <Field label="Марка" required value={form.brand} onChange={set('brand')} />
+          <Field label="Модель" required value={form.model} onChange={set('model')} />
         </div>
-        {error && <div className="bg-red-50 text-red-700 rounded px-3 py-2 text-sm mb-3">{error}</div>}
-        <form onSubmit={handleSubmit} className="space-y-3 text-sm">
-          <input required value={form.plate_number} onChange={(e) => setForm({ ...form, plate_number: e.target.value })} placeholder="Госномер" className={inp} />
-          <div className="flex gap-2">
-            <input required value={form.brand} onChange={(e) => setForm({ ...form, brand: e.target.value })} placeholder="Марка" className={`${inp} flex-1`} />
-            <input required value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} placeholder="Модель" className={`${inp} flex-1`} />
-          </div>
-          <div className="flex gap-2">
-            <input required type="number" value={form.capacity_weight} onChange={(e) => setForm({ ...form, capacity_weight: e.target.value })} placeholder="Груз (кг)" className={`${inp} flex-1`} />
-            <input required type="number" step="0.1" value={form.capacity_volume} onChange={(e) => setForm({ ...form, capacity_volume: e.target.value })} placeholder="Объём (м³)" className={`${inp} flex-1`} />
-          </div>
-          <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className={inp}>
-            <option value="available">Свободен</option>
-            <option value="in_transit">В рейсе</option>
-            <option value="maintenance">На ремонте</option>
-          </select>
-          <select value={form.driver_id} onChange={(e) => setForm({ ...form, driver_id: e.target.value })} className={inp}>
-            <option value="">— Без водителя —</option>
-            {drivers.filter((d) => d.is_available).map((d) => (
-              <option key={d.id} value={d.id}>{d.name}</option>
-            ))}
-          </select>
-          <button type="submit" disabled={loading}
-            className="w-full bg-blue-600 text-white py-2.5 rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50">
-            {loading ? 'Сохраняем...' : 'Сохранить'}
-          </button>
-        </form>
-      </div>
-    </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <Field label="Груз (кг)" type="number" required value={form.capacity_weight} onChange={set('capacity_weight')} />
+          <Field label="Объём (м³)" type="number" step="0.1" required value={form.capacity_volume} onChange={set('capacity_volume')} />
+        </div>
+        <Select label="Статус" value={form.status} onChange={set('status')}>
+          <option value="available">Свободен</option>
+          <option value="in_transit">В рейсе</option>
+          <option value="maintenance">На ремонте</option>
+        </Select>
+        <Select label="Водитель" value={form.driver_id} onChange={set('driver_id')}>
+          <option value="">— Без водителя —</option>
+          {drivers.filter((d) => d.is_available).map((d) => (
+            <option key={d.id} value={d.id}>{d.name}</option>
+          ))}
+        </Select>
+        <Btn type="submit" disabled={loading} style={{ width: '100%', justifyContent: 'center', marginTop: 8 }}>
+          {loading ? 'Сохраняем...' : 'Сохранить'}
+        </Btn>
+      </form>
+    </Modal>
   )
 }

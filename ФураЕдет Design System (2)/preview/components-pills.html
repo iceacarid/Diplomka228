@@ -1,0 +1,24 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Status pills</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { background: white; padding: 24px; font-family: var(--font-body); }
+  .pill { padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; display: inline-block; margin: 4px; }
+  .row { display: flex; flex-wrap: wrap; gap: 0; margin-bottom: 12px; align-items: center; }
+  .label { font-family: var(--font-mono); font-size: 9px; color: var(--gray-2); letter-spacing: 0.12em; width: 80px; text-transform: uppercase; }
+</style></head>
+<body>
+  <div class="row"><span class="label">Order</span>
+    <span class="pill" style="background:var(--gray-1);color:var(--gray-3)">Черновик</span>
+    <span class="pill" style="background:var(--amber-bg);color:var(--amber)">На рассмотрении</span>
+    <span class="pill" style="background:var(--blue-bg);color:var(--blue)">В работе</span>
+    <span class="pill" style="background:var(--violet-bg);color:var(--violet)">В пути</span>
+    <span class="pill" style="background:var(--green-bg);color:var(--green)">Доставлено</span>
+    <span class="pill" style="background:var(--red-bg);color:var(--red)">Отклонено</span>
+  </div>
+  <div class="row"><span class="label">Role</span>
+    <span class="pill" style="background:var(--gray-1);color:var(--gray-3)">Клиент</span>
+    <span class="pill" style="background:var(--blue-bg);color:var(--blue)">Менеджер</span>
+    <span class="pill" style="background:var(--violet-bg);color:var(--violet)">Администратор</span>
+  </div>
+</body></html>

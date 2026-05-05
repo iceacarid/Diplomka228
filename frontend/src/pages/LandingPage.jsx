@@ -32,7 +32,7 @@ export default function LandingPage() {
     setCalcLoading(false)
   }
 
-  const tickerItems = ['Автоперевозки', 'Негабаритные грузы', 'Рефрижераторы', 'Складская логистика', 'GPS-мониторинг', 'Страхование', 'Экспресс-доставка', 'AI-оптимизация']
+  const tickerItems = ['МОСКВА → КАЗАНЬ', 'СПБ → НОВОСИБИРСК', 'ЕКАТЕРИНБУРГ → СОЧИ', 'РОСТОВ → ВЛАДИВОСТОК', 'КРАСНОДАР → УФА', 'ВОРОНЕЖ → ИРКУТСК', 'НИЖНИЙ НОВГОРОД → САМАРА', 'ОМСК → ТЮМЕНЬ']
 
   return (
     <div style={{ fontFamily: 'var(--font-body)', background: 'var(--navy)', color: 'var(--white)', minHeight: '100vh' }}>
@@ -346,18 +346,27 @@ export default function LandingPage() {
       </section>
 
       {/* PROCESS */}
-      <section id="process" style={{ background:'var(--off)', padding:80 }}>
-        <div style={{ fontSize:11, fontWeight:700, letterSpacing:'0.15em', textTransform:'uppercase', color:'var(--gold)', marginBottom:12 }}>Как мы работаем</div>
-        <div style={{ fontFamily:'var(--font-display)', fontSize:56, color:'var(--navy)', letterSpacing:1, textTransform:'uppercase', marginBottom:48 }}>Процесс работы</div>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:32 }}>
-          {[['01','Заявка','Оставьте заявку онлайн за 2 минуты. Никакой бумажной волокиты — всё в личном кабинете.'],['02','Расчёт','Менеджер свяжется в течение 15 минут, уточнит детали и предложит оптимальный тариф.'],['03','Доставка','GPS-отслеживание в реальном времени. Уведомления на каждом этапе маршрута.'],['04','Приёмка','Гарантированная доставка вовремя с электронным подтверждением и документами.']].map(([num, title, desc]) => (
-            <div key={num} style={{ position:'relative', paddingTop:24 }}
-              onMouseEnter={e => { const line = e.currentTarget.querySelector('.ps-line'); if(line) { line.style.width='80px'; line.style.background='var(--gold)' } }}
-              onMouseLeave={e => { const line = e.currentTarget.querySelector('.ps-line'); if(line) { line.style.width='40px'; line.style.background='var(--navy)' } }}>
-              <div style={{ fontFamily:'var(--font-display)', fontSize:80, color:'var(--gray1)', lineHeight:1, position:'absolute', top:-8, left:-4, zIndex:0 }}>{num}</div>
-              <div className="ps-line" style={{ width:40, height:3, background:'var(--navy)', marginBottom:20, position:'relative', zIndex:1, transition:'width 0.3s,background 0.3s' }} />
-              <div style={{ fontFamily:'var(--font-display)', fontSize:28, color:'var(--navy)', textTransform:'uppercase', marginBottom:8, position:'relative', zIndex:1, letterSpacing:0.5 }}>{title}</div>
-              <div style={{ fontSize:14, color:'var(--gray3)', lineHeight:1.6, position:'relative', zIndex:1 }}>{desc}</div>
+      <section id="process" style={{ background:'var(--navy2)', padding:'120px 80px', position:'relative' }}>
+        <div style={{ fontSize:10, fontWeight:700, letterSpacing:'0.22em', textTransform:'uppercase', color:'var(--gold)', marginBottom:14, display:'flex', alignItems:'center', gap:12 }}>
+          <span style={{ width:32, height:1, background:'var(--gold)', display:'block' }}/>
+          Как это работает
+        </div>
+        <div style={{ fontFamily:'var(--font-display)', fontSize:64, letterSpacing:2, lineHeight:1, marginBottom:80, color:'var(--white)' }}>
+          От заявки до <span style={{ color:'var(--gold)' }}>доставки</span>
+        </div>
+        <div style={{ display:'flex', gap:0, position:'relative' }}>
+          <div style={{ position:'absolute', top:32, left:'8%', right:'8%', height:1, background:'linear-gradient(90deg,transparent,rgba(240,165,0,0.4),transparent)', pointerEvents:'none' }} />
+          {[
+            ['01','Заявка','Заполните форму на сайте или позвоните. Менеджер свяжется в течение 5 минут.'],
+            ['02','Расчёт','Получите детальное коммерческое предложение с разбивкой стоимости.'],
+            ['03','Договор','Подписываем договор онлайн через ЭДО. Никаких бумажек и ожиданий.'],
+            ['04','Перевозка','Отслеживайте груз в личном кабинете на интерактивной карте.'],
+            ['05','Доставка','Получаете груз и закрывающие документы. Платите по факту.'],
+          ].map(([n, t, d]) => (
+            <div key={n} style={{ flex:1, position:'relative', padding:'0 16px' }}>
+              <div style={{ width:64, height:64, borderRadius:'50%', background:'var(--navy)', border:'2px solid var(--gold)', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'var(--font-display)', fontSize:22, color:'var(--gold)', letterSpacing:1, margin:'0 auto 24px', position:'relative', zIndex:2 }}>{n}</div>
+              <h4 style={{ fontFamily:'var(--font-display)', fontSize:22, letterSpacing:1, textAlign:'center', marginBottom:12, color:'var(--white)' }}>{t}</h4>
+              <p style={{ fontSize:12, lineHeight:1.6, color:'rgba(255,255,255,0.45)', textAlign:'center', fontWeight:300 }}>{d}</p>
             </div>
           ))}
         </div>

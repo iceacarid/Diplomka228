@@ -1,6 +1,11 @@
 <?php
 
+use App\Http\Controllers\AdminCourierController;
 use App\Http\Controllers\AiController;
+use App\Http\Controllers\CourierController;
+use App\Http\Controllers\AppealController;
+use App\Http\Controllers\CargoTypeController;
+use App\Http\Controllers\ChatController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Auth\RegisterController;
@@ -31,11 +36,14 @@ Route::prefix('auth')->group(function () {
 // Публичное отслеживание заказа
 Route::get('orders/track/{tracking_id}', [OrderController::class, 'track']);
 
-// Публичный калькулятор
-Route::post('calculator', [CalculatorController::class, 'calculate']);
+// Публичный калькулятор и подсказки адресов
+Route::post('calculator',    [CalculatorController::class, 'calculate']);
+Route::get('suggest',        [CalculatorController::class, 'suggest']);
+Route::get('geocode/reverse', [CalculatorController::class, 'reverseGeocode']);
 
 // Публичные тарифы (только чтение)
-Route::get('tariffs', [TariffController::class, 'index']);
+Route::get('tariffs',     [TariffController::class, 'index']);
+Route::get('cargo-types', [CargoTypeController::class, 'index']);
 
 // ─── Защищённые маршруты ──────────────────────────────────────────────────────
 Route::middleware('auth:sanctum')->group(function () {
@@ -65,21 +73,62 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('orders/{order}',                [OrderController::class, 'destroy']);
     Route::post('orders/{order}/accept',           [OrderController::class, 'accept']);
     Route::post('orders/{order}/reject',           [OrderController::class, 'reject']);
-    Route::post('orders/{order}/assign-transport', [OrderController::class, 'assignTransport']);
+    Route::post('orders/{order}/assign-transport',   [OrderController::class, 'assignTransport']);
+    Route::post('orders/{order}/reschedule-confirm', [OrderController::class, 'rescheduleConfirm']);
 
     // Избранные адреса
     Route::apiResource('addresses', FavoriteAddrController::class)->except(['show']);
 
-    // Тарифы (CRUD только admin)
-    Route::post('tariffs',            [TariffController::class, 'store']);
+    // Тариф (единый — только изменение)
     Route::put('tariffs/{tariff}',    [TariffController::class, 'update']);
     Route::patch('tariffs/{tariff}',  [TariffController::class, 'update']);
-    Route::delete('tariffs/{tariff}', [TariffController::class, 'destroy']);
+
+    // Типы груза (CRUD только admin)
+    Route::post('cargo-types',                [CargoTypeController::class, 'store']);
+    Route::put('cargo-types/{cargoType}',     [CargoTypeController::class, 'update']);
+    Route::patch('cargo-types/{cargoType}',   [CargoTypeController::class, 'update']);
+    Route::delete('cargo-types/{cargoType}',  [CargoTypeController::class, 'destroy']);
 
     // Маршруты (manager/admin)
     Route::post('routes/calculate', [CalculatorController::class, 'calculateRoute']);
 
     // AI (manager/admin)
-    Route::post('ai/optimize', [AiController::class, 'optimize']);
-    Route::get('ai/history',   [AiController::class, 'history']);
+    Route::post('ai/optimize',           [AiController::class, 'optimize']);
+    Route::get('ai/history',             [AiController::class, 'history']);
+    Route::post('ai/distribution-plan',  [AiController::class, 'distributionPlan']);
+    Route::post('ai/apply-plan',         [AiController::class, 'applyPlan']);
+
+    // Чаты
+    Route::get('chats',                               [ChatController::class, 'index']);
+    Route::get('chats/{chat}',                        [ChatController::class, 'show']);
+    Route::get('chats/{chat}/messages',               [ChatController::class, 'messages']);
+    Route::post('chats/{chat}/messages',              [ChatController::class, 'sendMessage']);
+    Route::patch('chats/{chat}/messages/{message}',   [ChatController::class, 'updateMessage']);
+    Route::post('chats/{chat}/confirm',               [ChatController::class, 'confirm']);
+    Route::post('chats/{chat}/archive',               [ChatController::class, 'archive']);
+    Route::post('chats/{chat}/unarchive',             [ChatController::class, 'unarchive']);
+    Route::post('chats/{chat}/appeal',                [ChatController::class, 'submitAppeal']);
+
+    // Апелляции
+    Route::get('appeals',              [AppealController::class, 'index']);
+    Route::patch('appeals/{appeal}',   [AppealController::class, 'update']);
+
+    // Курьеры (admin)
+    Route::get('admin/couriers',                  [AdminCourierController::class, 'index']);
+    Route::get('admin/couriers/{user}/history',   [AdminCourierController::class, 'history']);
+
+    // Курьер
+    Route::prefix('courier')->group(function () {
+        Route::get('shift',                    [CourierController::class, 'shiftStatus']);
+        Route::post('shift/open',              [CourierController::class, 'openShift']);
+        Route::post('shift/close',             [CourierController::class, 'closeShift']);
+        Route::get('orders/available',         [CourierController::class, 'availableOrders']);
+        Route::get('orders/my',                [CourierController::class, 'myOrders']);
+        Route::get('orders/history',           [CourierController::class, 'history']);
+        Route::post('orders/{order}/take',     [CourierController::class, 'takeOrder']);
+        Route::post('orders/{order}/pickup',   [CourierController::class, 'pickUp']);
+        Route::post('orders/{order}/warehouse',      [CourierController::class, 'deliverToWarehouse']);
+        Route::post('orders/{order}/notify-missed',       [CourierController::class, 'notifyMissed']);
+        Route::post('orders/{order}/request-reschedule',  [CourierController::class, 'requestReschedule']);
+    });
 });

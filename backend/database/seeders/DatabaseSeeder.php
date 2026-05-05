@@ -40,5 +40,7 @@ class DatabaseSeeder extends Seeder
         foreach ($users as $data) {
             User::updateOrCreate(['email' => $data['email']], $data);
         }
+
+        $this->call(DemoSeeder::class);
     }
 }

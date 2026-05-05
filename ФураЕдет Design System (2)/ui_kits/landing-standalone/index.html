@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ФураЕдет — Логистика нового поколения</title>
+
+<!-- Resources referenced as JS strings (must be lifted via window.__resources) -->
+<meta name="ext-resource-dependency" content="https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?q=80&w=2000" data-resource-id="heroBg" />
+<meta name="ext-resource-dependency" content="https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?q=80&w=1400&fit=crop" data-resource-id="fleetTrucks" />
+<meta name="ext-resource-dependency" content="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?q=80&w=1400&fit=crop" data-resource-id="fleetMid" />
+<meta name="ext-resource-dependency" content="https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?q=80&w=1400&fit=crop" data-resource-id="fleetVan" />
+
+<link rel="stylesheet" href="colors_and_type.css">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: var(--font-body); background: var(--navy); color: var(--fg-1); min-height: 100vh; overflow-x: hidden; }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+
+  @keyframes ticker { from { transform: translateX(0) } to { transform: translateX(-50%) } }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(24px) } to { opacity:1; transform:translateY(0) } }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  .fade-in { animation: fadeUp 0.7s var(--ease-out) both; }
+
+  .wm { font-family: var(--font-display); letter-spacing: 0.1em; line-height: 1; }
+  .wm .accent { color: var(--gold); }
+
+  a { color: inherit; text-decoration: none; }
+  button { font-family: inherit; cursor: pointer; }
+
+  .grid-bg {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(240,165,0,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(240,165,0,0.03) 1px, transparent 1px);
+    background-size: 80px 80px;
+    pointer-events: none;
+  }
+</style>
+
+<template id="__bundler_thumbnail" data-bg-color="#0A1628">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="800" fill="#0A1628"/>
+    <!-- Grid lines -->
+    <g stroke="#F0A500" stroke-opacity="0.08" stroke-width="1">
+      <line x1="0" y1="200" x2="1200" y2="200"/>
+      <line x1="0" y1="400" x2="1200" y2="400"/>
+      <line x1="0" y1="600" x2="1200" y2="600"/>
+      <line x1="300" y1="0" x2="300" y2="800"/>
+      <line x1="600" y1="0" x2="600" y2="800"/>
+      <line x1="900" y1="0" x2="900" y2="800"/>
+    </g>
+    <!-- Wordmark ФУРАЕДЕТ -->
+    <g font-family="Impact, 'Bebas Neue', sans-serif" font-weight="700" letter-spacing="8">
+      <text x="600" y="380" font-size="120" text-anchor="middle" fill="#FFFFFF">ФУРА</text>
+      <text x="600" y="500" font-size="120" text-anchor="middle" fill="#F0A500">ЕДЕТ</text>
+    </g>
+    <!-- Gold accent bar -->
+    <rect x="540" y="540" width="120" height="4" fill="#F0A500"/>
+  </svg>
+</template>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="icons.jsx"></script>
+<script type="text/babel" src="Nav.jsx"></script>
+<script type="text/babel" src="Hero.jsx"></script>
+<script type="text/babel" src="Sections.jsx"></script>
+<script type="text/babel" src="Footer.jsx"></script>
+<script type="text/babel">
+  const { Nav, Hero, Ticker, Stats, Services, Why, Fleet, Process, Testimonials, CTA, Footer } = window;
+  function App() {
+    return (
+      <div data-screen-label="Landing">
+        <Nav />
+        <Hero />
+        <Ticker />
+        <Stats />
+        <Services />
+        <Why />
+        <Fleet />
+        <Process />
+        <Testimonials />
+        <CTA />
+        <Footer />
+      </div>
+    );
+  }
+  ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

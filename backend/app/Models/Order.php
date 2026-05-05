@@ -14,6 +14,7 @@ class Order extends Model
         'manager_id',
         'truck_id',
         'driver_id',
+        'courier_id',
         'status',
         'origin_address',
         'dest_address',
@@ -25,6 +26,10 @@ class Order extends Model
         'price',
         'eta',
         'rejection_reason',
+        'pickup_date',
+        'pickup_time',
+        'courier_blocked',
+        'courier_blocked_reason',
     ];
 
     protected function casts(): array
@@ -33,8 +38,10 @@ class Order extends Model
             'weight'     => 'float',
             'volume'     => 'float',
             'price'      => 'decimal:2',
-            'eta'        => 'datetime',
-            'created_at' => 'datetime',
+            'eta'             => 'datetime',
+            'pickup_date'     => 'date',
+            'courier_blocked' => 'boolean',
+            'created_at'      => 'datetime',
         ];
     }
 
@@ -74,5 +81,15 @@ class Order extends Model
     public function driver()
     {
         return $this->belongsTo(Driver::class);
+    }
+
+    public function courier()
+    {
+        return $this->belongsTo(User::class, 'courier_id');
+    }
+
+    public function chat()
+    {
+        return $this->hasOne(Chat::class);
     }
 }

@@ -1,8 +1,11 @@
+/* eslint-disable no-empty */
 import { useState } from 'react'
 import api from '../../api/axios'
 import { useAuth } from '../../context/AuthContext'
+import { Icons } from '../../components/Icons'
+import { Card, Btn, Field, PageHeader, Alert, RolePill } from '../../components/ui'
 
-export default function ProfileTab() {
+export default function ProfileTab({ compact = false }) {
   const { user, updateUser } = useAuth()
   const [form, setForm] = useState({ name: user?.name || '', phone: user?.phone || '' })
   const [passwords, setPasswords] = useState({ old_password: '', new_password: '', confirm: '' })
@@ -10,6 +13,10 @@ export default function ProfileTab() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [twoFaLoading, setTwoFaLoading] = useState(false)
+  const [showPass, setShowPass] = useState({ old: false, new: false, confirm: false })
+
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
+  const setP = (k) => (e) => setPasswords((f) => ({ ...f, [k]: e.target.value }))
 
   const handleProfile = async (e) => {
     e.preventDefault()
@@ -50,9 +57,13 @@ export default function ProfileTab() {
     const fd = new FormData()
     fd.append('avatar', file)
     try {
-      const { data } = await api.patch('/auth/me', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+      const { data } = await api.patch('/auth/me', fd, {
+        headers: { 'Content-Type': undefined },
+      })
       updateUser(data)
-    } catch {}
+    } catch (err) {
+      setError(err?.response?.data?.message || 'Ошибка загрузки аватара')
+    }
   }
 
   const handleToggle2FA = async () => {
@@ -67,85 +78,128 @@ export default function ProfileTab() {
     setTwoFaLoading(false)
   }
 
-  const inp = 'w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm'
+  const initials = user?.name?.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() || '?'
 
   return (
-    <div className="p-6 max-w-2xl">
-      <h2 className="text-2xl font-bold text-gray-800 mb-6">Профиль</h2>
+    <div style={{ padding: compact ? 0 : '0 0 40px' }}>
+      {!compact && <PageHeader eyebrow="Аккаунт" title="Профиль" />}
 
-      {error && <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 mb-4 text-sm">{error}</div>}
-      {success && <div className="bg-green-50 border border-green-200 text-green-700 rounded-lg px-4 py-3 mb-4 text-sm">{success}</div>}
+      <div style={{ padding: compact ? 0 : '0 32px', maxWidth: compact ? '100%' : 600, display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {error && <Alert type="error">{error}</Alert>}
+        {success && <Alert type="success">{success}</Alert>}
 
-      {/* Avatar */}
-      <div className="bg-white rounded-xl shadow-sm p-6 mb-4 flex items-center gap-4">
-        <img src={user?.avatar_url} alt="avatar" className="w-16 h-16 rounded-full object-cover border" />
-        <div>
-          <p className="font-semibold">{user?.name}</p>
-          <p className="text-sm text-gray-500">{user?.email}</p>
-          <p className="text-xs text-blue-600 capitalize">{user?.role}</p>
-          <label className="mt-2 block text-sm text-blue-600 cursor-pointer hover:underline">
-            Сменить фото
-            <input type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
-          </label>
-        </div>
-      </div>
-
-      {/* Info */}
-      <div className="bg-white rounded-xl shadow-sm p-6 mb-4">
-        <h3 className="font-semibold mb-4">Личные данные</h3>
-        <form onSubmit={handleProfile} className="space-y-3">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Имя</label>
-            <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={inp} />
+        <Card padding={22}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+              {user?.avatar_url ? (
+                <img
+                  src={user.avatar_url}
+                  alt="avatar"
+                  style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.1)' }}
+                />
+              ) : (
+                <div style={{
+                  width: 64, height: 64, borderRadius: '50%',
+                  background: 'var(--gold)', color: 'var(--navy)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontFamily: 'var(--font-display)', fontSize: 24, letterSpacing: 1,
+                }}>
+                  {initials}
+                </div>
+              )}
+              <label style={{ position: 'absolute', bottom: 0, right: 0, width: 22, height: 22, background: 'var(--navy-3)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                <Icons.Edit size={11} style={{ color: 'rgba(255,255,255,0.7)' }} />
+                <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarChange} />
+              </label>
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: 24, letterSpacing: 0.5, marginBottom: 4 }}>{user?.name}</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 8 }}>{user?.email}</div>
+              <RolePill role={user?.role} />
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Телефон</label>
-            <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className={inp} />
+        </Card>
+
+        <Card padding={22}>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: 4, fontFamily: 'var(--font-body)' }}>
+            Данные
           </div>
-          <button type="submit" disabled={loading}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-50">
-            {loading ? 'Сохраняем...' : 'Сохранить'}
-          </button>
-        </form>
-      </div>
+          <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 22, letterSpacing: 0.5, marginBottom: 16 }}>Личные данные</h3>
+          <form onSubmit={handleProfile} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <Field label="Имя" value={form.name} onChange={set('name')} />
+            <Field label="Телефон" value={form.phone} onChange={set('phone')} />
+            <div>
+              <Btn type="submit" disabled={loading}>
+                {loading ? 'Сохраняем...' : 'Сохранить'}
+              </Btn>
+            </div>
+          </form>
+        </Card>
 
-      {/* Password */}
-      <div className="bg-white rounded-xl shadow-sm p-6 mb-4">
-        <h3 className="font-semibold mb-4">Смена пароля</h3>
-        <form onSubmit={handlePassword} className="space-y-3">
-          <input type="password" value={passwords.old_password}
-            onChange={(e) => setPasswords({ ...passwords, old_password: e.target.value })}
-            placeholder="Текущий пароль" className={inp} />
-          <input type="password" value={passwords.new_password}
-            onChange={(e) => setPasswords({ ...passwords, new_password: e.target.value })}
-            placeholder="Новый пароль" className={inp} />
-          <input type="password" value={passwords.confirm}
-            onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
-            placeholder="Повторите пароль" className={inp} />
-          <button type="submit" disabled={loading}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-50">
-            Сменить пароль
-          </button>
-        </form>
-      </div>
+        <Card padding={22}>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: 4, fontFamily: 'var(--font-body)' }}>
+            Безопасность
+          </div>
+          <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 22, letterSpacing: 0.5, marginBottom: 16 }}>Смена пароля</h3>
+          <form onSubmit={handlePassword} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <PasswordField label="Текущий пароль" value={passwords.old_password} onChange={setP('old_password')} show={showPass.old} onToggle={() => setShowPass((s) => ({ ...s, old: !s.old }))} />
+            <PasswordField label="Новый пароль" value={passwords.new_password} onChange={setP('new_password')} show={showPass.new} onToggle={() => setShowPass((s) => ({ ...s, new: !s.new }))} />
+            <PasswordField label="Повторите пароль" value={passwords.confirm} onChange={setP('confirm')} show={showPass.confirm} onToggle={() => setShowPass((s) => ({ ...s, confirm: !s.confirm }))} />
+            <div>
+              <Btn type="submit" disabled={loading}>Сменить пароль</Btn>
+            </div>
+          </form>
+        </Card>
 
-      {/* 2FA */}
-      <div className="bg-white rounded-xl shadow-sm p-6">
-        <h3 className="font-semibold mb-2">Двухфакторная аутентификация</h3>
-        <p className="text-sm text-gray-500 mb-4">
-          {user?.two_factor_enabled
-            ? '2FA включена. При входе будет отправляться код на email.'
-            : '2FA выключена. Включите для дополнительной защиты аккаунта.'}
-        </p>
-        <button onClick={handleToggle2FA} disabled={twoFaLoading}
-          className={`px-6 py-2 rounded-lg text-sm font-semibold disabled:opacity-50 transition ${
-            user?.two_factor_enabled
-              ? 'bg-red-100 text-red-700 hover:bg-red-200'
-              : 'bg-green-100 text-green-700 hover:bg-green-200'
-          }`}>
-          {twoFaLoading ? '...' : user?.two_factor_enabled ? 'Отключить 2FA' : 'Включить 2FA'}
-        </button>
+        <Card padding={22}>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: 4, fontFamily: 'var(--font-body)' }}>
+            2FA
+          </div>
+          <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 22, letterSpacing: 0.5, marginBottom: 8 }}>Двухфакторная аутентификация</h3>
+          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)', lineHeight: 1.6, marginBottom: 16 }}>
+            {user?.two_factor_enabled
+              ? '2FA включена. При входе будет отправляться код на email.'
+              : '2FA выключена. Включите для дополнительной защиты аккаунта.'}
+          </p>
+          <Btn
+            kind={user?.two_factor_enabled ? 'danger' : 'ghost'}
+            onClick={handleToggle2FA}
+            disabled={twoFaLoading}
+            icon={<Icons.Shield size={14} />}
+          >
+            {twoFaLoading ? '...' : user?.two_factor_enabled ? 'Отключить 2FA' : 'Включить 2FA'}
+          </Btn>
+        </Card>
       </div>
     </div>
+  )
+}
+
+function PasswordField({ label, value, onChange, show, onToggle }) {
+  return (
+    <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-body)' }}>
+        {label}
+      </span>
+      <div style={{ position: 'relative' }}>
+        <input
+          type={show ? 'text' : 'password'}
+          value={value}
+          onChange={onChange}
+          style={{
+            background: 'var(--navy-3)', border: '1px solid rgba(255,255,255,0.08)',
+            color: 'white', padding: '11px 40px 11px 13px', borderRadius: 6, fontSize: 13,
+            fontWeight: 500, fontFamily: 'var(--font-body)', outline: 'none', width: '100%',
+          }}
+        />
+        <button
+          type="button"
+          onClick={onToggle}
+          style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', display: 'flex' }}
+        >
+          {show ? <Icons.EyeOff size={16} /> : <Icons.Eye size={16} />}
+        </button>
+      </div>
+    </label>
   )
 }

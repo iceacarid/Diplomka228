@@ -76,7 +76,7 @@ class UserController extends Controller
             return response()->json(['error' => 'Недостаточно прав.'], 403);
         }
 
-        $request->validate(['role' => 'required|in:client,manager,admin']);
+        $request->validate(['role' => 'required|in:client,manager,admin,courier']);
         $user->update(['role' => $request->role]);
 
         return response()->json($this->userData($user->fresh()));
