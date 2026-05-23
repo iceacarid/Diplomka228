@@ -100,3 +100,7 @@ local_settings.py
 /staticfiles
 db.sqlite3
 db.sqlite3-journal
+
+# Design system & personal docs
+ФураЕдет Design System (2)/
+.agents/
