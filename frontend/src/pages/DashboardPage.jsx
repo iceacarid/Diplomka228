@@ -21,6 +21,8 @@ import ManagerHome from './dashboard/ManagerHome'
 import AdminHome from './dashboard/AdminHome'
 import AdminAppeals from './dashboard/AdminAppeals'
 import AdminCouriers from './dashboard/AdminCouriers'
+import WarehousesTab from './dashboard/WarehousesTab'
+import AcceptedOrdersTab from './dashboard/AcceptedOrdersTab'
 
 function getInitials(name) {
   if (!name) return '?'
@@ -31,12 +33,14 @@ const ROLE_LABEL = { client: 'CLIENT', manager: 'MANAGER', admin: 'ADMIN' }
 
 const STAFF_NAV = [
   { to: '/dashboard',         label: 'Сводка',          icon: 'Home',     roles: ['manager', 'admin'], end: true },
-  { to: '/dashboard/orders',  label: 'Заказы',          icon: 'Package',  roles: ['client', 'manager', 'admin'] },
-  { to: '/dashboard/drivers', label: 'Водители',       icon: 'User',     roles: ['manager', 'admin'] },
+  { to: '/dashboard/orders',          label: 'Заказы',           icon: 'Package',  roles: ['client', 'manager', 'admin'] },
+  { to: '/dashboard/accepted-orders', label: 'Принятые заказы',  icon: 'Check',    roles: ['manager', 'admin'] },
+  { to: '/dashboard/drivers',         label: 'Водители',         icon: 'User',     roles: ['manager', 'admin'] },
   { to: '/dashboard/trucks',  label: 'Транспорт',      icon: 'Truck',    roles: ['manager', 'admin'] },
   { to: '/dashboard/tariffs', label: 'Тарифы',         icon: 'Wallet',   roles: ['admin'] },
   { to: '/dashboard/users',   label: 'Пользователи',   icon: 'Users',    roles: ['manager', 'admin'] },
   { to: '/dashboard/chats',    label: 'Чаты',           icon: 'Chat',     roles: ['manager', 'admin'] },
+  { to: '/dashboard/warehouses',label: 'Склады',          icon: 'Boxes',    roles: ['manager', 'admin'] },
   { to: '/dashboard/appeals',  label: 'Апелляции',      icon: 'LifeBuoy', roles: ['admin'] },
   { to: '/dashboard/couriers', label: 'Курьеры',         icon: 'User',     roles: ['admin'] },
   { to: '/dashboard/ai',      label: 'AI Оптимизация', icon: 'Sparkles', roles: ['manager', 'admin'] },
@@ -186,6 +190,8 @@ export default function DashboardPage() {
               <Route path="tariffs" element={<TariffsTab />} />
               <Route path="users"   element={<UsersTab />} />
               <Route path="chats"   element={<ManagerChats />} />
+              <Route path="warehouses"      element={<WarehousesTab />} />
+              <Route path="accepted-orders" element={<AcceptedOrdersTab />} />
               <Route path="appeals"  element={<AdminAppeals />} />
               <Route path="couriers" element={<AdminCouriers />} />
               <Route path="ai"      element={<AiTab />} />

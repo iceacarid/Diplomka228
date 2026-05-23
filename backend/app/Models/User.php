@@ -19,6 +19,7 @@ class User extends Authenticatable
         'phone',
         'avatar',
         'role',
+        'warehouse_id',
         'password',
         'is_active',
         'failed_login_attempts',
@@ -71,6 +72,11 @@ class User extends Authenticatable
     public function otps()
     {
         return $this->hasMany(EmailOtp::class);
+    }
+
+    public function warehouse()
+    {
+        return $this->belongsTo(\App\Models\Warehouse::class);
     }
 
     // Helpers

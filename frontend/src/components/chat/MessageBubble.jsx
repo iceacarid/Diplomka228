@@ -27,12 +27,12 @@ const ROLE_CONFIG = {
   },
 }
 
-export function MessageBubble({ msg, isArchived, canWrite, onFormSubmit, onFormUpdate, orderData, chatId }) {
+export function MessageBubble({ msg, isArchived, canWrite, onFormSubmit, onFormUpdate, orderData, chatId, formSubmitted }) {
   const { user }  = useAuth()
   const cfg       = ROLE_CONFIG[msg.sender_role] ?? ROLE_CONFIG.client
   const isBot     = msg.sender_role === 'bot'
   const isMine    = msg.is_mine
-  const showForm  = msg.type === 'bot_greeting' && canWrite && !isArchived && user?.role === 'client'
+  const showForm  = msg.type === 'bot_greeting' && canWrite && !isArchived && user?.role === 'client' && !formSubmitted
   const isFormCard = msg.type === 'form_submission'
 
   const time = new Date(msg.created_at).toLocaleTimeString('ru-RU', {

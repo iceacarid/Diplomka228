@@ -1,5 +1,5 @@
 /* eslint-disable no-empty, react-hooks/set-state-in-effect */
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../../api/axios'
 import { useAuth } from '../../context/AuthContext'
@@ -10,7 +10,9 @@ import MapPickerModal from '../../components/MapPickerModal'
 const ORDER_STATUS_MAP = {
   draft:            { bg: 'rgba(255,255,255,0.06)', fg: 'rgba(255,255,255,0.45)', label: 'Черновик' },
   pending:          { bg: 'rgba(247,144,9,0.14)',   fg: 'var(--amber)',           label: 'На рассмотрении' },
+  pending_approval: { bg: 'rgba(240,165,0,0.14)',   fg: 'var(--gold)',            label: 'Ожидает проверки' },
   in_progress:      { bg: 'rgba(46,144,250,0.14)',  fg: 'var(--blue)',            label: 'В работе' },
+  accepted:         { bg: 'rgba(46,144,250,0.14)',  fg: '#2E90FA',               label: 'Принята' },
   confirmed:        { bg: 'rgba(18,183,106,0.12)',  fg: '#12B76A',               label: 'Подтверждено' },
   courier_assigned: { bg: 'rgba(139,92,246,0.14)',  fg: '#8B5CF6',               label: 'Курьер назначен' },
   picked_up:        { bg: 'rgba(99,102,241,0.14)',  fg: '#6366F1',               label: 'Курьер в дороге' },
@@ -24,6 +26,171 @@ const ORDER_STATUS_MAP = {
 const thStyle = { textAlign: 'left', padding: '14px 20px', fontSize: 9, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-body)' }
 const tdStyle = { padding: '14px 20px', fontSize: 13, color: 'rgba(255,255,255,0.85)' }
 
+function RegionPicker({ regions, regionCounts, value, onChange }) {
+  const [open, setOpen]     = useState(false)
+  const [search, setSearch] = useState('')
+  const ref                 = useRef(null)
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const filtered = regions.filter(r => r.toLowerCase().includes(search.toLowerCase()))
+  const totalNew = Object.values(regionCounts).reduce((a, b) => a + b, 0)
+  const isAll    = value.length === 0
+  const btnLabel = isAll ? 'Все регионы' : value.length === 1 ? value[0] : `${value.length} региона`
+  const toggle   = (r) => onChange(value.includes(r) ? value.filter(x => x !== r) : [...value, r])
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button
+        onClick={() => setOpen(v => !v)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 6,
+          background: !isAll ? 'rgba(240,165,0,0.1)' : 'rgba(255,255,255,0.04)',
+          border: `1px solid ${!isAll ? 'rgba(240,165,0,0.35)' : 'rgba(255,255,255,0.1)'}`,
+          borderRadius: 7, padding: '6px 10px',
+          color: !isAll ? '#F0A500' : 'rgba(255,255,255,0.55)',
+          fontSize: 11, fontWeight: 600, fontFamily: 'var(--font-body)',
+          cursor: 'pointer', maxWidth: 220, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+        }}
+      >
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="10" r="3"/><path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 14 8 14s8-8.75 8-14a8 8 0 0 0-8-8z"/>
+        </svg>
+        {btnLabel}
+        {isAll && totalNew > 0 && (
+          <span style={{ background: '#F0A500', color: '#0D0D1F', borderRadius: 10, padding: '0px 5px', fontSize: 9, fontWeight: 800 }}>{totalNew}</span>
+        )}
+        {!isAll && (
+          <span style={{ background: 'rgba(240,165,0,0.25)', color: '#F0A500', borderRadius: 10, padding: '0px 5px', fontSize: 9, fontWeight: 800 }}>{value.length}</span>
+        )}
+        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points={open ? '18 15 12 9 6 15' : '6 9 12 15 18 9'}/>
+        </svg>
+      </button>
+
+      {open && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 200,
+          background: '#1A1A35', border: '1px solid rgba(255,255,255,0.1)',
+          borderRadius: 10, minWidth: 220, maxWidth: 280,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.5)', overflow: 'hidden',
+        }}>
+          <div style={{ padding: '8px 10px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+            <input autoFocus value={search} onChange={e => setSearch(e.target.value)} placeholder="Поиск региона..."
+              style={{ width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, padding: '6px 9px', color: '#fff', fontSize: 12, fontFamily: 'var(--font-body)', outline: 'none' }}
+            />
+          </div>
+          <div style={{ maxHeight: 260, overflowY: 'auto' }}>
+            <button onClick={() => { onChange([]); setOpen(false); setSearch('') }}
+              style={{ width: '100%', padding: '9px 14px', background: isAll ? 'rgba(240,165,0,0.08)' : 'transparent', border: 'none', borderBottom: '1px solid rgba(255,255,255,0.05)', color: isAll ? '#F0A500' : 'rgba(255,255,255,0.6)', fontSize: 12, fontWeight: isAll ? 700 : 500, cursor: 'pointer', fontFamily: 'var(--font-body)', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>Все регионы</span>
+              {totalNew > 0 && <span style={{ fontSize: 10, fontWeight: 700, background: 'rgba(240,165,0,0.15)', color: '#F0A500', borderRadius: 8, padding: '1px 7px' }}>{totalNew} заявок</span>}
+            </button>
+            {filtered.length === 0
+              ? <div style={{ padding: '12px 14px', fontSize: 12, color: 'rgba(255,255,255,0.3)', textAlign: 'center' }}>Не найдено</div>
+              : filtered.map(r => {
+                  const sel = value.includes(r)
+                  return (
+                    <button key={r} onClick={() => toggle(r)}
+                      style={{ width: '100%', padding: '9px 14px', background: sel ? 'rgba(240,165,0,0.08)' : 'transparent', border: 'none', borderBottom: '1px solid rgba(255,255,255,0.04)', color: sel ? '#F0A500' : 'rgba(255,255,255,0.7)', fontSize: 12, fontWeight: sel ? 700 : 400, cursor: 'pointer', fontFamily: 'var(--font-body)', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                        <span style={{ width: 14, height: 14, borderRadius: 3, flexShrink: 0, border: `1.5px solid ${sel ? '#F0A500' : 'rgba(255,255,255,0.2)'}`, background: sel ? '#F0A500' : 'transparent', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                          {sel && <svg width="9" height="9" viewBox="0 0 12 12" fill="none"><polyline points="2 6 5 9 10 3" stroke="#0D0D1F" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                        </span>
+                        {r}
+                      </span>
+                      {regionCounts[r] > 0 && <span style={{ fontSize: 10, fontWeight: 700, background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.45)', borderRadius: 8, padding: '1px 7px' }}>{regionCounts[r]}</span>}
+                    </button>
+                  )
+                })
+            }
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function StatusPicker({ statusMap, statusCounts, value, onChange }) {
+  const [open, setOpen] = useState(false)
+  const ref             = useRef(null)
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const available = Object.keys(statusMap).filter(s => (statusCounts[s] || 0) > 0)
+  const isAll     = value.length === 0
+  const btnLabel  = isAll ? 'Все статусы' : value.length === 1 ? (statusMap[value[0]]?.label || value[0]) : `${value.length} статуса`
+  const toggle    = (s) => onChange(value.includes(s) ? value.filter(x => x !== s) : [...value, s])
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button
+        onClick={() => setOpen(v => !v)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 6,
+          background: !isAll ? 'rgba(99,102,241,0.1)' : 'rgba(255,255,255,0.04)',
+          border: `1px solid ${!isAll ? 'rgba(99,102,241,0.35)' : 'rgba(255,255,255,0.1)'}`,
+          borderRadius: 7, padding: '6px 10px',
+          color: !isAll ? '#6366F1' : 'rgba(255,255,255,0.55)',
+          fontSize: 11, fontWeight: 600, fontFamily: 'var(--font-body)',
+          cursor: 'pointer', whiteSpace: 'nowrap',
+        }}
+      >
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/>
+        </svg>
+        {btnLabel}
+        {!isAll && (
+          <span style={{ background: 'rgba(99,102,241,0.25)', color: '#6366F1', borderRadius: 10, padding: '0px 5px', fontSize: 9, fontWeight: 800 }}>{value.length}</span>
+        )}
+        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points={open ? '18 15 12 9 6 15' : '6 9 12 15 18 9'}/>
+        </svg>
+      </button>
+
+      {open && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 200,
+          background: '#1A1A35', border: '1px solid rgba(255,255,255,0.1)',
+          borderRadius: 10, minWidth: 210, maxWidth: 270,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.5)', overflow: 'hidden',
+        }}>
+          <div style={{ maxHeight: 320, overflowY: 'auto' }}>
+            <button onClick={() => { onChange([]); setOpen(false) }}
+              style={{ width: '100%', padding: '9px 14px', background: isAll ? 'rgba(99,102,241,0.08)' : 'transparent', border: 'none', borderBottom: '1px solid rgba(255,255,255,0.05)', color: isAll ? '#6366F1' : 'rgba(255,255,255,0.6)', fontSize: 12, fontWeight: isAll ? 700 : 500, cursor: 'pointer', fontFamily: 'var(--font-body)', textAlign: 'left' }}>
+              Все статусы
+            </button>
+            {available.map(s => {
+              const sel  = value.includes(s)
+              const info = statusMap[s] || { label: s, fg: 'rgba(255,255,255,0.6)' }
+              return (
+                <button key={s} onClick={() => toggle(s)}
+                  style={{ width: '100%', padding: '9px 14px', background: sel ? 'rgba(255,255,255,0.04)' : 'transparent', border: 'none', borderBottom: '1px solid rgba(255,255,255,0.04)', color: sel ? info.fg : 'rgba(255,255,255,0.7)', fontSize: 12, fontWeight: sel ? 700 : 400, cursor: 'pointer', fontFamily: 'var(--font-body)', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                    <span style={{ width: 14, height: 14, borderRadius: 3, flexShrink: 0, border: `1.5px solid ${sel ? info.fg : 'rgba(255,255,255,0.2)'}`, background: sel ? info.fg : 'transparent', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {sel && <svg width="9" height="9" viewBox="0 0 12 12" fill="none"><polyline points="2 6 5 9 10 3" stroke="#0D0D1F" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                    </span>
+                    {info.label}
+                  </span>
+                  <span style={{ fontSize: 10, fontWeight: 700, background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.45)', borderRadius: 8, padding: '1px 7px' }}>{statusCounts[s]}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function OrdersTab() {
   const { user }   = useAuth()
   const navigate   = useNavigate()
@@ -34,6 +201,10 @@ export default function OrdersTab() {
   const [rejectTarget, setRejectTarget] = useState(null)
   const [trackInput, setTrackInput]   = useState('')
   const [trackResult, setTrackResult] = useState(null)
+  const [statusFilter, setStatusFilter] = useState([])
+  const [regionFilter, setRegionFilter] = useState([])
+  const [sortDir, setSortDir]           = useState('desc')
+  const [searchQuery, setSearchQuery]   = useState('')
 
   const loadOrders = async () => {
     setLoading(true)
@@ -88,6 +259,31 @@ export default function OrdersTab() {
     setRejectTarget(null)
   }
 
+  const regions      = [...new Set(orders.map(o => o.region).filter(Boolean))].sort()
+  const regionCounts = regions.reduce((acc, r) => { acc[r] = orders.filter(o => o.region === r).length; return acc }, {})
+  const statusCounts = orders.reduce((acc, o) => { acc[o.status] = (acc[o.status] || 0) + 1; return acc }, {})
+
+  const matchesSearch = (o) => {
+    const q = searchQuery.trim().toLowerCase()
+    if (!q) return true
+    const hay = [
+      o.tracking_id, o.origin_address, o.dest_address,
+      o.client_name, o.manager_name, o.driver_name, o.courier_name,
+      o.cargo_type, o.cargo_description, o.region,
+      String(o.weight ?? ''), String(o.volume ?? ''), String(o.price ?? ''),
+      ORDER_STATUS_MAP[o.status]?.label || o.status,
+    ].filter(Boolean).join(' ').toLowerCase()
+    return hay.includes(q)
+  }
+
+  const displayedOrders = orders
+    .filter(matchesSearch)
+    .filter(o => statusFilter.length === 0 || statusFilter.includes(o.status))
+    .filter(o => regionFilter.length === 0 || regionFilter.includes(o.region))
+    .sort((a, b) => sortDir === 'desc'
+      ? new Date(b.created_at) - new Date(a.created_at)
+      : new Date(a.created_at) - new Date(b.created_at))
+
   return (
     <div style={{ padding: '0 0 40px' }}>
       <PageHeader
@@ -127,10 +323,70 @@ export default function OrdersTab() {
           </Card>
         )}
 
+        {orders.length > 0 && !loading && (
+          <Card padding={12} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Icons.Search size={14} style={{ color: 'rgba(255,255,255,0.35)', flexShrink: 0 }} />
+            <input
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Поиск по заказам — адрес, клиент, трекинг, тип груза, регион..."
+              style={{ background: 'transparent', border: 'none', color: 'white', outline: 'none', flex: 1, fontSize: 13, fontFamily: 'var(--font-body)' }}
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery('')} style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: '2px 4px' }}>✕</button>
+            )}
+          </Card>
+        )}
+
+        {orders.length > 0 && !loading && (
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <StatusPicker
+              statusMap={ORDER_STATUS_MAP}
+              statusCounts={statusCounts}
+              value={statusFilter}
+              onChange={setStatusFilter}
+            />
+            {regions.length > 0 && (
+              <RegionPicker
+                regions={regions}
+                regionCounts={regionCounts}
+                value={regionFilter}
+                onChange={setRegionFilter}
+              />
+            )}
+            <button
+              onClick={() => setSortDir(d => d === 'desc' ? 'asc' : 'desc')}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: 7, padding: '6px 12px',
+                color: 'rgba(255,255,255,0.55)', cursor: 'pointer',
+                fontSize: 11, fontWeight: 600, fontFamily: 'var(--font-body)',
+              }}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                {sortDir === 'desc'
+                  ? <><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></>
+                  : <><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></>
+                }
+              </svg>
+              {sortDir === 'desc' ? 'Новые сначала' : 'Старые сначала'}
+            </button>
+            {(statusFilter.length > 0 || regionFilter.length > 0) && (
+              <button
+                onClick={() => { setStatusFilter([]); setRegionFilter([]); setSearchQuery('') }}
+                style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.35)', cursor: 'pointer', fontSize: 11, fontFamily: 'var(--font-body)', padding: '6px 4px', textDecoration: 'underline' }}
+              >
+                Сбросить фильтры
+              </button>
+            )}
+          </div>
+        )}
+
         {loading ? (
           <Loading />
-        ) : orders.length === 0 ? (
-          <Empty text="Заказов пока нет" />
+        ) : displayedOrders.length === 0 ? (
+          <Empty text={orders.length === 0 ? 'Заказов пока нет' : 'Нет заказов по выбранным фильтрам'} />
         ) : (
           <Card padding={0}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -148,10 +404,10 @@ export default function OrdersTab() {
                 </tr>
               </thead>
               <tbody>
-                {orders.map((order, i) => (
+                {displayedOrders.map((order, i) => (
                   <tr
                     key={order.id}
-                    style={{ borderBottom: i < orders.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}
+                    style={{ borderBottom: i < displayedOrders.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}
                     onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
                     onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                   >
@@ -215,7 +471,7 @@ export default function OrdersTab() {
                             <Icons.Chat size={11} /> Чат
                           </button>
                         )}
-                        {user?.role !== 'client' && order.status === 'pending' && (
+                        {user?.role !== 'client' && ['pending', 'pending_approval'].includes(order.status) && (
                           <>
                             <button onClick={() => handleAccept(order.id)} style={{ background: 'transparent', border: 'none', color: 'var(--green)', cursor: 'pointer', fontSize: 11, fontWeight: 700, fontFamily: 'var(--font-body)' }}>
                               Принять

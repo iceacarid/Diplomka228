@@ -92,6 +92,27 @@ class GigaChatService
     }
 
     /**
+     * Extract Russian federal subject (субъект РФ) from an address string.
+     * Returns normalized region name or null on failure.
+     */
+    public function extractRegion(string $address): ?string
+    {
+        $system = 'Ты — геокодер. По адресу определи субъект Российской Федерации. '
+                . 'Отвечай ТОЛЬКО названием субъекта, без лишних слов. '
+                . 'Примеры: "Москва", "Республика Татарстан", "Московская область", "Краснодарский край". '
+                . 'Если адрес не российский или регион не определить — ответь пустой строкой.';
+
+        $raw = $this->chat($system, "Адрес: {$address}");
+        if (!$raw) return null;
+
+        $region = trim(strip_tags($raw));
+        // Reject obviously wrong answers (too long or empty)
+        if ($region === '' || mb_strlen($region) > 100) return null;
+
+        return $region;
+    }
+
+    /**
      * Ask GigaChat to distribute orders across trucks.
      * Returns decoded array with keys: plan[], unassigned[]
      * or null on failure.

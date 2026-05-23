@@ -14,8 +14,11 @@ const CHAT_STATUS_FILTERS = [
 
 const ORDER_STATUS_OPTIONS = [
   { value: '',                 label: 'Любой статус заявки' },
+  { value: 'draft',            label: 'Черновик' },
   { value: 'pending',          label: 'Ожидает' },
+  { value: 'pending_approval', label: 'Ожидает проверки' },
   { value: 'in_progress',      label: 'В работе' },
+  { value: 'accepted',         label: 'Принята' },
   { value: 'confirmed',        label: 'Подтверждён' },
   { value: 'courier_assigned', label: 'Курьер назначен' },
   { value: 'picked_up',        label: 'Курьер в дороге' },

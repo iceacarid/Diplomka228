@@ -92,157 +92,170 @@ export default function ClientNewOrder() {
 
   return (
     <>
-    <div style={{ padding: 36, maxWidth: 740 }}>
+    <div style={{ padding: 36 }}>
       <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 30, letterSpacing: 1, marginBottom: 28 }}>
         Новая <span style={{ color: 'var(--gold)' }}>заявка</span>
       </h2>
 
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-        {/* Маршрут */}
-        <Card padding={24}>
-          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: 14 }}>Маршрут</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <AddressField label="Откуда" value={form.origin_address} onChange={set('origin_address')} placeholder="Москва, Каширское ш. 60" />
-              <Btn kind="ghost" size="sm" type="button" onClick={() => setMapPicker('origin_address')} icon={<Icons.Pin size={13} />}>
-                Выбрать на карте
-              </Btn>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <AddressField label="Куда" value={form.dest_address} onChange={set('dest_address')} placeholder="Казань, Кремлёвская 12" />
-              <Btn kind="ghost" size="sm" type="button" onClick={() => setMapPicker('dest_address')} icon={<Icons.Pin size={13} />}>
-                Выбрать на карте
-              </Btn>
-            </div>
-          </div>
-        </Card>
+      <form onSubmit={handleSubmit}>
+        <div className="new-order-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
 
-        {/* Груз */}
-        <Card padding={24}>
-          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: 14 }}>Груз</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
-            <Field label="Вес, кг"   type="number" placeholder="5000" value={form.weight} onChange={set('weight')} />
-            <Field label="Объём, м³" type="number" placeholder="20"   value={form.volume} onChange={set('volume')} />
-          </div>
-          <Field label="Описание груза" placeholder="Промышленное оборудование, хрупкое" value={form.cargo_description} onChange={set('cargo_description')} />
-        </Card>
+          {/* LEFT: маршрут + груз + расчёт */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: '100%' }}>
+            <Card padding={24}>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: 14 }}>Маршрут</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <AddressField label="Откуда" value={form.origin_address} onChange={set('origin_address')} placeholder="Москва, Каширское ш. 60" />
+                  <Btn kind="ghost" size="sm" type="button" onClick={() => setMapPicker('origin_address')} icon={<Icons.Pin size={13} />}>
+                    Выбрать на карте
+                  </Btn>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <AddressField label="Куда" value={form.dest_address} onChange={set('dest_address')} placeholder="Казань, Кремлёвская 12" />
+                  <Btn kind="ghost" size="sm" type="button" onClick={() => setMapPicker('dest_address')} icon={<Icons.Pin size={13} />}>
+                    Выбрать на карте
+                  </Btn>
+                </div>
+              </div>
+            </Card>
 
-        {/* Тип груза — инфографика */}
-        <Card padding={24}>
-          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: 14 }}>Тип груза</div>
-          {cargoTypes.length === 0 ? (
-            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)' }}>Загрузка...</div>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 10 }}>
-              {[...cargoTypes].sort((a, b) => a.slug === 'other' ? 1 : b.slug === 'other' ? -1 : 0).map(ct => {
-                const IconComp = Icons[ct.icon]
-                const active   = form.cargo_type === ct.slug
-                return (
-                  <button
-                    key={ct.slug}
-                    type="button"
-                    onClick={() => setForm(f => ({ ...f, cargo_type: ct.slug, cargo_type_custom: '' }))}
+            <Card padding={24}>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: 14 }}>Груз</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+                <Field label="Вес, кг"   type="number" placeholder="5000" value={form.weight} onChange={set('weight')} />
+                <Field label="Объём, м³" type="number" placeholder="20"   value={form.volume} onChange={set('volume')} />
+              </div>
+              <Field label="Описание груза" placeholder="Промышленное оборудование, хрупкое" value={form.cargo_description} onChange={set('cargo_description')} />
+            </Card>
+
+          </div>
+
+          {/* RIGHT: тип груза + кнопки */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: '100%' }}>
+            <Card padding={24} style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: 14 }}>Тип груза</div>
+              {cargoTypes.length === 0 ? (
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)' }}>Загрузка...</div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 10 }}>
+                  {[...cargoTypes].sort((a, b) => a.slug === 'other' ? 1 : b.slug === 'other' ? -1 : 0).map(ct => {
+                    const IconComp = Icons[ct.icon]
+                    const active   = form.cargo_type === ct.slug
+                    return (
+                      <button
+                        key={ct.slug}
+                        type="button"
+                        onClick={() => setForm(f => ({ ...f, cargo_type: ct.slug, cargo_type_custom: '' }))}
+                        style={{
+                          padding: '14px 12px',
+                          borderRadius: 8,
+                          border: active ? '1.5px solid var(--gold)' : '1.5px solid rgba(255,255,255,0.07)',
+                          background: active ? 'rgba(240,165,0,0.08)' : 'var(--navy-3)',
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          transition: 'all 0.15s',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 8,
+                        }}
+                      >
+                        <div style={{ color: active ? 'var(--gold)' : 'rgba(255,255,255,0.3)' }}>
+                          {IconComp ? <IconComp size={18} /> : <Icons.Package size={18} />}
+                        </div>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: active ? 'white' : 'rgba(255,255,255,0.65)', fontFamily: 'var(--font-body)', lineHeight: 1.3 }}>
+                          {ct.label}
+                        </div>
+                        <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: active ? 'var(--gold)' : 'rgba(255,255,255,0.25)', fontWeight: 700 }}>
+                          × {ct.coefficient}
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+
+              {form.cargo_type === 'other' && (
+                <div style={{ marginTop: 14 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', marginBottom: 6, fontFamily: 'var(--font-body)' }}>
+                    Укажите тип груза
+                  </div>
+                  <input
+                    value={form.cargo_type_custom || ''}
+                    onChange={e => setForm(f => ({ ...f, cargo_type_custom: e.target.value }))}
+                    placeholder="Например: строительные материалы, металлопрокат..."
                     style={{
-                      padding: '14px 12px',
-                      borderRadius: 8,
-                      border: active ? '1.5px solid var(--gold)' : '1.5px solid rgba(255,255,255,0.07)',
-                      background: active ? 'rgba(240,165,0,0.08)' : 'var(--navy-3)',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      transition: 'all 0.15s',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 8,
+                      width: '100%',
+                      background: 'var(--navy-3)',
+                      border: '1px solid rgba(240,165,0,0.3)',
+                      color: 'white',
+                      padding: '11px 13px',
+                      borderRadius: 6,
+                      fontSize: 13,
+                      fontFamily: 'var(--font-body)',
+                      outline: 'none',
+                      boxSizing: 'border-box',
                     }}
-                  >
-                    <div style={{ color: active ? 'var(--gold)' : 'rgba(255,255,255,0.3)' }}>
-                      {IconComp ? <IconComp size={18} /> : <Icons.Package size={18} />}
-                    </div>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: active ? 'white' : 'rgba(255,255,255,0.65)', fontFamily: 'var(--font-body)', lineHeight: 1.3 }}>
-                      {ct.label}
-                    </div>
-                    <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: active ? 'var(--gold)' : 'rgba(255,255,255,0.25)', fontWeight: 700 }}>
-                      × {ct.coefficient}
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-          )}
-
-          {form.cargo_type === 'other' && (
-            <div style={{ marginTop: 14 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', marginBottom: 6, fontFamily: 'var(--font-body)' }}>
-                Укажите тип груза
-              </div>
-              <input
-                value={form.cargo_type_custom || ''}
-                onChange={e => setForm(f => ({ ...f, cargo_type_custom: e.target.value }))}
-                placeholder="Например: строительные материалы, металлопрокат..."
-                style={{
-                  width: '100%',
-                  background: 'var(--navy-3)',
-                  border: '1px solid rgba(240,165,0,0.3)',
-                  color: 'white',
-                  padding: '11px 13px',
-                  borderRadius: 6,
-                  fontSize: 13,
-                  fontFamily: 'var(--font-body)',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                }}
-              />
-            </div>
-          )}
-        </Card>
-
-        {/* Авто-расчёт */}
-        {(calcLoading || calc) && (
-          <Card padding={20} style={{ borderColor: calcLoading ? 'rgba(255,255,255,0.08)' : 'rgba(240,165,0,0.25)' }}>
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: calcLoading ? 'rgba(255,255,255,0.3)' : 'var(--gold)', marginBottom: 14 }}>
-              {calcLoading ? 'Считаем маршрут...' : 'Предварительный расчёт'}
-            </div>
-            {calcLoading ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {[1,2].map(i => <div key={i} style={{ height: 24, background: 'rgba(255,255,255,0.04)', borderRadius: 4, animation: 'pulse 1.4s ease-in-out infinite' }} />)}
-              </div>
-            ) : calc && (
-              <>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 14 }}>
-                  {[
-                    ['Итого', `₽ ${Number(calc.price).toLocaleString('ru')}`, 'var(--gold)'],
-                    ['Расстояние', `${calc.distance_km} км`, 'white'],
-                    ['Срок', `${calc.estimated_delivery_days} дн.`, 'white'],
-                    ['Тип груза', `${calc.cargo_type_label} ×${calc.cargo_type_coef}`, 'rgba(255,255,255,0.55)'],
-                  ].map(([l, v, c]) => (
-                    <div key={l}>
-                      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)', marginBottom: 6 }}>{l}</div>
-                      <div style={{ fontFamily: 'var(--font-display)', fontSize: 16, color: c, letterSpacing: 0.4 }}>{v}</div>
-                    </div>
-                  ))}
+                  />
                 </div>
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', fontFamily: 'var(--font-mono)' }}>
-                  Базовая цена: ₽ {Number(calc.base_price).toLocaleString('ru')} × {calc.cargo_type_coef} = ₽ {Number(calc.price).toLocaleString('ru')}
+              )}
+
+              {(calcLoading || calc) && (
+                <div style={{ marginTop: 'auto', paddingTop: 20, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: calcLoading ? 'rgba(255,255,255,0.3)' : 'var(--gold)', marginBottom: 14 }}>
+                    {calcLoading ? 'Считаем маршрут...' : 'Предварительный расчёт'}
+                  </div>
+                  {calcLoading ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {[1,2].map(i => <div key={i} style={{ height: 24, background: 'rgba(255,255,255,0.04)', borderRadius: 4, animation: 'pulse 1.4s ease-in-out infinite' }} />)}
+                    </div>
+                  ) : calc && (
+                    <>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 14 }}>
+                        {[
+                          ['Итого', `₽ ${Number(calc.price).toLocaleString('ru')}`, 'var(--gold)'],
+                          ['Расстояние', `${calc.distance_km} км`, 'white'],
+                          ['Срок', `${calc.estimated_delivery_days} дн.`, 'white'],
+                          ['Тип груза', `${calc.cargo_type_label} ×${calc.cargo_type_coef}`, 'rgba(255,255,255,0.55)'],
+                        ].map(([l, v, c]) => (
+                          <div key={l}>
+                            <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)', marginBottom: 6 }}>{l}</div>
+                            <div style={{ fontFamily: 'var(--font-display)', fontSize: 16, color: c, letterSpacing: 0.4 }}>{v}</div>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', fontFamily: 'var(--font-mono)' }}>
+                        Базовая цена: ₽ {Number(calc.base_price).toLocaleString('ru')} × {calc.cargo_type_coef} = ₽ {Number(calc.price).toLocaleString('ru')}
+                      </div>
+                    </>
+                  )}
                 </div>
-              </>
-            )}
-          </Card>
-        )}
+              )}
+            </Card>
+
+          </div>
+
+        </div>
 
         {error && (
-          <div style={{ fontSize: 12, color: 'var(--red)', padding: '10px 14px', background: 'rgba(240,68,56,0.08)', borderRadius: 6, border: '1px solid rgba(240,68,56,0.2)' }}>
+          <div style={{ fontSize: 12, color: 'var(--red)', padding: '10px 14px', background: 'rgba(240,68,56,0.08)', borderRadius: 6, border: '1px solid rgba(240,68,56,0.2)', marginTop: 16 }}>
             {error}
           </div>
         )}
 
-        <div style={{ display: 'flex', gap: 12 }}>
+        <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 16 }}>
+          <Btn kind="ghost" onClick={() => navigate('/dashboard/my-orders')} type="button">Отмена</Btn>
           <Btn type="submit" disabled={submitting || !canSubmit} icon={<Icons.Plus size={14} />}>
             {submitting ? 'Создаём...' : 'Создать заявку'}
           </Btn>
-          <Btn kind="ghost" onClick={() => navigate('/dashboard/my-orders')} type="button">Отмена</Btn>
         </div>
       </form>
-      <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }`}</style>
+      <style>{`
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+        @media (max-width: 768px) {
+          .new-order-grid { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
     </div>
 
     {mapPicker && (

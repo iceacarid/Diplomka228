@@ -22,7 +22,7 @@ class AdminCourierController extends Controller
     {
         abort_unless($request->user()->isAdmin(), 403);
 
-        $couriers = User::where('role', 'courier')->orderBy('name')->get();
+        $couriers = User::where('role', 'courier')->orderBy('name')->with('warehouse')->get();
 
         $result = $couriers->map(function (User $u) {
             $lastAction = CourierAction::where('courier_id', $u->id)
@@ -34,6 +34,8 @@ class AdminCourierController extends Controller
                 'email'          => $u->email,
                 'phone'          => $u->phone,
                 'is_active'      => $u->is_active,
+                'warehouse_id'   => $u->warehouse_id,
+                'warehouse_name' => $u->warehouse?->name,
                 'has_open_shift' => CourierShift::where('courier_id', $u->id)
                                                 ->whereNull('closed_at')->exists(),
                 'total_orders'   => Order::where('courier_id', $u->id)->count(),

@@ -1,15 +1,17 @@
 import { useRef, useEffect, useState } from 'react'
 
 const ORDER_STATUS_LABEL = {
-  draft:            'Черновик',
+  draft:            'Черновик — ожидает заполнения',
   pending:          'На рассмотрении',
+  pending_approval: 'Ожидает проверки менеджера',
   in_progress:      'В работе',
+  accepted:         'Принята — ожидает курьера',
   confirmed:        'Подтверждено',
-  courier_assigned: 'Курьер назначен',
+  courier_assigned: 'Курьер назначен — едет на точку',
   picked_up:        'Курьер в дороге',
   at_warehouse:     'Груз на складе',
   missed_pickup:    '⚠ Пропущен забор',
-  shipped:          'В пути',
+  shipped:          'В пути на доставку',
   delivered:        'Доставлено',
   rejected:         'Отклонено',
 }
@@ -174,6 +176,7 @@ export function ChatWindow({ chatId, onClose }) {
             onFormUpdate={updateMessage}
             orderData={chatMeta?.order_data}
             chatId={chatId}
+            formSubmitted={!!formMsg}
           />
         ))}
         <div ref={bottomRef} />

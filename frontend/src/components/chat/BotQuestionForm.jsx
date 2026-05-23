@@ -111,8 +111,7 @@ const LBL = {
 // ══════════════════════════════════════════════════════════════════════════
 export function BotQuestionForm({ onSubmit, disabled, orderData, chatId }) {
   const { user }   = useAuth()
-  const storageKey = `chat_form_sent_${chatId}`
-  const [sent, setSent]       = useState(() => !!localStorage.getItem(storageKey))
+  const [sent, setSent]       = useState(false)
   const [error, setError]     = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -181,7 +180,6 @@ export function BotQuestionForm({ onSubmit, disabled, orderData, chatId }) {
 
     try {
       await onSubmit('', metadata)
-      localStorage.setItem(storageKey, '1')
       setSent(true)
     } catch {
       setError('Ошибка отправки. Попробуйте ещё раз.')

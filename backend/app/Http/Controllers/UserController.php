@@ -12,7 +12,7 @@ class UserController extends Controller
     /** GET /api/auth/me */
     public function me(Request $request)
     {
-        return response()->json($this->userData($request->user()));
+        return response()->json($this->userData($request->user()->load('warehouse')));
     }
 
     /** PUT/PATCH /api/auth/me */
@@ -66,6 +66,7 @@ class UserController extends Controller
             $users = User::where('id', $authUser->id)->get();
         }
 
+        $users->load('warehouse');
         return response()->json($users->map(fn($u) => $this->userData($u)));
     }
 
@@ -77,7 +78,13 @@ class UserController extends Controller
         }
 
         $request->validate(['role' => 'required|in:client,manager,admin,courier']);
-        $user->update(['role' => $request->role]);
+
+        if ($request->role === 'courier') {
+            $request->validate(['warehouse_id' => 'required|exists:warehouses,id']);
+            $user->update(['role' => 'courier', 'warehouse_id' => $request->warehouse_id]);
+        } else {
+            $user->update(['role' => $request->role, 'warehouse_id' => null]);
+        }
 
         return response()->json($this->userData($user->fresh()));
     }
@@ -100,6 +107,8 @@ class UserController extends Controller
             'name'               => $user->name,
             'phone'              => $user->phone,
             'role'               => $user->role,
+            'warehouse_id'       => $user->warehouse_id,
+            'warehouse_name'     => $user->warehouse?->name,
             'avatar_url'         => $user->avatarUrl(),
             'is_active'          => $user->is_active,
             'two_factor_enabled' => $user->two_factor_enabled,

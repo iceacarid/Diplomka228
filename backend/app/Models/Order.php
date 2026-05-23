@@ -30,6 +30,7 @@ class Order extends Model
         'pickup_time',
         'courier_blocked',
         'courier_blocked_reason',
+        'region',
     ];
 
     protected function casts(): array

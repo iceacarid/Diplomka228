@@ -147,6 +147,26 @@ class ChatController extends Controller
             'metadata'    => $data['metadata'] ?? null,
         ]);
 
+        // Клиент отправил форму → переводим заявку в очередь на проверку менеджером
+        if ($type === 'form_submission' && $user->isClient()) {
+            $order = $chat->order;
+            if ($order && $order->status === 'draft') {
+                $orderUpdate = ['status' => 'pending_approval'];
+                if (!empty($data['metadata']['pickup_date'])) {
+                    $orderUpdate['pickup_date'] = $data['metadata']['pickup_date'];
+                }
+                $order->update($orderUpdate);
+                Message::create([
+                    'chat_id'     => $chat->id,
+                    'sender_id'   => null,
+                    'sender_role' => 'bot',
+                    'body'        => "Заявка {$order->tracking_id} передана на проверку менеджеру. Ожидайте подтверждения.",
+                    'type'        => 'text',
+                    'metadata'    => ['event' => 'order_submitted'],
+                ]);
+            }
+        }
+
         $chat->touch();
 
         return response()->json($this->messageData($message->load('sender'), $user), 201);
@@ -159,8 +179,56 @@ class ChatController extends Controller
         abort_unless($chat->canUserWrite($user), 403, 'Нет доступа к этому чату.');
         abort_unless($message->type === 'form_submission', 422, 'Можно редактировать только форму.');
 
-        $data = $request->validate(['metadata' => 'required|array']);
-        $message->update(['metadata' => $data['metadata']]);
+        $data    = $request->validate(['metadata' => 'required|array']);
+        $oldMeta = $message->metadata ?? [];
+        $newMeta = $data['metadata'];
+
+        $message->update(['metadata' => $newMeta]);
+
+        // Sync pickup_date to order if changed
+        $order = $chat->order;
+        if ($order && isset($newMeta['pickup_date']) && ($oldMeta['pickup_date'] ?? null) !== $newMeta['pickup_date']) {
+            $order->update(['pickup_date' => $newMeta['pickup_date']]);
+        }
+
+        // Build human-readable diff and notify
+        $labels = [
+            'pickup_date'          => 'Дата забора',
+            'pickup_time'          => 'Время забора',
+            'pickup_name'          => 'Контакт на месте забора',
+            'pickup_phone'         => 'Телефон на месте забора',
+            'delivery_name'        => 'Имя получателя',
+            'delivery_phone'       => 'Телефон получателя',
+            'cargo_description'    => 'Описание груза',
+            'loaders_pickup'       => 'Грузчики на погрузке',
+            'loaders_pickup_floor' => 'Этаж погрузки',
+            'loaders_delivery'     => 'Грузчики на выгрузке',
+            'packaging'            => 'Упаковка',
+            'comment'              => 'Комментарий',
+        ];
+
+        $changes = [];
+        foreach ($labels as $key => $label) {
+            $old = (string) ($oldMeta[$key] ?? '');
+            $new = (string) ($newMeta[$key] ?? '');
+            if ($old !== $new) {
+                $oldStr = $old !== '' ? $old : '—';
+                $newStr = $new !== '' ? $new : '—';
+                $changes[] = "• {$label}: {$oldStr} → {$newStr}";
+            }
+        }
+
+        if (!empty($changes)) {
+            Message::create([
+                'chat_id'     => $chat->id,
+                'sender_id'   => null,
+                'sender_role' => 'bot',
+                'body'        => "Менеджер {$user->name} изменил данные заявки:\n" . implode("\n", $changes),
+                'type'        => 'text',
+                'metadata'    => ['event' => 'form_edited'],
+            ]);
+            $chat->touch();
+        }
 
         return response()->json($this->messageData($message->load('sender'), $user));
     }
@@ -247,7 +315,7 @@ class ChatController extends Controller
     {
         $user = $request->user();
         abort_unless($user->isClient(), 403, 'Только клиент может подать апелляцию.');
-        abort_unless($chat->order->client_id === $user->id, 403, 'Нет доступа.');
+        abort_unless((int) $chat->order->client_id === (int) $user->id, 403, 'Нет доступа.');
 
         if ($chat->status !== 'archived') {
             return response()->json(['error' => 'Апелляция возможна только по архивированному чату.'], 400);

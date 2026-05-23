@@ -23,6 +23,12 @@ export default function UsersTab() {
   const [filterRole, setFilterRole] = useState('all')
   const [sortBy,     setSortBy]     = useState('date_desc')
 
+  const [courierModal, setCourierModal]           = useState(null) // { userId }
+  const [warehouses,   setWarehouses]             = useState([])
+  const [selectedWh,   setSelectedWh]             = useState('')
+  const [whLoading,    setWhLoading]              = useState(false)
+  const [courierAssigning, setCourierAssigning]   = useState(false)
+
   const load = async () => {
     setLoading(true)
     try {
@@ -51,10 +57,22 @@ export default function UsersTab() {
     })
 
   const handleChangeRole = async (id, role) => {
+    if (role === 'courier') {
+      setSelectedWh('')
+      if (warehouses.length === 0) {
+        setWhLoading(true)
+        try {
+          const { data } = await api.get('/warehouses')
+          setWarehouses(Array.isArray(data) ? data : [])
+        } catch {}
+        setWhLoading(false)
+      }
+      setCourierModal({ userId: id })
+      return
+    }
     try {
       await api.post(`/users/${id}/change-role`, { role })
       if (id === me?.id) {
-        // Own role changed — refresh from server so redirect fires immediately
         const { data } = await api.get('/auth/me')
         updateUser(data)
       } else {
@@ -63,6 +81,19 @@ export default function UsersTab() {
     } catch (err) {
       alert(err.response?.data?.error || 'Ошибка')
     }
+  }
+
+  const confirmCourier = async () => {
+    if (!selectedWh || !courierModal) return
+    setCourierAssigning(true)
+    try {
+      await api.post(`/users/${courierModal.userId}/change-role`, { role: 'courier', warehouse_id: selectedWh })
+      setCourierModal(null)
+      load()
+    } catch (err) {
+      alert(err.response?.data?.error || 'Ошибка назначения')
+    }
+    setCourierAssigning(false)
   }
 
   const handleDelete = async (id) => {
@@ -202,6 +233,79 @@ export default function UsersTab() {
           </Card>
         )}
       </div>
+
+      {/* Courier warehouse picker modal */}
+      {courierModal && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+          onClick={() => setCourierModal(null)}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ background: 'var(--navy-2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 14, padding: 24, width: '100%', maxWidth: 420, display: 'flex', flexDirection: 'column', gap: 16 }}
+          >
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--gold)', fontFamily: 'var(--font-body)' }}>Назначение роли</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: 'white', marginTop: 4 }}>Выберите склад для курьера</div>
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 4 }}>Курьер будет закреплён за выбранным складом. Ему будут доступны только заказы из этого региона.</div>
+            </div>
+
+            {whLoading ? (
+              <div style={{ textAlign: 'center', padding: 20, color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>Загрузка складов...</div>
+            ) : warehouses.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: 20, color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>
+                Нет складов. Сначала создайте склад в разделе «Склады».
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 260, overflowY: 'auto' }}>
+                {warehouses.map(wh => (
+                  <label
+                    key={wh.id}
+                    style={{
+                      display: 'flex', alignItems: 'flex-start', gap: 10,
+                      padding: '12px 14px', borderRadius: 9, cursor: 'pointer',
+                      background: selectedWh === String(wh.id) ? 'rgba(240,165,0,0.1)' : 'rgba(255,255,255,0.03)',
+                      border: `1px solid ${selectedWh === String(wh.id) ? 'rgba(240,165,0,0.35)' : 'rgba(255,255,255,0.07)'}`,
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="warehouse"
+                      value={wh.id}
+                      checked={selectedWh === String(wh.id)}
+                      onChange={() => setSelectedWh(String(wh.id))}
+                      style={{ accentColor: 'var(--gold)', marginTop: 2, flexShrink: 0 }}
+                    />
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: selectedWh === String(wh.id) ? 'var(--gold)' : 'white' }}>{wh.name}</div>
+                      {wh.address && <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>{wh.address}</div>}
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>
+                        Загрузка: {wh.load_percent}% · {wh.current_load}/{wh.total_capacity} т
+                      </div>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={() => setCourierModal(null)}
+                style={{ flex: 1, padding: '11px', borderRadius: 9, border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: 'rgba(255,255,255,0.5)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-body)' }}
+              >
+                Отмена
+              </button>
+              <button
+                onClick={confirmCourier}
+                disabled={!selectedWh || courierAssigning || warehouses.length === 0}
+                style={{ flex: 2, padding: '11px', borderRadius: 9, border: 'none', background: (!selectedWh || courierAssigning) ? 'rgba(255,255,255,0.08)' : 'var(--gold)', color: (!selectedWh || courierAssigning) ? 'rgba(255,255,255,0.3)' : 'var(--navy)', fontSize: 13, fontWeight: 700, cursor: (!selectedWh || courierAssigning) ? 'default' : 'pointer', fontFamily: 'var(--font-body)' }}
+              >
+                {courierAssigning ? 'Назначаем...' : 'Назначить курьером'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

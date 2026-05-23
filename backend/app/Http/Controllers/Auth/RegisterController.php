@@ -4,27 +4,16 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Services\OtpService;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 
 class RegisterController extends Controller
 {
-    public function __construct(private OtpService $otpService) {}
 
     public function register(Request $request)
     {
-        // Удаляем просроченных неподтверждённых пользователей
-        User::where('is_active', false)
-            ->where('created_at', '<', Carbon::now()->subMinutes(30))
-            ->delete();
-
         $email = strtolower(trim($request->input('email', '')));
-
-        // Разрешаем повторную регистрацию с неактивным email
-        User::where('email', $email)->where('is_active', false)->delete();
 
         $validator = Validator::make($request->all(), [
             'email'    => 'required|email|unique:users,email',
@@ -50,19 +39,15 @@ class RegisterController extends Controller
             'phone'     => $request->phone,
             'password'  => Hash::make($request->password),
             'role'      => 'client',
-            'is_active' => false,
+            'is_active' => true,
         ]);
 
-        try {
-            $this->otpService->send($user, 'registration');
-        } catch (\Exception $e) {
-            $user->delete();
-            return response()->json(['error' => 'Не удалось отправить письмо: ' . $e->getMessage()], 500);
-        }
+        $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
-            'message' => 'Код подтверждения отправлен на вашу почту.',
-            'email'   => $user->email,
+            'message' => 'Регистрация успешна.',
+            'user'    => $this->userData($user),
+            'token'   => $token,
         ], 201);
     }
 

@@ -4,8 +4,8 @@ import { useAuth } from '../context/AuthContext'
 import api from '../api/axios'
 import ProfileTab from './dashboard/ProfileTab'
 
-const TABS = ['available', 'my', 'history']
-const TAB_LABELS = { available: 'Доступные', my: 'Мои заказы', history: 'История' }
+const TABS = ['my', 'history']
+const TAB_LABELS = { my: 'Мои заказы', history: 'История' }
 
 const STATUS_LABEL = {
   confirmed:        'Ожидает курьера',
@@ -335,9 +335,8 @@ const filterSelectStyle = {
 export default function CourierDashboard() {
   const { user, logout }           = useAuth()
   const navigate                   = useNavigate()
-  const [tab, setTab]              = useState('available')
+  const [tab, setTab]              = useState('my')
   const [shift, setShift]          = useState(null)
-  const [available, setAvailable]  = useState([])
   const [myOrders, setMyOrders]    = useState([])
   const [history, setHistory]      = useState([])
   const [ordersLoading, setOL]     = useState(false)
@@ -358,12 +357,10 @@ export default function CourierDashboard() {
     setOL(true)
     setError(null)
     try {
-      const [avail, my, hist] = await Promise.all([
-        api.get('/courier/orders/available').then(r => r.data).catch(() => []),
+      const [my, hist] = await Promise.all([
         api.get('/courier/orders/my').then(r => r.data).catch(() => []),
         api.get('/courier/orders/history').then(r => r.data).catch(() => []),
       ])
-      setAvailable(Array.isArray(avail) ? avail : [])
       setMyOrders(Array.isArray(my) ? my : [])
       setHistory(Array.isArray(hist) ? hist : [])
     } catch {
@@ -390,28 +387,20 @@ export default function CourierDashboard() {
   }
 
   const handleCloseShift = async () => {
-    if (!window.confirm('Закрыть смену? Активные заказы останутся за вами.')) return
+    if (myOrders.length > 0) {
+      setError(`Нельзя закрыть смену: есть ${myOrders.length} активн. ${myOrders.length === 1 ? 'заказ' : myOrders.length < 5 ? 'заказа' : 'заказов'}. Завершите все заказы.`)
+      return
+    }
+    if (!window.confirm('Закрыть смену?')) return
     setSL(true); setError(null)
     try {
       const { data } = await api.post('/courier/shift/close')
       setShift(data)
-      setAvailable([]); setMyOrders([]); setHistory([])
+      setMyOrders([]); setHistory([])
     } catch (e) {
       setError(e?.response?.data?.error || 'Ошибка закрытия смены')
     }
     setSL(false)
-  }
-
-  const handleTake = async (id) => {
-    setAL(id); setError(null)
-    try {
-      await api.post(`/courier/orders/${id}/take`)
-      await loadOrders()
-      setTab('my')
-    } catch (e) {
-      setError(e?.response?.data?.error || 'Не удалось взять заказ')
-    }
-    setAL(null)
   }
 
   const handlePickup = async (id) => {
@@ -547,7 +536,7 @@ export default function CourierDashboard() {
     return out
   }
 
-  const rawOrders    = tab === 'available' ? available : tab === 'my' ? myOrders : history
+  const rawOrders    = tab === 'my' ? myOrders : history
   const currentOrders = applyFilters(rawOrders)
 
   const hasActiveFilters = filterDate || filterTimeFrom || filterTimeTo ||
@@ -680,13 +669,20 @@ export default function CourierDashboard() {
               <button
                 onClick={shift.open ? handleCloseShift : handleOpenShift}
                 disabled={shiftLoading}
+                title={shift.open && myOrders.length > 0 ? `Завершите ${myOrders.length} активн. заказ(а) перед закрытием смены` : undefined}
                 style={{
                   padding: '9px 18px', borderRadius: 8, flexShrink: 0,
-                  background: shift.open ? 'rgba(240,68,56,0.14)' : '#F0A500',
-                  border: shift.open ? '1px solid rgba(240,68,56,0.3)' : 'none',
-                  color: shift.open ? '#F87171' : '#0D0D1F',
+                  background: shift.open
+                    ? (myOrders.length > 0 ? 'rgba(255,255,255,0.05)' : 'rgba(240,68,56,0.14)')
+                    : '#F0A500',
+                  border: shift.open
+                    ? (myOrders.length > 0 ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(240,68,56,0.3)')
+                    : 'none',
+                  color: shift.open
+                    ? (myOrders.length > 0 ? 'rgba(255,255,255,0.3)' : '#F87171')
+                    : '#0D0D1F',
                   fontSize: 12, fontWeight: 700,
-                  cursor: shiftLoading ? 'default' : 'pointer',
+                  cursor: (shiftLoading || (shift.open && myOrders.length > 0)) ? 'not-allowed' : 'pointer',
                   fontFamily: 'var(--font-body)',
                   letterSpacing: '0.04em',
                   opacity: shiftLoading ? 0.6 : 1,
@@ -707,7 +703,7 @@ export default function CourierDashboard() {
                   borderRadius: 11, padding: 4,
                 }}>
                   {TABS.map(t => {
-                    const count = t === 'available' ? available.length : t === 'my' ? myOrders.length : 0
+                    const count = t === 'my' ? myOrders.length : 0
                     return (
                       <button
                         key={t}
@@ -728,8 +724,8 @@ export default function CourierDashboard() {
                         {TAB_LABELS[t]}
                         {count > 0 && (
                           <span style={{
-                            background: t === 'available' ? '#F0A500' : '#8B5CF6',
-                            color: t === 'available' ? '#0D0D1F' : 'white',
+                            background: '#8B5CF6',
+                            color: 'white',
                             borderRadius: 10, padding: '1px 6px',
                             fontSize: 10, fontWeight: 800, lineHeight: 1.4,
                           }}>
@@ -858,15 +854,7 @@ export default function CourierDashboard() {
                     Загрузка заказов...
                   </div>
                 ) : currentOrders.length === 0 ? (
-                  tab === 'available'
-                    ? <EmptyState gold icon={
-                        <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-                          <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
-                          <line x1="12" y1="22.08" x2="12" y2="12"/>
-                        </svg>
-                      } text="Нет доступных заявок. Попробуйте обновить." />
-                    : tab === 'my'
+                  tab === 'my'
                     ? <EmptyState icon={
                         <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
                           <rect x="1" y="3" width="15" height="13" rx="1"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>
@@ -885,9 +873,7 @@ export default function CourierDashboard() {
                     onNotifyMissed={tab === 'my' ? handleNotifyMissed : undefined}
                     onRequestReschedule={tab === 'my' ? handleRequestReschedule : undefined}
                     onAction={
-                      tab === 'available'
-                        ? handleTake
-                        : tab === 'my'
+                      tab === 'my'
                         ? (order.status === 'courier_assigned' || (order.status === 'missed_pickup' && !order.courier_blocked))
                           ? handlePickup
                           : order.status === 'picked_up'
@@ -896,16 +882,12 @@ export default function CourierDashboard() {
                         : null
                     }
                     actionLabel={
-                      tab === 'available'
-                        ? 'Взять заказ'
-                        : (order.status === 'courier_assigned' || order.status === 'missed_pickup')
+                      (order.status === 'courier_assigned' || order.status === 'missed_pickup')
                         ? 'Груз забран'
                         : 'Передать на склад'
                     }
                     actionColor={
-                      tab === 'available'
-                        ? '#C98A00'
-                        : (order.status === 'courier_assigned' || order.status === 'missed_pickup')
+                      (order.status === 'courier_assigned' || order.status === 'missed_pickup')
                         ? '#7C3AED'
                         : '#059669'
                     }

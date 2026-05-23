@@ -59,26 +59,19 @@ class CourierController extends Controller
             return response()->json(['error' => 'Нет открытой смены.'], 400);
         }
 
+        $activeOrders = Order::where('courier_id', $courier->id)
+                             ->whereIn('status', ['courier_assigned', 'picked_up', 'missed_pickup'])
+                             ->count();
+        if ($activeOrders > 0) {
+            return response()->json([
+                'error' => "Нельзя закрыть смену: есть {$activeOrders} активн. " . ($activeOrders === 1 ? 'заказ' : ($activeOrders < 5 ? 'заказа' : 'заказов')) . '. Завершите все заказы.',
+            ], 400);
+        }
+
         $shift->update(['closed_at' => now()]);
         CourierAction::log($courier->id, 'shift_close', null, $shift->id);
 
         return response()->json(['open' => false, 'shift' => null]);
-    }
-
-    public function availableOrders(Request $request)
-    {
-        $courier = $request->user();
-        abort_unless($courier->isCourier(), 403, 'Только курьер.');
-        abort_unless($this->hasOpenShift($courier->id), 403, 'Откройте смену.');
-
-        $orders = Order::with(['client'])
-                       ->where('status', 'confirmed')
-                       ->whereNull('courier_id')
-                       ->orderBy('created_at')
-                       ->get()
-                       ->map(fn($o) => $this->orderData($o));
-
-        return response()->json($orders);
     }
 
     public function myOrders(Request $request)
@@ -86,9 +79,22 @@ class CourierController extends Controller
         $courier = $request->user();
         abort_unless($courier->isCourier(), 403, 'Только курьер.');
 
+        $today = now()->toDateString();
+
         $orders = Order::with(['client'])
                        ->where('courier_id', $courier->id)
-                       ->whereIn('status', ['courier_assigned', 'picked_up', 'missed_pickup'])
+                       ->where(function ($q) use ($today) {
+                           // picked_up и missed_pickup — всегда показываем
+                           $q->whereIn('status', ['picked_up', 'missed_pickup'])
+                             ->orWhere(function ($q2) use ($today) {
+                                 // courier_assigned — только если дата забора сегодня или раньше (или не задана)
+                                 $q2->where('status', 'courier_assigned')
+                                    ->where(function ($q3) use ($today) {
+                                        $q3->whereNull('pickup_date')
+                                           ->orWhereDate('pickup_date', '<=', $today);
+                                    });
+                             });
+                       })
                        ->orderByDesc('updated_at')
                        ->get()
                        ->map(fn($o) => $this->orderData($o));
@@ -109,23 +115,6 @@ class CourierController extends Controller
                        ->map(fn($o) => $this->orderData($o));
 
         return response()->json($orders);
-    }
-
-    public function takeOrder(Request $request, Order $order)
-    {
-        $courier = $request->user();
-        abort_unless($courier->isCourier(), 403, 'Только курьер.');
-        abort_unless($this->hasOpenShift($courier->id), 403, 'Откройте смену.');
-
-        if ($order->status !== 'confirmed' || $order->courier_id !== null) {
-            return response()->json(['error' => 'Заявка недоступна.'], 400);
-        }
-
-        $order->update(['status' => 'courier_assigned', 'courier_id' => $courier->id]);
-        CourierAction::log($courier->id, 'order_taken', $order);
-        $this->botMessage($order, "Курьер {$courier->name} взял заявку и выезжает на адрес забора.");
-
-        return response()->json($this->orderData($order->fresh('client')));
     }
 
     public function pickUp(Request $request, Order $order)

@@ -37,13 +37,14 @@ class Chat extends Model
 
     public function canUserRead(User $user): bool
     {
-        return match ($user->role) {
-            'admin'   => true,
-            'client'  => $this->order->client_id === $user->id,
-            'manager' => $this->manager_id === $user->id
-                      || $this->order->manager_id === $user->id,
-            default   => false,
-        };
+        if ($user->isAdmin()) return true;
+
+        // Order's client always has read access regardless of role
+        if ((int) $this->order->client_id === (int) $user->id) return true;
+
+        return $user->isManagerOrAdmin()
+            && ((int) $this->manager_id === (int) $user->id
+                || (int) $this->order->manager_id === (int) $user->id);
     }
 
     public function canUserWrite(User $user): bool
@@ -52,12 +53,13 @@ class Chat extends Model
             return false;
         }
 
-        return match ($user->role) {
-            'admin'   => true,
-            'client'  => $this->order->client_id === $user->id,
-            'manager' => $this->manager_id === $user->id
-                      || $this->order->manager_id === $user->id,
-            default   => false,
-        };
+        if ($user->isAdmin()) return true;
+
+        // Order's client always has write access regardless of role
+        if ((int) $this->order->client_id === (int) $user->id) return true;
+
+        return $user->isManagerOrAdmin()
+            && ((int) $this->manager_id === (int) $user->id
+                || (int) $this->order->manager_id === (int) $user->id);
     }
 }

@@ -4,10 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\CargoType;
 use App\Models\Chat;
+use App\Models\CourierShift;
 use App\Models\Driver;
 use App\Models\Message;
 use App\Models\Order;
 use App\Models\Truck;
+use App\Models\User;
+use App\Models\Warehouse;
+use App\Services\GigaChatService;
 use Illuminate\Http\Request;
 
 class OrderController extends Controller
@@ -45,9 +49,18 @@ class OrderController extends Controller
         ]);
 
         $data['client_id'] = $request->user()->id;
-        $data['status']    = 'pending';
+        $data['status']    = $request->user()->isClient() ? 'draft' : 'pending_approval';
 
         $order = Order::create($data);
+
+        // Определяем регион через GigaChat (не блокируем ответ при ошибке)
+        try {
+            $gigaChat = app(GigaChatService::class);
+            $region   = $gigaChat->extractRegion($order->origin_address);
+            if ($region) {
+                $order->update(['region' => $region]);
+            }
+        } catch (\Throwable) {}
 
         // Авто-создание чата с бот-приветствием
         $chat = Chat::create(['order_id' => $order->id]);
@@ -64,7 +77,7 @@ class OrderController extends Controller
             'type' => 'bot_greeting',
         ]);
 
-        return response()->json($this->orderData($order->load(['client', 'manager', 'truck', 'driver'])), 201);
+        return response()->json($this->orderData($order->load(['client', 'manager', 'courier', 'truck', 'driver'])), 201);
     }
 
     public function show(Request $request, Order $order)
@@ -73,25 +86,48 @@ class OrderController extends Controller
         if ($user->role === 'client' && $order->client_id !== $user->id) {
             return response()->json(['error' => 'Доступ запрещён.'], 403);
         }
-        return response()->json($this->orderData($order->load(['client', 'manager', 'truck', 'driver'])));
+        return response()->json($this->orderData($order->load(['client', 'manager', 'courier', 'truck', 'driver'])));
     }
 
     public function update(Request $request, Order $order)
     {
         $data = $request->validate([
-            'status'           => 'sometimes|in:draft,pending,in_progress,confirmed,courier_assigned,picked_up,at_warehouse,missed_pickup,shipped,delivered,rejected',
+            'status'           => 'sometimes|in:draft,pending,pending_approval,in_progress,accepted,confirmed,courier_assigned,picked_up,at_warehouse,missed_pickup,shipped,delivered,rejected',
             'rejection_reason' => 'nullable|string',
             'eta'              => 'nullable|date',
             'pickup_date'      => 'nullable|date',
         ]);
+
+        $oldDate = $order->pickup_date?->toDateString();
         $order->update($data);
+
+        // Уведомление в чат при смене даты забора менеджером
+        if (isset($data['pickup_date']) && $data['pickup_date'] !== $oldDate) {
+            $chat = $order->chat;
+            if ($chat) {
+                $manager  = $request->user();
+                $oldLabel = $oldDate
+                    ? \Carbon\Carbon::parse($oldDate)->format('d.m.Y')
+                    : '—';
+                $newLabel = \Carbon\Carbon::parse($data['pickup_date'])->format('d.m.Y');
+                Message::create([
+                    'chat_id'     => $chat->id,
+                    'sender_id'   => null,
+                    'sender_role' => 'bot',
+                    'body'        => "Менеджер {$manager->name} изменил данные заявки:\n• Дата забора: {$oldLabel} → {$newLabel}",
+                    'type'        => 'text',
+                    'metadata'    => ['event' => 'form_edited'],
+                ]);
+                $chat->touch();
+            }
+        }
 
         // Авто-архивация чата при доставке
         if (isset($data['status']) && $data['status'] === 'delivered') {
             \App\Models\Chat::where('order_id', $order->id)->update(['status' => 'archived']);
         }
 
-        return response()->json($this->orderData($order->load(['client', 'manager', 'truck', 'driver'])));
+        return response()->json($this->orderData($order->load(['client', 'manager', 'courier', 'truck', 'driver'])));
     }
 
     public function destroy(Order $order)
@@ -103,11 +139,12 @@ class OrderController extends Controller
     /** POST /api/orders/{id}/accept */
     public function accept(Request $request, Order $order)
     {
-        if ($order->status !== 'pending') {
+        if (!in_array($order->status, ['pending', 'pending_approval'])) {
             return response()->json(['error' => 'Заказ уже обработан.'], 400);
         }
         $manager = $request->user();
-        $order->update(['status' => 'in_progress', 'manager_id' => $manager->id]);
+        $newStatus = $order->status === 'pending_approval' ? 'accepted' : 'in_progress';
+        $order->update(['status' => $newStatus, 'manager_id' => $manager->id]);
 
         // Закрепляем чат за менеджером
         $chat = \App\Models\Chat::where('order_id', $order->id)->first();
@@ -122,13 +159,13 @@ class OrderController extends Controller
             ]);
         }
 
-        return response()->json($this->orderData($order->load(['client', 'manager', 'truck', 'driver'])));
+        return response()->json($this->orderData($order->load(['client', 'manager', 'courier', 'truck', 'driver'])));
     }
 
     /** POST /api/orders/{id}/reject */
     public function reject(Request $request, Order $order)
     {
-        if ($order->status !== 'pending') {
+        if (!in_array($order->status, ['pending', 'pending_approval'])) {
             return response()->json(['error' => 'Заказ уже обработан.'], 400);
         }
         $request->validate(['rejection_reason' => 'required|string']);
@@ -152,7 +189,7 @@ class OrderController extends Controller
             ]);
         }
 
-        return response()->json($this->orderData($order->load(['client', 'manager', 'truck', 'driver'])));
+        return response()->json($this->orderData($order->load(['client', 'manager', 'courier', 'truck', 'driver'])));
     }
 
     /** POST /api/orders/{id}/assign-transport */
@@ -177,7 +214,110 @@ class OrderController extends Controller
         $truck->update(['status' => 'in_transit', 'driver_id' => $driver->id]);
         $driver->update(['is_available' => false]);
 
-        return response()->json($this->orderData($order->load(['client', 'manager', 'truck', 'driver'])));
+        return response()->json($this->orderData($order->load(['client', 'manager', 'courier', 'truck', 'driver'])));
+    }
+
+    /** GET /api/orders/{id}/available-couriers */
+    public function availableCouriers(Request $request, Order $order)
+    {
+        $user = $request->user();
+        abort_unless($user->isManagerOrAdmin(), 403, 'Нет доступа.');
+
+        $couriers = User::where('role', 'courier')
+                        ->where('is_active', true)
+                        ->with('warehouse')
+                        ->get();
+
+        $origin = $order->origin_address;
+
+        $result = $couriers->map(function (User $c) use ($origin) {
+            $warehouseAddr = $c->warehouse?->address ?? '';
+            $geoMatch      = $warehouseAddr === '' || $this->citiesMatch($origin, $warehouseAddr);
+            return [
+                'id'             => $c->id,
+                'name'           => $c->name,
+                'email'          => $c->email,
+                'phone'          => $c->phone,
+                'warehouse_id'   => $c->warehouse_id,
+                'warehouse_name' => $c->warehouse?->name,
+                'geo_match'      => $geoMatch,
+                'has_open_shift' => CourierShift::where('courier_id', $c->id)->whereNull('closed_at')->exists(),
+                'active_orders'  => Order::where('courier_id', $c->id)
+                                         ->whereIn('status', ['courier_assigned', 'picked_up'])->count(),
+            ];
+        })->sortByDesc('geo_match')->values();
+
+        return response()->json($result);
+    }
+
+    /** POST /api/orders/{id}/assign-courier */
+    public function assignCourier(Request $request, Order $order)
+    {
+        $user = $request->user();
+        abort_unless($user->isManagerOrAdmin(), 403, 'Нет доступа.');
+
+        if (!in_array($order->status, ['accepted', 'confirmed', 'courier_assigned'])) {
+            return response()->json(['error' => 'Нельзя назначить курьера на данном этапе.'], 400);
+        }
+
+        $data    = $request->validate(['courier_id' => 'required|exists:users,id']);
+        $courier = User::findOrFail($data['courier_id']);
+
+        if ($courier->role !== 'courier') {
+            return response()->json(['error' => 'Пользователь не является курьером.'], 400);
+        }
+
+        if ($courier->warehouse_id) {
+            $warehouse = Warehouse::find($courier->warehouse_id);
+            if ($warehouse && $warehouse->address && !$this->citiesMatch($order->origin_address, $warehouse->address)) {
+                return response()->json(['error' => 'Регион склада курьера не совпадает с городом заказа.'], 422);
+            }
+        }
+
+        $order->update(['courier_id' => $courier->id, 'status' => 'courier_assigned']);
+
+        $chat = $order->chat;
+        if ($chat) {
+            Message::create([
+                'chat_id'     => $chat->id,
+                'sender_id'   => null,
+                'sender_role' => 'bot',
+                'body'        => "Курьер {$courier->name} назначен для забора груза.",
+                'type'        => 'text',
+                'metadata'    => ['event' => 'courier_assigned_by_manager'],
+            ]);
+            $chat->touch();
+        }
+
+        return response()->json($this->orderData($order->fresh(['client', 'manager', 'courier', 'truck', 'driver'])));
+    }
+
+    /** POST /api/orders/{id}/unassign-courier */
+    public function unassignCourier(Request $request, Order $order)
+    {
+        $user = $request->user();
+        abort_unless($user->isManagerOrAdmin(), 403, 'Нет доступа.');
+
+        if ($order->status !== 'courier_assigned') {
+            return response()->json(['error' => 'Курьер не назначен.'], 400);
+        }
+
+        $courierName = $order->courier?->name ?? 'Курьер';
+        $order->update(['courier_id' => null, 'status' => 'confirmed']);
+
+        $chat = $order->chat;
+        if ($chat) {
+            Message::create([
+                'chat_id'     => $chat->id,
+                'sender_id'   => null,
+                'sender_role' => 'bot',
+                'body'        => "{$courierName} снят с заявки. Заявка ожидает нового назначения курьера.",
+                'type'        => 'text',
+            ]);
+            $chat->touch();
+        }
+
+        return response()->json($this->orderData($order->fresh(['client', 'manager', 'courier', 'truck', 'driver'])));
     }
 
     /** POST /api/orders/{id}/reschedule-confirm — менеджер подтверждает перенос забора */
@@ -221,7 +361,7 @@ class OrderController extends Controller
             $chat->touch();
         }
 
-        return response()->json($this->orderData($order->load(['client', 'manager', 'truck', 'driver'])));
+        return response()->json($this->orderData($order->load(['client', 'manager', 'courier', 'truck', 'driver'])));
     }
 
     /** GET /api/orders/track/{tracking_id} — публичный */
@@ -234,6 +374,23 @@ class OrderController extends Controller
             return response()->json(['error' => 'Заказ не найден.'], 404);
         }
         return response()->json($this->orderData($order));
+    }
+
+    private function extractCity(string $address): string
+    {
+        $parts = array_filter(array_map('trim', explode(',', $address)));
+        $first = mb_strtolower(reset($parts) ?: $address);
+        return preg_replace('/^(г\.|г |город |city )/u', '', $first);
+    }
+
+    private function citiesMatch(string $addr1, string $addr2): bool
+    {
+        $c1 = $this->extractCity($addr1);
+        $c2 = $this->extractCity($addr2);
+        if ($c1 === $c2) return true;
+        $a1 = mb_strtolower($addr1);
+        $a2 = mb_strtolower($addr2);
+        return str_contains($a1, $c2) || str_contains($a2, $c1);
     }
 
     private function orderData(Order $order): array
@@ -258,6 +415,7 @@ class OrderController extends Controller
             'status'            => $order->status,
             'origin_address'    => $order->origin_address,
             'dest_address'      => $order->dest_address,
+            'region'            => $order->region,
             'weight'            => $order->weight,
             'volume'            => $order->volume,
             'cargo_type'        => $order->cargo_type,

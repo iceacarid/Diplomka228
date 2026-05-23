@@ -17,6 +17,7 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\TariffController;
 use App\Http\Controllers\TruckController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\WarehouseController;
 use Illuminate\Support\Facades\Route;
 
 // ─── Публичные маршруты ───────────────────────────────────────────────────────
@@ -75,6 +76,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('orders/{order}/reject',           [OrderController::class, 'reject']);
     Route::post('orders/{order}/assign-transport',   [OrderController::class, 'assignTransport']);
     Route::post('orders/{order}/reschedule-confirm', [OrderController::class, 'rescheduleConfirm']);
+    Route::get('orders/{order}/available-couriers',  [OrderController::class, 'availableCouriers']);
+    Route::post('orders/{order}/assign-courier',     [OrderController::class, 'assignCourier']);
+    Route::post('orders/{order}/unassign-courier',   [OrderController::class, 'unassignCourier']);
 
     // Избранные адреса
     Route::apiResource('addresses', FavoriteAddrController::class)->except(['show']);
@@ -113,6 +117,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('appeals',              [AppealController::class, 'index']);
     Route::patch('appeals/{appeal}',   [AppealController::class, 'update']);
 
+    // Склады (manager/admin)
+    Route::apiResource('warehouses', WarehouseController::class);
+    Route::post('warehouses/{warehouse}/update-load', [WarehouseController::class, 'updateLoad']);
+    Route::get('warehouses/{warehouse}/logs',         [WarehouseController::class, 'logs']);
+
     // Курьеры (admin)
     Route::get('admin/couriers',                  [AdminCourierController::class, 'index']);
     Route::get('admin/couriers/{user}/history',   [AdminCourierController::class, 'history']);
@@ -122,10 +131,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('shift',                    [CourierController::class, 'shiftStatus']);
         Route::post('shift/open',              [CourierController::class, 'openShift']);
         Route::post('shift/close',             [CourierController::class, 'closeShift']);
-        Route::get('orders/available',         [CourierController::class, 'availableOrders']);
         Route::get('orders/my',                [CourierController::class, 'myOrders']);
         Route::get('orders/history',           [CourierController::class, 'history']);
-        Route::post('orders/{order}/take',     [CourierController::class, 'takeOrder']);
         Route::post('orders/{order}/pickup',   [CourierController::class, 'pickUp']);
         Route::post('orders/{order}/warehouse',      [CourierController::class, 'deliverToWarehouse']);
         Route::post('orders/{order}/notify-missed',       [CourierController::class, 'notifyMissed']);
