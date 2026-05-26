@@ -9,6 +9,7 @@ class Driver extends Model
     protected $table = 'drivers';
 
     protected $fillable = [
+        'user_id',
         'name',
         'phone',
         'license_number',
@@ -23,6 +24,11 @@ class Driver extends Model
         return [
             'is_available' => 'boolean',
         ];
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(\App\Models\User::class);
     }
 
     public function trucks()

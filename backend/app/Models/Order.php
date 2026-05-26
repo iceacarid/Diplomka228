@@ -31,17 +31,27 @@ class Order extends Model
         'courier_blocked',
         'courier_blocked_reason',
         'region',
+        'actual_weight',
+        'actual_volume',
+        'measurement_note',
+        'trip_id',
+        'loaded_at',
+        'unloaded_at',
     ];
 
     protected function casts(): array
     {
         return [
-            'weight'     => 'float',
-            'volume'     => 'float',
-            'price'      => 'decimal:2',
+            'weight'         => 'float',
+            'volume'         => 'float',
+            'actual_weight'  => 'float',
+            'actual_volume'  => 'float',
+            'price'          => 'decimal:2',
             'eta'             => 'datetime',
             'pickup_date'     => 'date',
             'courier_blocked' => 'boolean',
+            'loaded_at'       => 'datetime',
+            'unloaded_at'     => 'datetime',
             'created_at'      => 'datetime',
         ];
     }
@@ -92,5 +102,10 @@ class Order extends Model
     public function chat()
     {
         return $this->hasOne(Chat::class);
+    }
+
+    public function trip()
+    {
+        return $this->belongsTo(\App\Models\Trip::class);
     }
 }

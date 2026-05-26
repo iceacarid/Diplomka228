@@ -12,12 +12,15 @@ use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\TwoFactorController;
 use App\Http\Controllers\CalculatorController;
 use App\Http\Controllers\DriverController;
+use App\Http\Controllers\DriverDashboardController;
 use App\Http\Controllers\FavoriteAddrController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\TariffController;
+use App\Http\Controllers\TripController;
 use App\Http\Controllers\TruckController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WarehouseController;
+use App\Http\Controllers\WarehouseKeeperController;
 use Illuminate\Support\Facades\Route;
 
 // ─── Публичные маршруты ───────────────────────────────────────────────────────
@@ -134,8 +137,41 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('orders/my',                [CourierController::class, 'myOrders']);
         Route::get('orders/history',           [CourierController::class, 'history']);
         Route::post('orders/{order}/pickup',   [CourierController::class, 'pickUp']);
-        Route::post('orders/{order}/warehouse',      [CourierController::class, 'deliverToWarehouse']);
+        Route::post('orders/{order}/warehouse',           [CourierController::class, 'deliverToWarehouse']);
+        Route::post('orders/{order}/deliver',             [CourierController::class, 'deliver']);
         Route::post('orders/{order}/notify-missed',       [CourierController::class, 'notifyMissed']);
         Route::post('orders/{order}/request-reschedule',  [CourierController::class, 'requestReschedule']);
     });
+
+    // Кладовщик
+    Route::prefix('keeper')->group(function () {
+        Route::get('stats',                         [WarehouseKeeperController::class, 'stats']);
+        Route::get('warehouse-orders',              [WarehouseKeeperController::class, 'warehouseOrders']);
+        Route::get('queue',                         [WarehouseKeeperController::class, 'incomingQueue']);
+        Route::post('orders/{order}/confirm',       [WarehouseKeeperController::class, 'confirmMeasurement']);
+        Route::post('orders/{order}/reject',        [WarehouseKeeperController::class, 'rejectCargo']);
+        Route::post('orders/{order}/mark-loaded',   [WarehouseKeeperController::class, 'markLoaded']);
+        Route::post('orders/{order}/mark-unloaded', [WarehouseKeeperController::class, 'markUnloaded']);
+        Route::get('manifests',                     [WarehouseKeeperController::class, 'myManifests']);
+        Route::post('trips/{trip}/dispatch',        [WarehouseKeeperController::class, 'dispatch']);
+        Route::post('trips/{trip}/unload',          [WarehouseKeeperController::class, 'confirmUnload']);
+    });
+
+    // Водитель фуры
+    Route::prefix('driver')->group(function () {
+        Route::get('shift',                         [DriverDashboardController::class, 'shiftStatus']);
+        Route::post('shift/open',                   [DriverDashboardController::class, 'openShift']);
+        Route::post('shift/close',                  [DriverDashboardController::class, 'closeShift']);
+        Route::get('trips',                         [DriverDashboardController::class, 'myTrips']);
+        Route::post('location',                     [DriverDashboardController::class, 'updateLocation']);
+        Route::post('trips/{trip}/arrived-load',    [DriverDashboardController::class, 'arrivedAtLoad']);
+        Route::post('trips/{trip}/arrived-unload',  [DriverDashboardController::class, 'arrivedAtUnload']);
+    });
+
+    // Рейсы (менеджер)
+    Route::get('trips/active-trucks',          [TripController::class, 'activeTrucks']);
+    Route::get('trips',                        [TripController::class, 'index']);
+    Route::post('trips',                       [TripController::class, 'store']);
+    Route::get('trips/{trip}',                 [TripController::class, 'show']);
+    Route::put('trips/{trip}/waypoints',       [TripController::class, 'updateWaypoints']);
 });

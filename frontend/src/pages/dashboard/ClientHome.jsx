@@ -7,16 +7,21 @@ import { Card, Btn, Field, StatTile, DataTable, StatusPill } from '../../compone
 import AddressField from '../../components/AddressField'
 
 const ORDER_STATUS_MAP = {
-  draft:            { bg: 'rgba(255,255,255,0.06)', fg: 'rgba(255,255,255,0.45)', label: 'Черновик' },
-  pending:          { bg: 'rgba(240,165,0,0.14)',   fg: 'var(--gold)',            label: 'Новая' },
-  in_progress:      { bg: 'rgba(247,144,9,0.14)',   fg: '#F79009',               label: 'В работе' },
-  confirmed:        { bg: 'rgba(18,183,106,0.12)',  fg: '#12B76A',               label: 'Подтверждено' },
-  courier_assigned: { bg: 'rgba(139,92,246,0.14)',  fg: '#8B5CF6',               label: 'Курьер назначен' },
-  picked_up:        { bg: 'rgba(99,102,241,0.14)',  fg: '#6366F1',               label: 'Курьер в дороге' },
-  at_warehouse:     { bg: 'rgba(20,184,166,0.14)',  fg: '#14B8A6',               label: 'Груз на складе' },
-  shipped:          { bg: 'rgba(123,180,255,0.14)', fg: '#7BB4FF',               label: 'В пути' },
-  delivered:        { bg: 'rgba(18,183,106,0.14)',  fg: '#12B76A',               label: 'Доставлено' },
-  rejected:         { bg: 'rgba(240,68,56,0.14)',   fg: 'var(--red)',            label: 'Отменено' },
+  draft:                { bg: 'rgba(255,255,255,0.06)', fg: 'rgba(255,255,255,0.45)', label: 'Черновик' },
+  pending:              { bg: 'rgba(240,165,0,0.14)',   fg: 'var(--gold)',            label: 'Новая' },
+  pending_approval:     { bg: 'rgba(240,165,0,0.14)',   fg: 'var(--gold)',            label: 'Ожидает проверки' },
+  in_progress:          { bg: 'rgba(247,144,9,0.14)',   fg: '#F79009',               label: 'В работе' },
+  accepted:             { bg: 'rgba(46,144,250,0.14)',  fg: '#2E90FA',               label: 'Принята' },
+  confirmed:            { bg: 'rgba(18,183,106,0.12)',  fg: '#12B76A',               label: 'Подтверждено' },
+  awaiting_measurement: { bg: 'rgba(139,92,246,0.12)', fg: '#a78bfa',               label: 'Ждёт замера' },
+  courier_assigned:     { bg: 'rgba(139,92,246,0.14)',  fg: '#8B5CF6',               label: 'Курьер назначен' },
+  picked_up:            { bg: 'rgba(99,102,241,0.14)',  fg: '#6366F1',               label: 'Курьер в дороге' },
+  missed_pickup:        { bg: 'rgba(240,68,56,0.16)',   fg: '#F04438',               label: 'Пропущен забор' },
+  at_warehouse:         { bg: 'rgba(20,184,166,0.14)',  fg: '#14B8A6',               label: 'Груз на складе' },
+  shipped:              { bg: 'rgba(123,180,255,0.14)', fg: '#7BB4FF',               label: 'В пути' },
+  ready_for_pickup:     { bg: 'rgba(16,185,129,0.14)',  fg: '#10b981',               label: 'Готов к выдаче' },
+  delivered:            { bg: 'rgba(18,183,106,0.14)',  fg: '#12B76A',               label: 'Доставлено' },
+  rejected:             { bg: 'rgba(240,68,56,0.14)',   fg: 'var(--red)',            label: 'Отменено' },
 }
 
 function debounce(fn, delay) {

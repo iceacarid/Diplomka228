@@ -16,9 +16,11 @@ const ORDER_STATUS_MAP = {
   confirmed:        { bg: 'rgba(18,183,106,0.12)',  fg: '#12B76A',               label: 'Подтверждено' },
   courier_assigned: { bg: 'rgba(139,92,246,0.14)',  fg: '#8B5CF6',               label: 'Курьер назначен' },
   picked_up:        { bg: 'rgba(99,102,241,0.14)',  fg: '#6366F1',               label: 'Курьер в дороге' },
+  awaiting_measurement: { bg: 'rgba(139,92,246,0.12)', fg: '#a78bfa',           label: 'Ждёт замера' },
   at_warehouse:     { bg: 'rgba(20,184,166,0.14)',  fg: '#14B8A6',               label: 'Груз на складе' },
   missed_pickup:    { bg: 'rgba(240,68,56,0.16)',   fg: '#F04438',               label: '⚠ Пропущен забор' },
   shipped:          { bg: 'rgba(240,165,0,0.14)',   fg: 'var(--gold)',            label: 'В пути' },
+  ready_for_pickup: { bg: 'rgba(16,185,129,0.14)',  fg: '#10b981',               label: 'Готов к выдаче' },
   delivered:        { bg: 'rgba(18,183,106,0.14)',  fg: 'var(--green)',           label: 'Доставлено' },
   rejected:         { bg: 'rgba(240,68,56,0.14)',   fg: 'var(--red)',             label: 'Отклонено' },
 }

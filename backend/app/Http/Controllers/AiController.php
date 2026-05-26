@@ -6,6 +6,7 @@ use App\Models\AiRequest;
 use App\Models\Driver;
 use App\Models\Order;
 use App\Models\Truck;
+use App\Models\Warehouse;
 use App\Services\AiService;
 use App\Services\GigaChatService;
 use Illuminate\Http\Request;
@@ -65,13 +66,22 @@ class AiController extends Controller
     /** POST /api/ai/distribution-plan — GigaChat structured plan */
     public function distributionPlan(Request $request)
     {
+        $request->validate([
+            'order_ids'         => 'nullable|array',
+            'order_ids.*'       => 'integer',
+            'warehouse_from_id' => 'nullable|integer',
+            'warehouse_to_id'   => 'nullable|integer',
+        ]);
+
         $trucks = Truck::with('driver')
             ->where('status', 'available')
             ->get();
 
-        $orders = Order::where('status', 'in_progress')
-            ->whereNull('truck_id')
-            ->get();
+        $ordersQuery = Order::where('status', 'at_warehouse');
+        if (!empty($request->order_ids)) {
+            $ordersQuery->whereIn('id', $request->order_ids);
+        }
+        $orders = $ordersQuery->get();
 
         if ($trucks->isEmpty()) {
             return response()->json(['error' => 'Нет доступных фур.'], 422);
@@ -79,6 +89,23 @@ class AiController extends Controller
         if ($orders->isEmpty()) {
             return response()->json(['error' => 'Нет заказов для распределения.'], 422);
         }
+
+        $warehouseIds = array_filter([
+            $request->warehouse_from_id,
+            $request->warehouse_to_id,
+        ]);
+        $warehousesData = Warehouse::when(!empty($warehouseIds), fn($q) => $q->whereIn('id', $warehouseIds))
+            ->get()
+            ->map(fn($w) => [
+                'id'              => $w->id,
+                'name'            => $w->name,
+                'address'         => $w->address,
+                'total_capacity'  => $w->total_capacity,
+                'current_load'    => $w->current_load,
+                'load_percent'    => $w->total_capacity > 0
+                    ? round($w->current_load / $w->total_capacity * 100, 1)
+                    : 0,
+            ])->values()->toArray();
 
         $trucksData = $trucks->map(fn($t) => [
             'id'              => $t->id,
@@ -98,9 +125,10 @@ class AiController extends Controller
             'weight'         => (float) $o->weight,
             'volume'         => (float) ($o->volume ?? 0),
             'cargo_type'     => $o->cargo_type,
+            'actual_weight'  => $o->actual_weight ? (float) $o->actual_weight : null,
         ])->values()->toArray();
 
-        $aiResult = $this->gigaChatService->optimizeDistribution($trucksData, $ordersData);
+        $aiResult = $this->gigaChatService->optimizeDistribution($trucksData, $ordersData, $warehousesData);
 
         if (!$aiResult) {
             return response()->json(['error' => 'GigaChat не ответил. Проверьте GIGACHAT_AUTH_KEY.'], 503);

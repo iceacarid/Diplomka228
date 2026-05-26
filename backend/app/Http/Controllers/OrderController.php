@@ -228,7 +228,9 @@ class OrderController extends Controller
                         ->with('warehouse')
                         ->get();
 
-        $origin = $order->origin_address;
+        $origin = $order->status === 'ready_for_pickup'
+            ? $order->dest_address
+            : $order->origin_address;
 
         $result = $couriers->map(function (User $c) use ($origin) {
             $warehouseAddr = $c->warehouse?->address ?? '';
@@ -256,7 +258,7 @@ class OrderController extends Controller
         $user = $request->user();
         abort_unless($user->isManagerOrAdmin(), 403, 'Нет доступа.');
 
-        if (!in_array($order->status, ['accepted', 'confirmed', 'courier_assigned'])) {
+        if (!in_array($order->status, ['accepted', 'confirmed', 'courier_assigned', 'ready_for_pickup'])) {
             return response()->json(['error' => 'Нельзя назначить курьера на данном этапе.'], 400);
         }
 
@@ -269,7 +271,10 @@ class OrderController extends Controller
 
         if ($courier->warehouse_id) {
             $warehouse = Warehouse::find($courier->warehouse_id);
-            if ($warehouse && $warehouse->address && !$this->citiesMatch($order->origin_address, $warehouse->address)) {
+            $geoAddr = $order->status === 'ready_for_pickup'
+                ? $order->dest_address
+                : $order->origin_address;
+            if ($warehouse && $warehouse->address && !$this->citiesMatch($geoAddr, $warehouse->address)) {
                 return response()->json(['error' => 'Регион склада курьера не совпадает с городом заказа.'], 422);
             }
         }
@@ -282,7 +287,9 @@ class OrderController extends Controller
                 'chat_id'     => $chat->id,
                 'sender_id'   => null,
                 'sender_role' => 'bot',
-                'body'        => "Курьер {$courier->name} назначен для забора груза.",
+                'body'        => $order->trip_id
+                    ? "Курьер {$courier->name} назначен для выдачи груза клиенту."
+                    : "Курьер {$courier->name} назначен для забора груза.",
                 'type'        => 'text',
                 'metadata'    => ['event' => 'courier_assigned_by_manager'],
             ]);
@@ -303,7 +310,8 @@ class OrderController extends Controller
         }
 
         $courierName = $order->courier?->name ?? 'Курьер';
-        $order->update(['courier_id' => null, 'status' => 'confirmed']);
+        $revertStatus = $order->trip_id ? 'ready_for_pickup' : 'confirmed';
+        $order->update(['courier_id' => null, 'status' => $revertStatus]);
 
         $chat = $order->chat;
         if ($chat) {
@@ -428,6 +436,9 @@ class OrderController extends Controller
             'courier_blocked'        => (bool) $order->courier_blocked,
             'courier_blocked_reason' => $order->courier_blocked_reason,
             'rejection_reason'       => $order->rejection_reason,
+            'trip_id'                => $order->trip_id,
+            'actual_weight'          => $order->actual_weight,
+            'actual_volume'          => $order->actual_volume,
             'created_at'             => $order->created_at,
         ];
     }

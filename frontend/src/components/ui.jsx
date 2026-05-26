@@ -164,10 +164,12 @@ export function StatusPill({ status, map }) {
 
 export function RolePill({ role }) {
   const map = {
-    client:  { bg: 'rgba(123,180,255,0.14)', fg: '#7BB4FF', label: 'Клиент' },
-    manager: { bg: 'rgba(240,165,0,0.14)',   fg: 'var(--gold)', label: 'Менеджер' },
-    admin:   { bg: 'rgba(240,68,56,0.14)',   fg: '#FF8A8A', label: 'Админ' },
-    courier: { bg: 'rgba(20,184,166,0.14)',  fg: '#14B8A6', label: 'Курьер' },
+    client:           { bg: 'rgba(123,180,255,0.14)', fg: '#7BB4FF',     label: 'Клиент' },
+    manager:          { bg: 'rgba(240,165,0,0.14)',   fg: 'var(--gold)', label: 'Менеджер' },
+    admin:            { bg: 'rgba(240,68,56,0.14)',   fg: '#FF8A8A',     label: 'Админ' },
+    courier:          { bg: 'rgba(20,184,166,0.14)',  fg: '#14B8A6',     label: 'Курьер' },
+    warehouse_keeper: { bg: 'rgba(139,92,246,0.14)',  fg: '#A78BFA',     label: 'Кладовщик' },
+    driver:           { bg: 'rgba(251,146,60,0.14)',  fg: '#FB923C',     label: 'Водитель' },
   }
   const s = map[role] || map.client
   return (

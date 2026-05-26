@@ -5,10 +5,13 @@ import { Icons } from '../../components/Icons'
 import { Btn, PageHeader, StatusPill, Field, Alert, Loading, Empty } from '../../components/ui'
 
 const STATUS_MAP = {
-  confirmed:        { bg: 'rgba(18,183,106,0.12)',  fg: '#12B76A', label: 'Подтверждено' },
-  courier_assigned: { bg: 'rgba(139,92,246,0.14)',  fg: '#8B5CF6', label: 'Курьер назначен' },
-  picked_up:        { bg: 'rgba(99,102,241,0.14)',  fg: '#6366F1', label: 'Курьер в дороге' },
-  at_warehouse:     { bg: 'rgba(20,184,166,0.14)',  fg: '#14B8A6', label: 'На складе' },
+  confirmed:            { bg: 'rgba(18,183,106,0.12)',  fg: '#12B76A', label: 'Подтверждено' },
+  courier_assigned:     { bg: 'rgba(139,92,246,0.14)',  fg: '#8B5CF6', label: 'Курьер назначен' },
+  picked_up:            { bg: 'rgba(99,102,241,0.14)',  fg: '#6366F1', label: 'Курьер в дороге' },
+  awaiting_measurement: { bg: 'rgba(139,92,246,0.12)', fg: '#a78bfa', label: 'Ждёт замера' },
+  at_warehouse:         { bg: 'rgba(20,184,166,0.14)',  fg: '#14B8A6', label: 'На складе' },
+  shipped:              { bg: 'rgba(240,165,0,0.14)',   fg: '#f0a500', label: 'В пути' },
+  ready_for_pickup:     { bg: 'rgba(16,185,129,0.14)', fg: '#10b981', label: 'Готов к выдаче' },
 }
 
 function RegionPicker({ regions, regionCounts, value, onChange }) {
@@ -397,7 +400,7 @@ function OrderCard({ order, isFuture, onAssign, onUnassign, onDateChange, onOpen
   )
 }
 
-const ACTIVE_STATUSES = ['confirmed', 'courier_assigned']
+const ACTIVE_STATUSES = ['confirmed', 'courier_assigned', 'ready_for_pickup']
 
 function todayStr() {
   return new Date().toISOString().slice(0, 10)
@@ -478,7 +481,7 @@ export default function AcceptedOrdersTab() {
     return sortDir === 'asc' ? diff : -diff
   })
 
-  const accepted = filteredOrders.filter(o => o.status === 'confirmed').length
+  const accepted = filteredOrders.filter(o => o.status === 'confirmed' || o.status === 'ready_for_pickup').length
   const assigned = filteredOrders.filter(o => o.status === 'courier_assigned').length
   const today    = todayStr()
 
@@ -595,7 +598,11 @@ export default function AcceptedOrdersTab() {
       {assignTarget && (
         <CourierPickerModal
           orderId={assignTarget.id}
-          originAddress={assignTarget.origin_address}
+          originAddress={
+            assignTarget.status === 'ready_for_pickup'
+              ? assignTarget.dest_address
+              : assignTarget.origin_address
+          }
           onClose={() => setAssignTarget(null)}
           onAssigned={load}
         />
@@ -608,6 +615,7 @@ export default function AcceptedOrdersTab() {
           onSaved={load}
         />
       )}
+
     </div>
   )
 }

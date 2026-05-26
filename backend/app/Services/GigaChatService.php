@@ -117,10 +117,15 @@ class GigaChatService
      * Returns decoded array with keys: plan[], unassigned[]
      * or null on failure.
      */
-    public function optimizeDistribution(array $trucks, array $orders): ?array
+    public function optimizeDistribution(array $trucks, array $orders, array $warehouses = []): ?array
     {
-        $trucksJson = json_encode($trucks, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-        $ordersJson = json_encode($orders, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        $trucksJson     = json_encode($trucks,     JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        $ordersJson     = json_encode($orders,     JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        $warehousesJson = json_encode($warehouses, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+
+        $warehouseSection = !empty($warehouses)
+            ? "\n\nСостояние складов:\n{$warehousesJson}\nУчти загруженность складов при приоритизации отправки (предпочти склады с высокой загрузкой)."
+            : '';
 
         $system = <<<PROMPT
 Ты — опытный логист-аналитик. Оптимально распредели нераспределённые грузы по доступным фурам.
@@ -130,7 +135,8 @@ class GigaChatService
 2. Суммарный объём в фуре НЕ должен превышать capacity_volume (если capacity_volume > 0).
 3. Группируй грузы по схожим направлениям маршрута.
 4. Максимизируй загрузку фур.
-5. Если груз не умещается ни в одну фуру — только тогда помести в unassigned.
+5. Учитывай actual_weight (фактический вес) вместо weight, если он задан.
+6. Если груз не умещается ни в одну фуру — только тогда помести в unassigned.
 
 СТРОГИЕ ТРЕБОВАНИЯ К ФОРМАТУ:
 - Каждый truck_id встречается в "plan" РОВНО ОДИН РАЗ.
@@ -142,7 +148,7 @@ class GigaChatService
 {"plan":[{"truck_id":1,"order_ids":[5,8],"justification":"обоснование на русском"}],"unassigned":[{"order_id":3,"reason":"причина на русском"}]}
 PROMPT;
 
-        $user = "Фуры:\n{$trucksJson}\n\nГрузы:\n{$ordersJson}\n\nРаспредели оптимально. Только JSON.";
+        $user = "Фуры:\n{$trucksJson}\n\nГрузы:\n{$ordersJson}{$warehouseSection}\n\nРаспредели оптимально. Только JSON.";
 
         $raw = $this->chat($system, $user);
         if (!$raw) return null;

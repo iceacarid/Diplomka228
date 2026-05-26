@@ -118,24 +118,31 @@ export default function TrucksTab() {
                       Водитель: <span style={{ color: 'rgba(255,255,255,0.85)' }}>{t.driver_name}</span>
                     </div>
                   )}
+                  {(t.height_m || t.width_m || t.length_m) && (
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)' }}>
+                      {[t.height_m && `В: ${t.height_m}м`, t.width_m && `Ш: ${t.width_m}м`, t.length_m && `Д: ${t.length_m}м`].filter(Boolean).join(' · ')}
+                    </div>
+                  )}
                 </div>
-                <div style={{ display: 'flex', gap: 10, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                  <button
-                    onClick={() => { setEditing(t); setShowForm(true) }}
-                    style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.55)', cursor: 'pointer', fontSize: 12, fontFamily: 'var(--font-body)', transition: 'color 0.15s' }}
-                    onMouseEnter={(e) => e.currentTarget.style.color = 'white'}
-                    onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.55)'}
-                  >
-                    <Icons.Edit size={14} /> Изменить
-                  </button>
-                  <button
-                    onClick={() => handleDelete(t.id)}
-                    style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.55)', cursor: 'pointer', fontSize: 12, fontFamily: 'var(--font-body)', transition: 'color 0.15s' }}
-                    onMouseEnter={(e) => e.currentTarget.style.color = 'var(--red)'}
-                    onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.55)'}
-                  >
-                    <Icons.Trash size={14} /> Удалить
-                  </button>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <button
+                      onClick={() => { setEditing(t); setShowForm(true) }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.55)', cursor: 'pointer', fontSize: 12, fontFamily: 'var(--font-body)', transition: 'color 0.15s' }}
+                      onMouseEnter={(e) => e.currentTarget.style.color = 'white'}
+                      onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.55)'}
+                    >
+                      <Icons.Edit size={14} /> Изменить
+                    </button>
+                    <button
+                      onClick={() => handleDelete(t.id)}
+                      style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.55)', cursor: 'pointer', fontSize: 12, fontFamily: 'var(--font-body)', transition: 'color 0.15s' }}
+                      onMouseEnter={(e) => e.currentTarget.style.color = 'var(--red)'}
+                      onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.55)'}
+                    >
+                      <Icons.Trash size={14} /> Удалить
+                    </button>
+                  </div>
                 </div>
               </Card>
             ))}
@@ -146,6 +153,7 @@ export default function TrucksTab() {
       {showForm && (
         <TruckForm initial={editing} drivers={drivers} onClose={() => setShowForm(false)} onSaved={load} />
       )}
+
     </div>
   )
 }
@@ -157,6 +165,11 @@ function TruckForm({ initial, drivers, onClose, onSaved }) {
     model: initial?.model || '',
     capacity_weight: initial?.capacity_weight || '',
     capacity_volume: initial?.capacity_volume || '',
+    height_m:     initial?.height_m     || '',
+    width_m:      initial?.width_m      || '',
+    length_m:     initial?.length_m     || '',
+    mass_kg:      initial?.mass_kg      || '',
+    axle_load_kg: initial?.axle_load_kg || '',
     status: initial?.status || 'available',
     driver_id: initial?.driver_id || '',
     is_company_owned: initial?.is_company_owned ?? true,
@@ -175,6 +188,11 @@ function TruckForm({ initial, drivers, onClose, onSaved }) {
         ...form,
         capacity_weight: parseInt(form.capacity_weight),
         capacity_volume: parseFloat(form.capacity_volume),
+        height_m:     form.height_m     ? parseFloat(form.height_m)     : null,
+        width_m:      form.width_m      ? parseFloat(form.width_m)      : null,
+        length_m:     form.length_m     ? parseFloat(form.length_m)     : null,
+        mass_kg:      form.mass_kg      ? parseInt(form.mass_kg)        : null,
+        axle_load_kg: form.axle_load_kg ? parseInt(form.axle_load_kg)   : null,
         driver_id: form.driver_id || null,
       }
       if (initial) await api.put(`/trucks/${initial.id}`, payload)
@@ -197,9 +215,26 @@ function TruckForm({ initial, drivers, onClose, onSaved }) {
           <Field label="Модель" required value={form.model} onChange={set('model')} />
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-          <Field label="Груз (кг)" type="number" required value={form.capacity_weight} onChange={set('capacity_weight')} />
+          <Field label="Грузоподъёмность (т)" type="number" step="0.1" required value={form.capacity_weight} onChange={set('capacity_weight')} />
           <Field label="Объём (м³)" type="number" step="0.1" required value={form.capacity_volume} onChange={set('capacity_volume')} />
         </div>
+
+        {/* Габариты для маршрута */}
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 12 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', marginBottom: 10 }}>
+            Габариты фуры (для построения маршрутов)
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+            <Field label="Высота (м)" type="number" step="0.01" placeholder="4.0"  value={form.height_m}  onChange={set('height_m')} />
+            <Field label="Ширина (м)"  type="number" step="0.01" placeholder="2.55" value={form.width_m}   onChange={set('width_m')} />
+            <Field label="Длина (м)"   type="number" step="0.01" placeholder="16.5" value={form.length_m}  onChange={set('length_m')} />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 8 }}>
+            <Field label="Масса без груза (кг)" type="number" placeholder="7500" value={form.mass_kg}      onChange={set('mass_kg')} />
+            <Field label="Нагрузка на ось (кг)" type="number" placeholder="11500" value={form.axle_load_kg} onChange={set('axle_load_kg')} />
+          </div>
+        </div>
+
         <Select label="Статус" value={form.status} onChange={set('status')}>
           <option value="available">Свободен</option>
           <option value="in_transit">В рейсе</option>

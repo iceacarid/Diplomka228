@@ -15,6 +15,11 @@ const STATUS_LABEL = {
   missed_pickup:    'Пропущен забор',
 }
 
+const STATUS_LABEL_DELIVERY = {
+  courier_assigned: 'Забор со склада',
+  picked_up:        'Выдача клиенту',
+}
+
 const STATUS_COLOR = {
   confirmed:        '#F0A500',
   courier_assigned: '#8B5CF6',
@@ -50,10 +55,11 @@ function CargoTypeLabel({ type, custom }) {
 }
 
 function OrderCard({ order, onAction, actionLabel, actionColor, actionLoading, onNotifyMissed, onRequestReschedule }) {
-  const isBusy    = actionLoading === order.id
-  const isMissed  = order.status === 'missed_pickup'
-  const isBlocked = order.courier_blocked
-  const canReschedule = order.status === 'courier_assigned' && !isBlocked
+  const isBusy      = actionLoading === order.id
+  const isMissed    = order.status === 'missed_pickup'
+  const isBlocked   = order.courier_blocked
+  const isDelivery  = !!order.trip_id
+  const canReschedule = order.status === 'courier_assigned' && !isBlocked && !isDelivery
 
   return (
     <div style={{
@@ -77,7 +83,9 @@ function OrderCard({ order, onAction, actionLabel, actionColor, actionLoading, o
           border: `1px solid ${STATUS_COLOR[order.status] ?? '#888'}44`,
           whiteSpace: 'nowrap',
         }}>
-          {STATUS_LABEL[order.status] ?? order.status}
+          {isDelivery
+            ? (STATUS_LABEL_DELIVERY[order.status] ?? STATUS_LABEL[order.status] ?? order.status)
+            : (STATUS_LABEL[order.status] ?? order.status)}
         </span>
       </div>
 
@@ -142,38 +150,78 @@ function OrderCard({ order, onAction, actionLabel, actionColor, actionLoading, o
         )}
       </div>
 
-      {/* Pickup address */}
+      {/* Address block */}
       <div style={{ marginBottom: 12 }}>
-        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.14em', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', marginBottom: 5 }}>
-          Адрес забора
-        </div>
-        <a
-          href={make2GisUrl(order.origin_address)}
-          target="_blank"
-          rel="noreferrer"
-          style={{ fontSize: 13, color: '#34D399', wordBreak: 'break-word', display: 'inline-flex', alignItems: 'flex-start', gap: 6, lineHeight: 1.4 }}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34D399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}>
-            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/>
-            <circle cx="12" cy="10" r="3"/>
-          </svg>
-          {order.origin_address}
-        </a>
-        {order.created_at && (
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 6,
-            marginTop: 8,
-            background: 'rgba(240,165,0,0.10)',
-            border: '1px solid rgba(240,165,0,0.25)',
-            borderRadius: 6, padding: '4px 10px',
-          }}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#F0A500" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-            </svg>
-            <span style={{ fontSize: 12, fontWeight: 700, color: '#F0A500', fontFamily: 'var(--font-mono)', letterSpacing: '0.04em' }}>
-              {new Date(order.created_at).toLocaleString('ru', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-            </span>
-          </div>
+        {isDelivery && order.status === 'courier_assigned' ? (
+          <>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.14em', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', marginBottom: 5 }}>
+              Адрес склада (забор груза)
+            </div>
+            <a
+              href={make2GisUrl(order.warehouse_address || order.warehouse_name || '')}
+              target="_blank"
+              rel="noreferrer"
+              style={{ fontSize: 13, color: '#F0A500', wordBreak: 'break-word', display: 'inline-flex', alignItems: 'flex-start', gap: 6, lineHeight: 1.4 }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F0A500" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}>
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/>
+                <circle cx="12" cy="10" r="3"/>
+              </svg>
+              {order.warehouse_address || order.warehouse_name || '—'}
+            </a>
+          </>
+        ) : isDelivery && order.status === 'picked_up' ? (
+          <>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.14em', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', marginBottom: 5 }}>
+              Адрес клиента (доставка)
+            </div>
+            <a
+              href={make2GisUrl(order.dest_address)}
+              target="_blank"
+              rel="noreferrer"
+              style={{ fontSize: 13, color: '#34D399', wordBreak: 'break-word', display: 'inline-flex', alignItems: 'flex-start', gap: 6, lineHeight: 1.4 }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34D399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}>
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/>
+                <circle cx="12" cy="10" r="3"/>
+              </svg>
+              {order.dest_address}
+            </a>
+          </>
+        ) : (
+          <>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.14em', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', marginBottom: 5 }}>
+              Адрес забора
+            </div>
+            <a
+              href={make2GisUrl(order.origin_address)}
+              target="_blank"
+              rel="noreferrer"
+              style={{ fontSize: 13, color: '#34D399', wordBreak: 'break-word', display: 'inline-flex', alignItems: 'flex-start', gap: 6, lineHeight: 1.4 }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34D399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}>
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/>
+                <circle cx="12" cy="10" r="3"/>
+              </svg>
+              {order.origin_address}
+            </a>
+            {order.created_at && (
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                marginTop: 8,
+                background: 'rgba(240,165,0,0.10)',
+                border: '1px solid rgba(240,165,0,0.25)',
+                borderRadius: 6, padding: '4px 10px',
+              }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#F0A500" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                </svg>
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#F0A500', fontFamily: 'var(--font-mono)', letterSpacing: '0.04em' }}>
+                  {new Date(order.created_at).toLocaleString('ru', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -418,6 +466,18 @@ export default function CourierDashboard() {
     setAL(id); setError(null)
     try {
       await api.post(`/courier/orders/${id}/warehouse`)
+      await loadOrders()
+      setTab('history')
+    } catch (e) {
+      setError(e?.response?.data?.error || 'Ошибка')
+    }
+    setAL(null)
+  }
+
+  const handleDeliver = async (id) => {
+    setAL(id); setError(null)
+    try {
+      await api.post(`/courier/orders/${id}/deliver`)
       await loadOrders()
       setTab('history')
     } catch (e) {
@@ -873,23 +933,24 @@ export default function CourierDashboard() {
                     onNotifyMissed={tab === 'my' ? handleNotifyMissed : undefined}
                     onRequestReschedule={tab === 'my' ? handleRequestReschedule : undefined}
                     onAction={
-                      tab === 'my'
-                        ? (order.status === 'courier_assigned' || (order.status === 'missed_pickup' && !order.courier_blocked))
-                          ? handlePickup
-                          : order.status === 'picked_up'
-                          ? handleWarehouse
+                      tab !== 'my' ? null
+                      : (order.status === 'courier_assigned' || (order.status === 'missed_pickup' && !order.courier_blocked))
+                        ? handlePickup
+                        : order.status === 'picked_up'
+                          ? (order.trip_id ? handleDeliver : handleWarehouse)
                           : null
-                        : null
                     }
                     actionLabel={
                       (order.status === 'courier_assigned' || order.status === 'missed_pickup')
-                        ? 'Груз забран'
-                        : 'Передать на склад'
+                        ? (order.trip_id ? 'Забрал со склада' : 'Груз забран')
+                        : order.status === 'picked_up'
+                          ? (order.trip_id ? 'Отдал получателю' : 'Передать на склад')
+                          : ''
                     }
                     actionColor={
                       (order.status === 'courier_assigned' || order.status === 'missed_pickup')
                         ? '#7C3AED'
-                        : '#059669'
+                        : order.trip_id ? '#059669' : '#059669'
                     }
                   />
                 ))}

@@ -57,7 +57,7 @@ export default function UsersTab() {
     })
 
   const handleChangeRole = async (id, role) => {
-    if (role === 'courier') {
+    if (role === 'courier' || role === 'warehouse_keeper') {
       setSelectedWh('')
       if (warehouses.length === 0) {
         setWhLoading(true)
@@ -67,7 +67,7 @@ export default function UsersTab() {
         } catch {}
         setWhLoading(false)
       }
-      setCourierModal({ userId: id })
+      setCourierModal({ userId: id, role })
       return
     }
     try {
@@ -87,7 +87,7 @@ export default function UsersTab() {
     if (!selectedWh || !courierModal) return
     setCourierAssigning(true)
     try {
-      await api.post(`/users/${courierModal.userId}/change-role`, { role: 'courier', warehouse_id: selectedWh })
+      await api.post(`/users/${courierModal.userId}/change-role`, { role: courierModal.role || 'courier', warehouse_id: selectedWh })
       setCourierModal(null)
       load()
     } catch (err) {
@@ -217,6 +217,8 @@ export default function UsersTab() {
                           <option value="manager">Менеджер</option>
                           <option value="admin">Администратор</option>
                           <option value="courier">Курьер</option>
+                          <option value="warehouse_keeper">Кладовщик</option>
+                          <option value="driver">Водитель фуры</option>
                         </select>
                         <button
                           onClick={() => handleDelete(u.id)}
@@ -246,8 +248,14 @@ export default function UsersTab() {
           >
             <div>
               <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--gold)', fontFamily: 'var(--font-body)' }}>Назначение роли</div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: 'white', marginTop: 4 }}>Выберите склад для курьера</div>
-              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 4 }}>Курьер будет закреплён за выбранным складом. Ему будут доступны только заказы из этого региона.</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: 'white', marginTop: 4 }}>
+                {courierModal?.role === 'warehouse_keeper' ? 'Выберите склад для кладовщика' : 'Выберите склад для курьера'}
+              </div>
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 4 }}>
+                {courierModal?.role === 'warehouse_keeper'
+                  ? 'Кладовщик будет закреплён за выбранным складом и сможет управлять его грузами.'
+                  : 'Курьер будет закреплён за выбранным складом. Ему будут доступны только заказы из этого региона.'}
+              </div>
             </div>
 
             {whLoading ? (

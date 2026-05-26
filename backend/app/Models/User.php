@@ -79,12 +79,19 @@ class User extends Authenticatable
         return $this->belongsTo(\App\Models\Warehouse::class);
     }
 
+    public function driverRecord()
+    {
+        return $this->hasOne(\App\Models\Driver::class, 'user_id');
+    }
+
     // Helpers
-    public function isClient(): bool        { return $this->role === 'client'; }
-    public function isManager(): bool       { return $this->role === 'manager'; }
-    public function isAdmin(): bool         { return $this->role === 'admin'; }
-    public function isCourier(): bool       { return $this->role === 'courier'; }
-    public function isManagerOrAdmin(): bool { return in_array($this->role, ['manager', 'admin']); }
+    public function isClient(): bool          { return $this->role === 'client'; }
+    public function isManager(): bool         { return $this->role === 'manager'; }
+    public function isAdmin(): bool           { return $this->role === 'admin'; }
+    public function isCourier(): bool         { return $this->role === 'courier'; }
+    public function isWarehouseKeeper(): bool  { return $this->role === 'warehouse_keeper'; }
+    public function isDriver(): bool          { return $this->role === 'driver'; }
+    public function isManagerOrAdmin(): bool  { return in_array($this->role, ['manager', 'admin']); }
 
     public function avatarUrl(): ?string
     {

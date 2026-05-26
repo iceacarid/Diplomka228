@@ -6,6 +6,8 @@ use App\Models\CourierAction;
 use App\Models\CourierShift;
 use App\Models\Message;
 use App\Models\Order;
+use App\Models\Trip;
+use App\Models\Warehouse;
 use Illuminate\Http\Request;
 
 class CourierController extends Controller
@@ -60,7 +62,7 @@ class CourierController extends Controller
         }
 
         $activeOrders = Order::where('courier_id', $courier->id)
-                             ->whereIn('status', ['courier_assigned', 'picked_up', 'missed_pickup'])
+                             ->whereIn('status', ['courier_assigned', 'picked_up', 'missed_pickup', 'awaiting_measurement'])
                              ->count();
         if ($activeOrders > 0) {
             return response()->json([
@@ -79,15 +81,17 @@ class CourierController extends Controller
         $courier = $request->user();
         abort_unless($courier->isCourier(), 403, 'Только курьер.');
 
+        $courier->load('warehouse');
+        $warehouseAddress = $courier->warehouse?->address ?? null;
+        $warehouseName    = $courier->warehouse?->name    ?? null;
+
         $today = now()->toDateString();
 
         $orders = Order::with(['client'])
                        ->where('courier_id', $courier->id)
                        ->where(function ($q) use ($today) {
-                           // picked_up и missed_pickup — всегда показываем
                            $q->whereIn('status', ['picked_up', 'missed_pickup'])
                              ->orWhere(function ($q2) use ($today) {
-                                 // courier_assigned — только если дата забора сегодня или раньше (или не задана)
                                  $q2->where('status', 'courier_assigned')
                                     ->where(function ($q3) use ($today) {
                                         $q3->whereNull('pickup_date')
@@ -97,7 +101,7 @@ class CourierController extends Controller
                        })
                        ->orderByDesc('updated_at')
                        ->get()
-                       ->map(fn($o) => $this->orderData($o));
+                       ->map(fn($o) => $this->orderData($o, $warehouseAddress, $warehouseName));
 
         return response()->json($orders);
     }
@@ -129,7 +133,22 @@ class CourierController extends Controller
 
         $order->update(['status' => 'picked_up', 'courier_blocked' => false, 'courier_blocked_reason' => null]);
         CourierAction::log($courier->id, 'order_picked_up', $order);
-        $this->botMessage($order, "Курьер {$courier->name} забрал груз. Везёт на склад.");
+
+        if ($order->trip_id) {
+            $trip = Trip::find($order->trip_id);
+            if ($trip && $trip->warehouse_to_id) {
+                Warehouse::updateStorageLoad($trip->warehouse_to_id, -($order->actual_weight ?? $order->weight), [
+                    'order_id' => $order->id,
+                    'action'   => 'unload',
+                    'note'     => "Курьер забрал груз {$order->tracking_id} со склада для доставки клиенту",
+                ]);
+            }
+        }
+
+        $msg = $order->trip_id
+            ? "Курьер {$courier->name} забрал груз со склада. Везёт получателю."
+            : "Курьер {$courier->name} забрал груз. Везёт на склад.";
+        $this->botMessage($order, $msg);
 
         return response()->json($this->orderData($order->fresh('client')));
     }
@@ -143,10 +162,31 @@ class CourierController extends Controller
         if ($order->status !== 'picked_up') {
             return response()->json(['error' => 'Неверный статус заявки.'], 400);
         }
+        if ($order->trip_id) {
+            return response()->json(['error' => 'Используйте маршрут доставки получателю.'], 400);
+        }
 
-        $order->update(['status' => 'at_warehouse']);
+        $order->update(['status' => 'awaiting_measurement']);
         CourierAction::log($courier->id, 'order_at_warehouse', $order);
-        $this->botMessage($order, "Курьер {$courier->name} доставил груз на склад. Заявка готова к следующему этапу.");
+        $this->botMessage($order, "Курьер {$courier->name} доставил груз на склад. Ожидается замер и приёмка кладовщиком.");
+
+        return response()->json($this->orderData($order->fresh('client')));
+    }
+
+    /** POST /courier/orders/{order}/deliver — последняя миля: доставил конечному получателю */
+    public function deliver(Request $request, Order $order)
+    {
+        $courier = $request->user();
+        abort_unless($courier->isCourier(), 403, 'Только курьер.');
+        abort_unless($order->courier_id === $courier->id, 403, 'Нет доступа.');
+
+        if ($order->status !== 'picked_up') {
+            return response()->json(['error' => 'Неверный статус заявки.'], 400);
+        }
+
+        $order->update(['status' => 'delivered']);
+        CourierAction::log($courier->id, 'order_delivered', $order);
+        $this->botMessage($order, "Курьер {$courier->name} доставил груз получателю. Заявка выполнена.");
 
         return response()->json($this->orderData($order->fresh('client')));
     }
@@ -246,14 +286,17 @@ class CourierController extends Controller
         $chat->touch();
     }
 
-    private function orderData(Order $order): array
+    private function orderData(Order $order, ?string $warehouseAddress = null, ?string $warehouseName = null): array
     {
         return [
             'id'                => $order->id,
             'tracking_id'       => $order->tracking_id,
             'status'            => $order->status,
+            'trip_id'           => $order->trip_id,
             'origin_address'    => $order->origin_address,
             'dest_address'      => $order->dest_address,
+            'warehouse_address' => $warehouseAddress,
+            'warehouse_name'    => $warehouseName,
             'weight'            => $order->weight,
             'volume'            => $order->volume,
             'cargo_type'        => $order->cargo_type,

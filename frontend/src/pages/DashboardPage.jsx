@@ -23,13 +23,25 @@ import AdminAppeals from './dashboard/AdminAppeals'
 import AdminCouriers from './dashboard/AdminCouriers'
 import WarehousesTab from './dashboard/WarehousesTab'
 import AcceptedOrdersTab from './dashboard/AcceptedOrdersTab'
+import CourierDashboard from './dashboard/CourierDashboard'
+import WarehouseDashboard from './dashboard/WarehouseDashboard'
+import DriverDashboard from './dashboard/DriverDashboard'
+import KeeperHome from './dashboard/KeeperHome'
+import KeeperOrders from './dashboard/KeeperOrders'
 
 function getInitials(name) {
   if (!name) return '?'
   return name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
 }
 
-const ROLE_LABEL = { client: 'CLIENT', manager: 'MANAGER', admin: 'ADMIN' }
+const ROLE_LABEL = {
+  client:           'CLIENT',
+  manager:          'MANAGER',
+  admin:            'ADMIN',
+  courier:          'COURIER',
+  warehouse_keeper: 'КЛАДОВЩИК',
+  driver:           'ВОДИТЕЛЬ',
+}
 
 const STAFF_NAV = [
   { to: '/dashboard',         label: 'Сводка',          icon: 'Home',     roles: ['manager', 'admin'], end: true },
@@ -54,6 +66,23 @@ const CLIENT_NAV = [
   { to: '/dashboard/profile',     label: 'Профиль',      icon: 'Settings' },
   { to: '/dashboard/support',     label: 'Поддержка',    icon: 'LifeBuoy' },
   { to: '/dashboard/chats',       label: 'Чаты',         icon: 'Chat'     },
+]
+
+const COURIER_NAV = [
+  { to: '/dashboard',         label: 'Мои заказы', icon: 'Package', end: true },
+  { to: '/dashboard/profile', label: 'Профиль',    icon: 'Settings' },
+]
+
+const KEEPER_NAV = [
+  { to: '/dashboard',                    label: 'Сводка',          icon: 'Home',    end: true },
+  { to: '/dashboard/warehouse-orders',   label: 'Заказы склада',   icon: 'Package' },
+  { to: '/dashboard/operations',         label: 'Приёмка / Рейсы', icon: 'Boxes'   },
+  { to: '/dashboard/profile',            label: 'Профиль',         icon: 'Settings' },
+]
+
+const DRIVER_NAV = [
+  { to: '/dashboard',         label: 'Мои рейсы', icon: 'Truck',   end: true },
+  { to: '/dashboard/profile', label: 'Профиль',   icon: 'Settings' },
 ]
 
 function SidebarLink({ item }) {
@@ -98,10 +127,18 @@ export default function DashboardPage() {
     navigate('/login')
   }
 
-  const isClient = user?.role === 'client'
-  const navItems = isClient
-    ? CLIENT_NAV
-    : STAFF_NAV.filter(item => item.roles.includes(user?.role))
+  const role = user?.role
+  const isClient  = role === 'client'
+  const isCourier = role === 'courier'
+  const isKeeper  = role === 'warehouse_keeper'
+  const isDriver  = role === 'driver'
+  const isStaff   = !isClient && !isCourier && !isKeeper && !isDriver
+
+  const navItems = isClient  ? CLIENT_NAV
+    : isCourier ? COURIER_NAV
+    : isKeeper  ? KEEPER_NAV
+    : isDriver  ? DRIVER_NAV
+    : STAFF_NAV.filter(item => item.roles.includes(role))
 
   return (
     <div style={{ display: 'flex', height: '100vh', background: 'var(--navy)', overflow: 'hidden' }}>
@@ -182,6 +219,23 @@ export default function DashboardPage() {
               <Route path="chats"      element={<ClientChats />} />
               <Route index             element={<ClientHome />} />
             </>
+          ) : isCourier ? (
+            <>
+              <Route path="profile" element={<ProfileTab />} />
+              <Route index          element={<CourierDashboard />} />
+            </>
+          ) : isKeeper ? (
+            <>
+              <Route path="profile"            element={<ProfileTab />} />
+              <Route path="warehouse-orders"   element={<KeeperOrders />} />
+              <Route path="operations"         element={<WarehouseDashboard />} />
+              <Route index                     element={<KeeperHome />} />
+            </>
+          ) : isDriver ? (
+            <>
+              <Route path="profile" element={<ProfileTab />} />
+              <Route index          element={<DriverDashboard />} />
+            </>
           ) : (
             <>
               <Route path="orders"  element={<OrdersTab />} />
@@ -197,7 +251,7 @@ export default function DashboardPage() {
               <Route path="ai"      element={<AiTab />} />
               <Route path="profile" element={<ProfileTab />} />
               <Route index element={
-                user?.role === 'manager' ? <ManagerHome /> : <AdminHome />
+                role === 'manager' ? <ManagerHome /> : <AdminHome />
               } />
             </>
           )}

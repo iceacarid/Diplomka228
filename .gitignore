@@ -104,3 +104,12 @@ db.sqlite3-journal
 # Design system & personal docs
 ФураЕдет Design System (2)/
 .agents/
+
+# Personal/diploma docs
+*.zip
+*.docx
+*.doc
+Ахметшин*/
+ДОКУМЕНТЫ*/
+Дневник*/
+Отчет*/

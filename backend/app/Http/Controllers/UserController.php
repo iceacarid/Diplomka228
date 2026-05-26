@@ -77,11 +77,11 @@ class UserController extends Controller
             return response()->json(['error' => 'Недостаточно прав.'], 403);
         }
 
-        $request->validate(['role' => 'required|in:client,manager,admin,courier']);
+        $request->validate(['role' => 'required|in:client,manager,admin,courier,warehouse_keeper,driver']);
 
-        if ($request->role === 'courier') {
+        if (in_array($request->role, ['courier', 'warehouse_keeper'])) {
             $request->validate(['warehouse_id' => 'required|exists:warehouses,id']);
-            $user->update(['role' => 'courier', 'warehouse_id' => $request->warehouse_id]);
+            $user->update(['role' => $request->role, 'warehouse_id' => $request->warehouse_id]);
         } else {
             $user->update(['role' => $request->role, 'warehouse_id' => null]);
         }

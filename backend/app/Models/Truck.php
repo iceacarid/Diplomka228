@@ -14,6 +14,11 @@ class Truck extends Model
         'model',
         'capacity_weight',
         'capacity_volume',
+        'height_m',
+        'width_m',
+        'length_m',
+        'mass_kg',
+        'axle_load_kg',
         'status',
         'driver_id',
         'is_company_owned',
@@ -24,6 +29,9 @@ class Truck extends Model
         return [
             'is_company_owned' => 'boolean',
             'capacity_volume'  => 'float',
+            'height_m'         => 'float',
+            'width_m'          => 'float',
+            'length_m'         => 'float',
         ];
     }
 
