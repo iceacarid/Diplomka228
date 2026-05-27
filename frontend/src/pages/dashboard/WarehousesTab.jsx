@@ -378,10 +378,11 @@ export default function WarehousesTab() {
             </select>
             {/* Фильтр по типу операции */}
             {[
-              { value: 'all',    label: 'Все' },
-              { value: 'load',   label: 'Загрузка' },
-              { value: 'unload', label: 'Разгрузка' },
-              { value: 'manual', label: 'Ручное' },
+              { value: 'all',            label: 'Все' },
+              { value: 'load',           label: 'Загрузка' },
+              { value: 'unload',         label: 'Разгрузка' },
+              { value: 'courier_pickup', label: 'Выдача курьеру' },
+              { value: 'manual',         label: 'Ручное' },
             ].map(opt => (
               <button
                 key={opt.value}
@@ -421,8 +422,21 @@ export default function WarehousesTab() {
                         {new Date(l.created_at).toLocaleString('ru', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}
                       </td>
                       <td style={{ padding: '12px 16px' }}>
-                        <span style={{ padding: '3px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600, background: l.action === 'load' ? 'rgba(18,183,106,0.12)' : l.action === 'unload' ? 'rgba(240,68,56,0.12)' : 'rgba(240,165,0,0.1)', color: l.action === 'load' ? '#12B76A' : l.action === 'unload' ? '#F04438' : 'var(--gold)' }}>
-                          {l.action === 'load' ? 'Загрузка' : l.action === 'unload' ? 'Разгрузка' : 'Ручное'}
+                        <span style={{
+                          padding: '3px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600,
+                          background: l.action === 'load' ? 'rgba(18,183,106,0.12)'
+                            : l.action === 'unload' ? 'rgba(240,68,56,0.12)'
+                            : l.action === 'courier_pickup' ? 'rgba(99,179,237,0.12)'
+                            : 'rgba(240,165,0,0.1)',
+                          color: l.action === 'load' ? '#12B76A'
+                            : l.action === 'unload' ? '#F04438'
+                            : l.action === 'courier_pickup' ? '#63B3ED'
+                            : 'var(--gold)',
+                        }}>
+                          {l.action === 'load' ? 'Загрузка'
+                            : l.action === 'unload' ? 'Разгрузка'
+                            : l.action === 'courier_pickup' ? 'Выдача курьеру'
+                            : 'Ручное'}
                         </span>
                       </td>
                       <td style={{ padding: '12px 16px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: positive ? '#12B76A' : '#F04438' }}>
@@ -438,7 +452,9 @@ export default function WarehousesTab() {
                         {l.truck ? `${l.truck.plate_number}` : '—'}
                       </td>
                       <td style={{ padding: '12px 16px', color: 'rgba(255,255,255,0.65)' }}>
-                        {l.driver?.name || '—'}
+                        {l.action === 'courier_pickup' && l.courier
+                          ? <span>Курьер: <span style={{ color: '#63B3ED' }}>{l.courier.name}</span></span>
+                          : l.driver?.name || '—'}
                       </td>
                       <td style={{ padding: '12px 16px', color: 'rgba(255,255,255,0.4)', maxWidth: 200 }}>
                         {l.note || '—'}

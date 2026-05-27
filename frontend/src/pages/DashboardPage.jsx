@@ -28,6 +28,7 @@ import WarehouseDashboard from './dashboard/WarehouseDashboard'
 import DriverDashboard from './dashboard/DriverDashboard'
 import KeeperHome from './dashboard/KeeperHome'
 import KeeperOrders from './dashboard/KeeperOrders'
+import KeeperHistory from './dashboard/KeeperHistory'
 
 function getInitials(name) {
   if (!name) return '?'
@@ -77,6 +78,7 @@ const KEEPER_NAV = [
   { to: '/dashboard',                    label: 'Сводка',          icon: 'Home',    end: true },
   { to: '/dashboard/warehouse-orders',   label: 'Заказы склада',   icon: 'Package' },
   { to: '/dashboard/operations',         label: 'Приёмка / Рейсы', icon: 'Boxes'   },
+  { to: '/dashboard/history',            label: 'История склада',  icon: 'Clock'   },
   { to: '/dashboard/profile',            label: 'Профиль',         icon: 'Settings' },
 ]
 
@@ -229,6 +231,7 @@ export default function DashboardPage() {
               <Route path="profile"            element={<ProfileTab />} />
               <Route path="warehouse-orders"   element={<KeeperOrders />} />
               <Route path="operations"         element={<WarehouseDashboard />} />
+              <Route path="history"            element={<KeeperHistory />} />
               <Route index                     element={<KeeperHome />} />
             </>
           ) : isDriver ? (

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\User;
 
 class WarehouseLog extends Model
 {
@@ -11,6 +12,7 @@ class WarehouseLog extends Model
         'order_id',
         'truck_id',
         'driver_id',
+        'courier_id',
         'weight_change',
         'load_before',
         'load_after',
@@ -45,5 +47,10 @@ class WarehouseLog extends Model
     public function driver()
     {
         return $this->belongsTo(Driver::class);
+    }
+
+    public function courier()
+    {
+        return $this->belongsTo(User::class, 'courier_id');
     }
 }

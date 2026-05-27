@@ -43,8 +43,7 @@ export function MessageBubble({ msg, isArchived, canWrite, onFormSubmit, onFormU
     return <RejectionCard msg={msg} />
   }
 
-  const EVENT_TYPES = ['order_confirmed', 'chat_archived', 'appeal_submitted', 'chat_unarchived']
-  if (EVENT_TYPES.includes(msg.metadata?.event)) {
+  if (isBot) {
     return <EventCard msg={msg} />
   }
 

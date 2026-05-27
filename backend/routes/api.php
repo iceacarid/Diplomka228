@@ -155,6 +155,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('manifests',                     [WarehouseKeeperController::class, 'myManifests']);
         Route::post('trips/{trip}/dispatch',        [WarehouseKeeperController::class, 'dispatch']);
         Route::post('trips/{trip}/unload',          [WarehouseKeeperController::class, 'confirmUnload']);
+        Route::get('history',                       [WarehouseKeeperController::class, 'history']);
     });
 
     // Водитель фуры

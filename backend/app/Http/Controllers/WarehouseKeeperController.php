@@ -183,6 +183,40 @@ class WarehouseKeeperController extends Controller
         return response()->json(['message' => 'Груз отклонён.']);
     }
 
+    /** GET /keeper/history — история изменений нагрузки своего склада */
+    public function history(Request $request)
+    {
+        $keeper = $request->user();
+        abort_unless($keeper->isWarehouseKeeper(), 403, 'Только кладовщик.');
+        abort_unless($keeper->warehouse_id, 404, 'Склад не назначен.');
+
+        $warehouse = Warehouse::findOrFail($keeper->warehouse_id);
+
+        $logs = $warehouse->logs()
+            ->with(['order:id,tracking_id', 'truck:id,plate_number,brand,model', 'driver:id,name', 'courier:id,name'])
+            ->latest()
+            ->take(200)
+            ->get()
+            ->map(fn($l) => [
+                'id'            => $l->id,
+                'weight_change' => $l->weight_change,
+                'load_before'   => $l->load_before,
+                'load_after'    => $l->load_after,
+                'action'        => $l->action,
+                'note'          => $l->note,
+                'created_at'    => $l->created_at,
+                'order'         => $l->order  ? ['id' => $l->order->id, 'tracking_id' => $l->order->tracking_id] : null,
+                'truck'         => $l->truck  ? ['plate_number' => $l->truck->plate_number, 'label' => "{$l->truck->brand} {$l->truck->model}"] : null,
+                'driver'        => $l->driver ? ['name' => $l->driver->name] : null,
+                'courier'       => $l->courier? ['name' => $l->courier->name] : null,
+            ]);
+
+        return response()->json([
+            'warehouse' => ['id' => $warehouse->id, 'name' => $warehouse->name],
+            'logs'      => $logs,
+        ]);
+    }
+
     /** GET /keeper/manifests — рейсы (манифесты) для моего склада */
     public function myManifests(Request $request)
     {

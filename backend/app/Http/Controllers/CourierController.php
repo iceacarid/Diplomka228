@@ -138,9 +138,10 @@ class CourierController extends Controller
             $trip = Trip::find($order->trip_id);
             if ($trip && $trip->warehouse_to_id) {
                 Warehouse::updateStorageLoad($trip->warehouse_to_id, -($order->actual_weight ?? $order->weight), [
-                    'order_id' => $order->id,
-                    'action'   => 'unload',
-                    'note'     => "Курьер забрал груз {$order->tracking_id} со склада для доставки клиенту",
+                    'order_id'   => $order->id,
+                    'courier_id' => $courier->id,
+                    'action'     => 'courier_pickup',
+                    'note'       => "Курьер {$courier->name} забрал груз {$order->tracking_id} для доставки клиенту",
                 ]);
             }
         }

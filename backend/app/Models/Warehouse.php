@@ -58,6 +58,7 @@ class Warehouse extends Model
             'order_id'     => $meta['order_id']  ?? null,
             'truck_id'     => $meta['truck_id']  ?? null,
             'driver_id'    => $meta['driver_id'] ?? null,
+            'courier_id'   => $meta['courier_id'] ?? null,
             'weight_change'=> $weightDelta,
             'load_before'  => $before,
             'load_after'   => $after,

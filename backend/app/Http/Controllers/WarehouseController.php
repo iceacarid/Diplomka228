@@ -82,7 +82,8 @@ class WarehouseController extends Controller
             'order_id'      => 'nullable|integer|exists:orders,id',
             'truck_id'      => 'nullable|integer|exists:trucks,id',
             'driver_id'     => 'nullable|integer|exists:drivers,id',
-            'action'        => 'nullable|in:load,unload,manual',
+            'courier_id'    => 'nullable|integer|exists:users,id',
+            'action'        => 'nullable|in:load,unload,manual,courier_pickup',
             'note'          => 'nullable|string|max:500',
         ]);
 
@@ -93,7 +94,7 @@ class WarehouseController extends Controller
     public function logs(Request $request, Warehouse $warehouse)
     {
         $query = $warehouse->logs()
-            ->with(['order:id,tracking_id', 'truck:id,plate_number,brand,model', 'driver:id,name'])
+            ->with(['order:id,tracking_id', 'truck:id,plate_number,brand,model', 'driver:id,name', 'courier:id,name'])
             ->latest();
 
         if ($request->filled('action')) {
@@ -110,9 +111,10 @@ class WarehouseController extends Controller
             'action'       => $l->action,
             'note'         => $l->note,
             'created_at'   => $l->created_at,
-            'order'        => $l->order  ? ['id' => $l->order->id, 'tracking_id' => $l->order->tracking_id] : null,
-            'truck'        => $l->truck  ? ['id' => $l->truck->id, 'plate_number' => $l->truck->plate_number, 'label' => "{$l->truck->brand} {$l->truck->model}"] : null,
-            'driver'       => $l->driver ? ['id' => $l->driver->id, 'name' => $l->driver->name] : null,
+            'order'        => $l->order   ? ['id' => $l->order->id, 'tracking_id' => $l->order->tracking_id] : null,
+            'truck'        => $l->truck   ? ['id' => $l->truck->id, 'plate_number' => $l->truck->plate_number, 'label' => "{$l->truck->brand} {$l->truck->model}"] : null,
+            'driver'       => $l->driver  ? ['id' => $l->driver->id, 'name' => $l->driver->name] : null,
+            'courier'      => $l->courier ? ['id' => $l->courier->id, 'name' => $l->courier->name] : null,
         ]));
     }
 
