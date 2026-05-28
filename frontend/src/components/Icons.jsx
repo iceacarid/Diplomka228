@@ -58,4 +58,5 @@ export const Icons = {
   LifeBuoy:     (p) => I(p, <><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><path d="m9.5 9.5-4-4M14.5 9.5l4-4M14.5 14.5l4 4M9.5 14.5l-4 4"/></>),
   Maximize:     (p) => I(p, <><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></>),
   Minimize:     (p) => I(p, <><path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/></>),
+  Warehouse:    (p) => I(p, <><path d="M22 9V7l-10-5L2 7v2"/><path d="M1 22h22"/><rect x="2" y="9" width="20" height="13"/><path d="M9 22V14h6v8"/></>),
 }

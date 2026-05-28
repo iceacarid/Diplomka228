@@ -10,7 +10,7 @@ const ORDER_STATUS_LABEL = {
   courier_assigned: 'Курьер назначен — едет на точку',
   picked_up:        'Курьер в дороге',
   at_warehouse:     'Груз на складе',
-  missed_pickup:    '⚠ Пропущен забор',
+  missed_pickup:    'Пропущен забор',
   shipped:          'В пути на доставку',
   delivered:        'Доставлено',
   rejected:         'Отклонено',

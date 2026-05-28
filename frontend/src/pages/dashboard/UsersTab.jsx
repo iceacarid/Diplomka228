@@ -10,6 +10,7 @@ const ROLE_ORDER = { admin: 0, manager: 1, courier: 2, client: 3 }
 const USER_STATUS_MAP = {
   active:   { bg: 'rgba(18,183,106,0.14)', fg: 'var(--green)', label: 'Активен' },
   inactive: { bg: 'rgba(240,68,56,0.14)',  fg: 'var(--red)',   label: 'Неактивен' },
+  blocked:  { bg: 'rgba(240,68,56,0.22)',  fg: '#ff4444',      label: 'Заблокирован' },
 }
 
 const thStyle = { textAlign: 'left', padding: '14px 20px', fontSize: 9, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-body)' }
@@ -23,11 +24,15 @@ export default function UsersTab() {
   const [filterRole, setFilterRole] = useState('all')
   const [sortBy,     setSortBy]     = useState('date_desc')
 
-  const [courierModal, setCourierModal]           = useState(null) // { userId }
-  const [warehouses,   setWarehouses]             = useState([])
-  const [selectedWh,   setSelectedWh]             = useState('')
-  const [whLoading,    setWhLoading]              = useState(false)
-  const [courierAssigning, setCourierAssigning]   = useState(false)
+  const [courierModal, setCourierModal]         = useState(null)
+  const [warehouses,   setWarehouses]           = useState([])
+  const [selectedWh,   setSelectedWh]           = useState('')
+  const [whLoading,    setWhLoading]            = useState(false)
+  const [courierAssigning, setCourierAssigning] = useState(false)
+
+  const [blockModal,  setBlockModal]  = useState(null) // { user }
+  const [blockReason, setBlockReason] = useState('')
+  const [blockBusy,   setBlockBusy]   = useState(false)
 
   const load = async () => {
     setLoading(true)
@@ -96,12 +101,31 @@ export default function UsersTab() {
     setCourierAssigning(false)
   }
 
-  const handleDelete = async (id) => {
-    if (!confirm('Удалить пользователя?')) return
+  const openBlockModal = (u) => {
+    setBlockReason('')
+    setBlockModal({ user: u })
+  }
+
+  const handleBlock = async () => {
+    if (!blockModal) return
+    setBlockBusy(true)
     try {
-      await api.delete(`/users/${id}`)
+      await api.post(`/users/${blockModal.user.id}/block`, { reason: blockReason || null })
+      setBlockModal(null)
       load()
-    } catch {}
+    } catch (err) {
+      alert(err.response?.data?.error || 'Ошибка блокировки')
+    }
+    setBlockBusy(false)
+  }
+
+  const handleUnblock = async (u) => {
+    try {
+      await api.post(`/users/${u.id}/unblock`)
+      load()
+    } catch (err) {
+      alert(err.response?.data?.error || 'Ошибка разблокировки')
+    }
   }
 
   return (
@@ -181,13 +205,24 @@ export default function UsersTab() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <div style={{
                           width: 30, height: 30, borderRadius: '50%',
-                          background: 'var(--gold)', color: 'var(--navy)',
+                          background: u.is_blocked ? 'rgba(240,68,56,0.35)' : 'var(--gold)',
+                          color: u.is_blocked ? '#ff6b6b' : 'var(--navy)',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           fontFamily: 'var(--font-display)', fontSize: 13, letterSpacing: 0.5, flexShrink: 0,
                         }}>
-                          {u.name?.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() || '?'}
+                          {u.is_blocked
+                            ? <Icons.Lock size={13} />
+                            : (u.name?.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() || '?')
+                          }
                         </div>
-                        <span style={{ fontWeight: 500 }}>{u.name}</span>
+                        <div>
+                          <span style={{ fontWeight: 500 }}>{u.name}</span>
+                          {u.is_blocked && u.block_reason && (
+                            <div style={{ fontSize: 10, color: '#ff6b6b', marginTop: 1, maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {u.block_reason}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </td>
                     <td style={{ ...tdStyle, fontFamily: 'var(--font-mono)', fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>
@@ -197,35 +232,49 @@ export default function UsersTab() {
                       <RolePill role={u.role} />
                     </td>
                     <td style={tdStyle}>
-                      <StatusPill status={u.is_active ? 'active' : 'inactive'} map={USER_STATUS_MAP} />
+                      <StatusPill
+                        status={u.is_blocked ? 'blocked' : (u.is_active ? 'active' : 'inactive')}
+                        map={USER_STATUS_MAP}
+                      />
                     </td>
                     <td style={{ ...tdStyle, fontFamily: 'var(--font-mono)', fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>
                       {new Date(u.created_at).toLocaleDateString('ru')}
                     </td>
                     {me?.role === 'admin' && u.id !== me.id && (
                       <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>
-                        <select
-                          value={u.role}
-                          onChange={(e) => handleChangeRole(u.id, e.target.value)}
-                          style={{
-                            background: 'var(--navy-3)', border: '1px solid rgba(255,255,255,0.08)',
-                            color: 'white', padding: '6px 10px', borderRadius: 4, fontSize: 11,
-                            fontFamily: 'var(--font-body)', cursor: 'pointer', marginRight: 8, outline: 'none',
-                          }}
-                        >
-                          <option value="client">Клиент</option>
-                          <option value="manager">Менеджер</option>
-                          <option value="admin">Администратор</option>
-                          <option value="courier">Курьер</option>
-                          <option value="warehouse_keeper">Кладовщик</option>
-                          <option value="driver">Водитель фуры</option>
-                        </select>
-                        <button
-                          onClick={() => handleDelete(u.id)}
-                          style={{ background: 'transparent', border: 'none', color: 'var(--red)', cursor: 'pointer', fontSize: 11, fontWeight: 700, fontFamily: 'var(--font-body)', textTransform: 'uppercase', letterSpacing: '0.06em' }}
-                        >
-                          Удалить
-                        </button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <select
+                            value={u.role}
+                            onChange={(e) => handleChangeRole(u.id, e.target.value)}
+                            style={{
+                              background: 'var(--navy-3)', border: '1px solid rgba(255,255,255,0.08)',
+                              color: 'white', padding: '6px 10px', borderRadius: 4, fontSize: 11,
+                              fontFamily: 'var(--font-body)', cursor: 'pointer', outline: 'none',
+                            }}
+                          >
+                            <option value="client">Клиент</option>
+                            <option value="manager">Менеджер</option>
+                            <option value="admin">Администратор</option>
+                            <option value="courier">Курьер</option>
+                            <option value="warehouse_keeper">Кладовщик</option>
+                            <option value="driver">Водитель фуры</option>
+                          </select>
+                          {u.is_blocked ? (
+                            <button
+                              onClick={() => handleUnblock(u)}
+                              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px', borderRadius: 4, border: '1px solid rgba(18,183,106,0.4)', background: 'rgba(18,183,106,0.1)', color: 'var(--green)', cursor: 'pointer', fontSize: 11, fontWeight: 700, fontFamily: 'var(--font-body)' }}
+                            >
+                              <Icons.Check size={11} /> Разблокировать
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => openBlockModal(u)}
+                              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px', borderRadius: 4, border: '1px solid rgba(240,68,56,0.4)', background: 'rgba(240,68,56,0.08)', color: 'var(--red)', cursor: 'pointer', fontSize: 11, fontWeight: 700, fontFamily: 'var(--font-body)' }}
+                            >
+                              <Icons.Lock size={11} /> Заблокировать
+                            </button>
+                          )}
+                        </div>
                       </td>
                     )}
                   </tr>
@@ -235,6 +284,57 @@ export default function UsersTab() {
           </Card>
         )}
       </div>
+
+      {/* Block reason modal */}
+      {blockModal && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+          onClick={() => setBlockModal(null)}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ background: 'var(--navy-2)', border: '1px solid rgba(240,68,56,0.25)', borderRadius: 14, padding: 24, width: '100%', maxWidth: 420, display: 'flex', flexDirection: 'column', gap: 16 }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(240,68,56,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Icons.Lock size={16} style={{ color: 'var(--red)' }} />
+              </div>
+              <div>
+                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--red)', fontFamily: 'var(--font-body)' }}>Блокировка аккаунта</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: 'white', marginTop: 2 }}>{blockModal.user.name}</div>
+              </div>
+            </div>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', lineHeight: 1.6 }}>
+              Пользователь потеряет доступ ко всем функциям системы. Сможет подать апелляцию только один раз.
+            </div>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.6)', marginBottom: 6, fontFamily: 'var(--font-body)' }}>Причина блокировки (необязательно)</div>
+              <textarea
+                value={blockReason}
+                onChange={e => setBlockReason(e.target.value)}
+                placeholder="Опишите причину блокировки..."
+                rows={3}
+                style={{ width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, padding: '10px 12px', color: 'white', fontSize: 13, fontFamily: 'var(--font-body)', outline: 'none', resize: 'vertical' }}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={() => setBlockModal(null)}
+                style={{ flex: 1, padding: '11px', borderRadius: 9, border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: 'rgba(255,255,255,0.5)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-body)' }}
+              >
+                Отмена
+              </button>
+              <button
+                onClick={handleBlock}
+                disabled={blockBusy}
+                style={{ flex: 2, padding: '11px', borderRadius: 9, border: 'none', background: blockBusy ? 'rgba(240,68,56,0.3)' : 'rgba(240,68,56,0.8)', color: 'white', fontSize: 13, fontWeight: 700, cursor: blockBusy ? 'wait' : 'pointer', fontFamily: 'var(--font-body)' }}
+              >
+                {blockBusy ? 'Блокируем...' : 'Заблокировать'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Courier warehouse picker modal */}
       {courierModal && (
@@ -308,7 +408,7 @@ export default function UsersTab() {
                 disabled={!selectedWh || courierAssigning || warehouses.length === 0}
                 style={{ flex: 2, padding: '11px', borderRadius: 9, border: 'none', background: (!selectedWh || courierAssigning) ? 'rgba(255,255,255,0.08)' : 'var(--gold)', color: (!selectedWh || courierAssigning) ? 'rgba(255,255,255,0.3)' : 'var(--navy)', fontSize: 13, fontWeight: 700, cursor: (!selectedWh || courierAssigning) ? 'default' : 'pointer', fontFamily: 'var(--font-body)' }}
               >
-                {courierAssigning ? 'Назначаем...' : 'Назначить курьером'}
+                {courierAssigning ? 'Назначаем...' : 'Назначить'}
               </button>
             </div>
           </div>

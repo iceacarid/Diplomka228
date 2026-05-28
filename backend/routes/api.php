@@ -64,7 +64,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // Пользователи (manager/admin)
     Route::get('users',                      [UserController::class, 'index']);
     Route::post('users/{user}/change-role',  [UserController::class, 'changeRole']);
-    Route::delete('users/{user}',            [UserController::class, 'destroy']);
+    Route::post('users/{user}/block',        [UserController::class, 'block']);
+    Route::post('users/{user}/unblock',      [UserController::class, 'unblock']);
+    Route::post('users/block-appeal',        [UserController::class, 'submitBlockAppeal']);
+    Route::get('block-appeals',              [UserController::class, 'blockAppeals']);
 
     // Водители (manager/admin)
     Route::apiResource('drivers', DriverController::class);

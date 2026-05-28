@@ -18,7 +18,7 @@ const ORDER_STATUS_MAP = {
   picked_up:        { bg: 'rgba(99,102,241,0.14)',  fg: '#6366F1',               label: 'Курьер в дороге' },
   awaiting_measurement: { bg: 'rgba(139,92,246,0.12)', fg: '#a78bfa',           label: 'Ждёт замера' },
   at_warehouse:     { bg: 'rgba(20,184,166,0.14)',  fg: '#14B8A6',               label: 'Груз на складе' },
-  missed_pickup:    { bg: 'rgba(240,68,56,0.16)',   fg: '#F04438',               label: '⚠ Пропущен забор' },
+  missed_pickup:    { bg: 'rgba(240,68,56,0.16)',   fg: '#F04438',               label: 'Пропущен забор' },
   shipped:          { bg: 'rgba(240,165,0,0.14)',   fg: 'var(--gold)',            label: 'В пути' },
   ready_for_pickup: { bg: 'rgba(16,185,129,0.14)',  fg: '#10b981',               label: 'Готов к выдаче' },
   delivered:        { bg: 'rgba(18,183,106,0.14)',  fg: 'var(--green)',           label: 'Доставлено' },
@@ -438,7 +438,7 @@ export default function OrdersTab() {
                         <StatusPill status={order.status} map={ORDER_STATUS_MAP} />
                         {order.courier_blocked && (
                           <span style={{ fontSize: 10, color: '#F59E0B', border: '1px solid rgba(245,158,11,0.35)', borderRadius: 4, padding: '1px 5px', fontWeight: 700, whiteSpace: 'nowrap' }}>
-                            🔒 Блок
+                            Блок
                           </span>
                         )}
                       </div>

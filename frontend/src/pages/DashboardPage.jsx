@@ -29,6 +29,7 @@ import DriverDashboard from './dashboard/DriverDashboard'
 import KeeperHome from './dashboard/KeeperHome'
 import KeeperOrders from './dashboard/KeeperOrders'
 import KeeperHistory from './dashboard/KeeperHistory'
+import BlockedScreen from '../components/BlockedScreen'
 
 function getInitials(name) {
   if (!name) return '?'
@@ -128,6 +129,8 @@ export default function DashboardPage() {
     logout()
     navigate('/login')
   }
+
+  if (user?.is_blocked) return <BlockedScreen />
 
   const role = user?.role
   const isClient  = role === 'client'

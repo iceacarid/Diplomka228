@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\BlockAppeal;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
@@ -89,14 +90,77 @@ class UserController extends Controller
         return response()->json($this->userData($user->fresh()));
     }
 
-    /** DELETE /api/users/{id} */
-    public function destroy(Request $request, User $user)
+    /** POST /api/users/{id}/block */
+    public function block(Request $request, User $user)
     {
         if ($request->user()->role !== 'admin') {
             return response()->json(['error' => 'Недостаточно прав.'], 403);
         }
-        $user->delete();
-        return response()->json(['message' => 'Пользователь удалён.']);
+        if ((int) $user->id === (int) $request->user()->id) {
+            return response()->json(['error' => 'Нельзя заблокировать себя.'], 422);
+        }
+        $data = $request->validate(['reason' => 'nullable|string|max:500']);
+        $user->update([
+            'is_blocked'   => true,
+            'block_reason' => $data['reason'] ?? null,
+        ]);
+        // Revoke all tokens
+        $user->tokens()->delete();
+        return response()->json($this->userData($user->fresh()));
+    }
+
+    /** POST /api/users/{id}/unblock */
+    public function unblock(Request $request, User $user)
+    {
+        if ($request->user()->role !== 'admin') {
+            return response()->json(['error' => 'Недостаточно прав.'], 403);
+        }
+        $user->update(['is_blocked' => false, 'block_reason' => null]);
+        // Mark block appeal as reviewed if exists
+        BlockAppeal::where('user_id', $user->id)->where('status', 'pending')
+            ->update(['status' => 'reviewed', 'reviewed_by' => $request->user()->id]);
+        return response()->json($this->userData($user->fresh()));
+    }
+
+    /** POST /api/users/block-appeal */
+    public function submitBlockAppeal(Request $request)
+    {
+        $user = $request->user();
+        if (!$user->is_blocked) {
+            return response()->json(['error' => 'Аккаунт не заблокирован.'], 422);
+        }
+        if (BlockAppeal::where('user_id', $user->id)->exists()) {
+            return response()->json(['error' => 'Апелляция уже подана. Повторная подача невозможна.'], 409);
+        }
+        $data = $request->validate(['body' => 'required|string|min:10|max:2000']);
+        $appeal = BlockAppeal::create([
+            'user_id' => $user->id,
+            'body'    => $data['body'],
+        ]);
+        return response()->json(['id' => $appeal->id, 'status' => $appeal->status], 201);
+    }
+
+    /** GET /api/block-appeals (admin only) */
+    public function blockAppeals(Request $request)
+    {
+        if ($request->user()->role !== 'admin') {
+            return response()->json(['error' => 'Недостаточно прав.'], 403);
+        }
+        $appeals = BlockAppeal::with(['user', 'reviewer'])
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(fn($a) => [
+                'id'             => $a->id,
+                'user_id'        => $a->user_id,
+                'user_name'      => $a->user?->name,
+                'user_email'     => $a->user?->email,
+                'body'           => $a->body,
+                'status'         => $a->status,
+                'admin_response' => $a->admin_response,
+                'reviewed_by'    => $a->reviewer?->name,
+                'created_at'     => $a->created_at,
+            ]);
+        return response()->json(['data' => $appeals]);
     }
 
     private function userData(User $user): array
@@ -111,6 +175,9 @@ class UserController extends Controller
             'warehouse_name'     => $user->warehouse?->name,
             'avatar_url'         => $user->avatarUrl(),
             'is_active'          => $user->is_active,
+            'is_blocked'         => (bool) $user->is_blocked,
+            'block_reason'       => $user->block_reason,
+            'has_block_appeal'   => BlockAppeal::where('user_id', $user->id)->exists(),
             'two_factor_enabled' => $user->two_factor_enabled,
             'created_at'         => $user->created_at,
         ];

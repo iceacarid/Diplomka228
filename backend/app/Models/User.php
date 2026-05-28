@@ -22,6 +22,8 @@ class User extends Authenticatable
         'warehouse_id',
         'password',
         'is_active',
+        'is_blocked',
+        'block_reason',
         'failed_login_attempts',
         'lockout_until',
         'two_factor_enabled',
@@ -41,6 +43,7 @@ class User extends Authenticatable
         return [
             'password'                    => 'hashed',
             'is_active'                   => 'boolean',
+            'is_blocked'                  => 'boolean',
             'two_factor_enabled'          => 'boolean',
             'lockout_until'               => 'datetime',
             'two_factor_action_expires_at'=> 'datetime',

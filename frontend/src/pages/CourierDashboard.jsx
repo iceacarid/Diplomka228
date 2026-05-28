@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import api from '../api/axios'
 import ProfileTab from './dashboard/ProfileTab'
+import { Icons } from '../components/Icons'
 
 const TABS = ['my', 'history']
 const TAB_LABELS = { my: 'Мои заказы', history: 'История' }
@@ -644,8 +645,8 @@ export default function CourierDashboard() {
               boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
             }}>
               {[
-                { label: 'Заказы',  icon: '📦', view: 'orders' },
-                { label: 'Профиль', icon: '👤', view: 'profile' },
+                { label: 'Заказы',  icon: <Icons.Package size={15} />, view: 'orders' },
+                { label: 'Профиль', icon: <Icons.User size={15} />, view: 'profile' },
               ].map(item => (
                 <button
                   key={item.view}
@@ -673,7 +674,7 @@ export default function CourierDashboard() {
                   display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left',
                 }}
               >
-                <span style={{ fontSize: 15 }}>🚪</span> Выйти
+                <Icons.Logout size={15} /> Выйти
               </button>
             </div>
           )}
@@ -753,7 +754,7 @@ export default function CourierDashboard() {
             </div>
 
             {!shift.open ? (
-              <EmptyState icon="🚐" text="Откройте смену, чтобы увидеть доступные заявки" />
+              <EmptyState icon={<Icons.Truck size={52} />} text="Откройте смену, чтобы увидеть доступные заявки" />
             ) : (
               <>
                 {/* Tab bar */}
@@ -973,7 +974,7 @@ export default function CourierDashboard() {
             border: '1px solid rgba(255,255,255,0.1)',
           }} onClick={e => e.stopPropagation()}>
             <div style={{ fontSize: 16, fontWeight: 700, color: '#fff', marginBottom: 4 }}>
-              {missedModalMode === 'reschedule' ? '⚠️ Запрос переноса даты' : 'Причина переноса'}
+              {missedModalMode === 'reschedule' ? 'Запрос переноса даты' : 'Причина переноса'}
             </div>
             <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginBottom: 16 }}>
               {missedModalMode === 'reschedule'

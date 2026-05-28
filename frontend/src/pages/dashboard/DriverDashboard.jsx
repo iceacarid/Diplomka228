@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import api from '../../api/axios'
+import { Icons } from '../../components/Icons'
 
 const TRIP_STATUS = {
   forming:    { label: 'Ожидание водителя', color: '#f0a500', next: 'Прибыть на загрузку' },
@@ -341,7 +342,7 @@ function TripCard({ trip, onAction }) {
             boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
           }}
         >
-          📍 Где я
+          <Icons.Pin size={12} /> Где я
         </button>
       </div>
 
