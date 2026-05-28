@@ -139,71 +139,31 @@ function YesNo({ value, onChange }) {
 }
 
 // ── Cargo info card ────────────────────────────────────────────────────────
-function CargoInfoCard({ cargoType, cargoText, cargoInfo, CargoIco }) {
+function CargoInfoCard({ cargoText, cargoInfo, CargoIco }) {
   const color = cargoInfo?.color || '#F0A500'
-  const restrictions = cargoInfo?.restrictions || []
   return (
     <div style={{
-      borderRadius: 9,
-      border: `1px solid ${color}40`,
-      background: `${color}0d`,
-      overflow: 'hidden',
-      marginBottom: 10,
+      display: 'flex', alignItems: 'center', gap: 14,
+      borderRadius: 9, border: `1px solid ${color}40`,
+      background: `${color}0d`, padding: '14px 16px', marginBottom: 10,
     }}>
-      {/* Top row */}
       <div style={{
-        display: 'flex', alignItems: 'center', gap: 14,
-        padding: '14px 16px',
-        borderBottom: restrictions.length ? `1px solid ${color}22` : 'none',
+        width: 52, height: 52, borderRadius: 12,
+        background: `${color}18`, border: `1.5px solid ${color}55`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        flexShrink: 0, color,
       }}>
-        <div style={{
-          width: 52, height: 52, borderRadius: 12,
-          background: `${color}18`,
-          border: `1.5px solid ${color}55`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          flexShrink: 0, color,
-        }}>
-          <CargoIco s={26} />
-        </div>
-        <div>
-          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: color, marginBottom: 3 }}>
-            Тип груза
-          </div>
-          <div style={{ fontSize: 15, fontWeight: 700, color: '#fff' }}>
-            {cargoText}
-          </div>
-        </div>
-        <div style={{
-          marginLeft: 'auto',
-          display: 'flex', alignItems: 'center', gap: 5,
-          fontSize: 10, color: 'rgba(255,255,255,0.25)',
-        }}>
-          <Icons.Lock size={10} /> зафиксировано
-        </div>
+        <CargoIco s={26} />
       </div>
-      {/* Restrictions */}
-      {restrictions.length > 0 && (
-        <div style={{ padding: '10px 16px 12px' }}>
-          <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', marginBottom: 8 }}>
-            Требования и ограничения
-          </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {restrictions.map((r, i) => (
-              <span key={i} style={{
-                display: 'inline-flex', alignItems: 'center', gap: 5,
-                fontSize: 11, fontWeight: 600,
-                color: color,
-                background: `${color}15`,
-                border: `1px solid ${color}35`,
-                borderRadius: 5, padding: '4px 9px',
-              }}>
-                <svg width="8" height="8" viewBox="0 0 8 8" fill={color}><circle cx="4" cy="4" r="3"/></svg>
-                {r}
-              </span>
-            ))}
-          </div>
+      <div>
+        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color, marginBottom: 3 }}>
+          Тип груза
         </div>
-      )}
+        <div style={{ fontSize: 15, fontWeight: 700, color: '#fff' }}>{cargoText}</div>
+      </div>
+      <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, color: 'rgba(255,255,255,0.25)' }}>
+        <Icons.Lock size={10} /> зафиксировано
+      </div>
     </div>
   )
 }
@@ -394,7 +354,7 @@ export function BotQuestionForm({ onSubmit, disabled, orderData, chatId }) {
 
       {/* ── Блок 3: Характеристики ── */}
       <Block title="БЛОК 3 · ХАРАКТЕРИСТИКИ ГРУЗА">
-        <CargoInfoCard cargoType={cargoType} cargoText={cargoText} cargoInfo={cargoInfo} CargoIco={CargoIco} />
+        <CargoInfoCard cargoText={cargoText} cargoInfo={cargoInfo} CargoIco={CargoIco} />
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 }}>
           <LockedField label="Вес" value={orderData?.weight ? `${orderData.weight} кг` : null} />

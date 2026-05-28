@@ -48,33 +48,17 @@ function Row({ label, value, editing, children }) {
 }
 
 // ── Cargo info card ─────────────────────────────────────────────────────────
-function CargoInfoCard({ cargoType, cargoText, cargoInfo, CargoIco }) {
+function CargoInfoCard({ cargoText, cargoInfo, CargoIco }) {
   const color = cargoInfo?.color || '#F0A500'
-  const restrictions = cargoInfo?.restrictions || []
   return (
-    <div style={{ borderRadius: 9, border: `1px solid ${color}40`, background: `${color}0d`, overflow: 'hidden', marginBottom: 12 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', borderBottom: restrictions.length ? `1px solid ${color}22` : 'none' }}>
-        <div style={{ width: 48, height: 48, borderRadius: 12, background: `${color}18`, border: `1.5px solid ${color}55`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color }}>
-          <CargoIco s={24} />
-        </div>
-        <div>
-          <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color, marginBottom: 3 }}>Тип груза</div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>{cargoText}</div>
-        </div>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 14, borderRadius: 9, border: `1px solid ${color}40`, background: `${color}0d`, padding: '14px 16px', marginBottom: 12 }}>
+      <div style={{ width: 48, height: 48, borderRadius: 12, background: `${color}18`, border: `1.5px solid ${color}55`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color }}>
+        <CargoIco s={24} />
       </div>
-      {restrictions.length > 0 && (
-        <div style={{ padding: '10px 16px 12px' }}>
-          <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', marginBottom: 7 }}>Требования и ограничения</div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-            {restrictions.map((r, i) => (
-              <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10, fontWeight: 600, color, background: `${color}15`, border: `1px solid ${color}35`, borderRadius: 5, padding: '3px 8px' }}>
-                <svg width="7" height="7" viewBox="0 0 8 8" fill={color}><circle cx="4" cy="4" r="3"/></svg>
-                {r}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
+      <div>
+        <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color, marginBottom: 3 }}>Тип груза</div>
+        <div style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>{cargoText}</div>
+      </div>
     </div>
   )
 }
@@ -195,7 +179,7 @@ export function FormSubmissionCard({ msg, chatId, onUpdate }) {
 
         {/* Блок 3: Груз */}
         <Section icon={<Icons.Package size={11} />} title="ХАРАКТЕРИСТИКИ ГРУЗА">
-          <CargoInfoCard cargoType={m.cargo_type} cargoText={cargoText} cargoInfo={cargoInfo} CargoIco={CargoIco} />
+          <CargoInfoCard cargoText={cargoText} cargoInfo={cargoInfo} CargoIco={CargoIco} />
           <Row label="Вес" value={m.weight ? `${m.weight} кг` : null} />
           <Row label="Объём" value={m.volume ? `${m.volume} м³` : null} />
           {m.cargo_description && (
