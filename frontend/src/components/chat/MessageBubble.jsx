@@ -117,14 +117,6 @@ export function MessageBubble({ msg, isArchived, canWrite, onFormSubmit, onFormU
           </div>
         )}
         <div style={{ whiteSpace: 'pre-wrap' }}>{msg.body}</div>
-        {showForm && (
-          <BotQuestionForm
-            onSubmit={onFormSubmit}
-            disabled={!canWrite}
-            orderData={orderData}
-            chatId={chatId}
-          />
-        )}
         <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 5, textAlign: 'right' }}>
           {time}
         </div>
