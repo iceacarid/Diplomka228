@@ -8,6 +8,17 @@ export default function RegisterPage() {
   const { login } = useAuth()
   const navigate = useNavigate()
   const [form, setForm] = useState({ email: '', name: '', phone: '', password: '', password_confirm: '' })
+
+  const formatPhone = (raw) => {
+    const digits = raw.replace(/\D/g, '')
+    const d = digits.startsWith('7') || digits.startsWith('8') ? digits.slice(1) : digits
+    let out = '+7'
+    if (d.length > 0) out += ' (' + d.slice(0, 3)
+    if (d.length >= 3) out += ') ' + d.slice(3, 6)
+    if (d.length >= 6) out += '-' + d.slice(6, 8)
+    if (d.length >= 8) out += '-' + d.slice(8, 10)
+    return out
+  }
   const [showPass, setShowPass] = useState(false)
   const [showPass2, setShowPass2] = useState(false)
   const [error, setError] = useState('')
@@ -16,6 +27,21 @@ export default function RegisterPage() {
   const handleRegister = async (e) => {
     e.preventDefault()
     setError('')
+    if (!form.name.trim() || form.name.trim().length < 2) {
+      setError('Введите имя (минимум 2 символа)')
+      return
+    }
+    if (form.phone) {
+      const digits = form.phone.replace(/\D/g, '')
+      if (digits.length < 10 || digits.length > 11) {
+        setError('Введите корректный номер телефона (+7 XXX XXX-XX-XX)')
+        return
+      }
+    }
+    if (form.password.length < 8) {
+      setError('Пароль должен содержать минимум 8 символов')
+      return
+    }
     if (form.password !== form.password_confirm) { setError('Пароли не совпадают'); return }
     setLoading(true)
     try {
@@ -94,7 +120,7 @@ export default function RegisterPage() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '0' }}>
                 <AuthInput label="Имя" value={form.name} onChange={(v) => setForm({ ...form, name: v })} placeholder="Иван Иванов"
                   icon={<svg width="18" height="18" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="1.8"/><path d="M4 20c0-4 3.582-7 8-7s8 3 8 7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>} />
-                <AuthInput label="Телефон" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} placeholder="+7 999 000-00-00" required={false}
+                <AuthInput label="Телефон" value={form.phone} onChange={(v) => setForm({ ...form, phone: formatPhone(v) })} placeholder="+7 (999) 000-00-00" required={false}
                   icon={<svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1-9.4 0-17-7.6-17-17 0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z" stroke="currentColor" strokeWidth="1.8"/></svg>} />
               </div>
 

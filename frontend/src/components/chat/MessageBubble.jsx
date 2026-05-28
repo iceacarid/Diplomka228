@@ -32,7 +32,6 @@ export function MessageBubble({ msg, isArchived, canWrite, onFormSubmit, onFormU
   const cfg       = ROLE_CONFIG[msg.sender_role] ?? ROLE_CONFIG.client
   const isBot     = msg.sender_role === 'bot'
   const isMine    = msg.is_mine
-  const showForm  = msg.type === 'bot_greeting' && canWrite && !isArchived && user?.role === 'client' && !formSubmitted
   const isFormCard = msg.type === 'form_submission'
 
   const time = new Date(msg.created_at).toLocaleTimeString('ru-RU', {
@@ -41,6 +40,40 @@ export function MessageBubble({ msg, isArchived, canWrite, onFormSubmit, onFormU
 
   if (msg.metadata?.event === 'order_rejected') {
     return <RejectionCard msg={msg} />
+  }
+
+  // bot_greeting — приветствие + форма для заполнения клиентом
+  if (msg.type === 'bot_greeting') {
+    const showBotForm = canWrite && !isArchived && user?.role === 'client' && !formSubmitted
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
+        <div style={{ maxWidth: 520, width: '100%' }}>
+          <div style={{
+            background: 'rgba(255,255,255,0.04)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: 10,
+            padding: '10px 14px',
+            fontSize: 13,
+            color: 'rgba(255,255,255,0.55)',
+            fontStyle: 'italic',
+            lineHeight: 1.55,
+            whiteSpace: 'pre-wrap',
+            marginBottom: showBotForm ? 10 : 0,
+          }}>
+            {msg.body}
+            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 5, textAlign: 'right' }}>{time}</div>
+          </div>
+          {showBotForm && (
+            <BotQuestionForm
+              onSubmit={onFormSubmit}
+              disabled={!canWrite}
+              orderData={orderData}
+              chatId={chatId}
+            />
+          )}
+        </div>
+      </div>
+    )
   }
 
   if (isBot) {
