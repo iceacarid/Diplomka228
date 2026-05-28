@@ -18,7 +18,13 @@ export function AuthProvider({ children }) {
         localStorage.setItem('user', JSON.stringify(data))
         setUser(data)
       })
-      .catch(() => {})
+      .catch((err) => {
+        if (err.response?.status === 401) {
+          localStorage.removeItem('token')
+          localStorage.removeItem('user')
+          setUser(null)
+        }
+      })
   }, [])
 
   const login = useCallback((userData, token) => {

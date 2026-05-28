@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\BlockAppeal;
 use App\Models\User;
 use App\Services\OtpService;
 use Carbon\Carbon;
@@ -58,6 +59,14 @@ class LoginController extends Controller
             ], 403);
         }
 
+        if ($user->is_blocked) {
+            $token = $user->createToken('auth_token')->plainTextToken;
+            return response()->json([
+                'user'  => $this->userData($user),
+                'token' => $token,
+            ]);
+        }
+
         // Успешный вход — сброс счётчика
         $user->failed_login_attempts = 0;
         $user->lockout_until = null;
@@ -98,7 +107,12 @@ class LoginController extends Controller
             'name'               => $user->name,
             'phone'              => $user->phone,
             'role'               => $user->role,
+            'warehouse_id'       => $user->warehouse_id,
             'avatar_url'         => $user->avatarUrl(),
+            'is_active'          => $user->is_active,
+            'is_blocked'         => (bool) $user->is_blocked,
+            'block_reason'       => $user->block_reason,
+            'has_block_appeal'   => BlockAppeal::where('user_id', $user->id)->exists(),
             'two_factor_enabled' => $user->two_factor_enabled,
             'created_at'         => $user->created_at,
         ];
