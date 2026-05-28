@@ -11,9 +11,9 @@ export default function LandingPage() {
   const [fleetActive, setFleetActive] = useState(0)
 
   const fleet = [
-    { num: '01 / ФУРЫ', name: 'До 20 тонн', desc: 'Магистральные фуры для крупных партий. КАМАЗ, МАЗ, Volvo.', payload: '20 Т', img: 'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?q=80&w=1400&fit=crop' },
-    { num: '02 / СРЕДНИЙ ТОННАЖ', name: 'До 5 тонн', desc: 'Региональная доставка средних партий. Гибкий график, быстрое оформление.', payload: '5 Т', img: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?q=80&w=1400&fit=crop' },
-    { num: '03 / МИНИВЭНЫ', name: 'Минивэны', desc: 'Срочные городские доставки. Express-формат, день в день.', payload: '1.5 Т', img: 'https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?q=80&w=1400&fit=crop' },
+    { num: '01 / ФУРЫ', name: 'До 20 тонн', desc: 'Магистральные фуры для крупных партий. КАМАЗ, МАЗ, Volvo.', payload: '20 Т', img: '/img/truck-heavy.jpg' },
+    { num: '02 / СРЕДНИЙ ТОННАЖ', name: 'До 5 тонн', desc: 'Региональная доставка средних партий. Гибкий график, быстрое оформление.', payload: '5 Т', img: '/img/truck-medium.jpg' },
+    { num: '03 / МИНИВЭНЫ', name: 'Минивэны', desc: 'Срочные городские доставки. Express-формат, день в день.', payload: '1.5 Т', img: '/img/van.jpg' },
   ]
 
   const handleCalc = async (e) => {
@@ -75,7 +75,7 @@ export default function LandingPage() {
 
       {/* HERO */}
       <section style={{ position:'relative', overflow:'hidden', minHeight:'100vh', display:'flex', flexDirection:'column', paddingTop:68 }}>
-        <div style={{ position:'absolute', inset:0, background:"url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?q=80&w=2000') center/cover no-repeat", opacity:0.08 }} />
+        <div style={{ position:'absolute', inset:0, background:"url('/img/hero-bg.jpg') center/cover no-repeat", opacity:0.08 }} />
         <div style={{ position:'absolute', inset:0, backgroundImage:'linear-gradient(rgba(240,165,0,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(240,165,0,0.03) 1px,transparent 1px)', backgroundSize:'80px 80px', pointerEvents:'none' }} />
 
         <div style={{ flex:1, display:'flex', alignItems:'center', padding:'80px 80px 60px', position:'relative', zIndex:2, gap:56 }}>
@@ -283,7 +283,7 @@ export default function LandingPage() {
       {/* WHY */}
       <section id="why" style={{ background:'var(--navy)', display:'grid', gridTemplateColumns:'1fr 1fr', minHeight:520 }}>
         <div style={{ position:'relative', overflow:'hidden' }}>
-          <img src="https://images.unsplash.com/photo-1580674684081-7617fbf3d745?q=80&w=1200&fit=crop" alt="Склад" style={{ width:'100%', height:'100%', objectFit:'cover', filter:'grayscale(20%)', display:'block' }} />
+          <img src="/img/warehouse.jpg" alt="Склад" style={{ width:'100%', height:'100%', objectFit:'cover', filter:'grayscale(20%)', display:'block' }} />
           <div style={{ position:'absolute', inset:0, background:'linear-gradient(to right,transparent 60%,var(--navy) 100%)' }} />
         </div>
         <div style={{ padding:'72px 72px 72px 52px', display:'flex', flexDirection:'column', justifyContent:'center' }}>
