@@ -16,14 +16,46 @@ const CargoIcon = {
 }
 
 const CARGO_TYPE_MAP = {
-  general:               { label: 'Общий груз' },
-  fragile:               { label: 'Хрупкий груз' },
-  flammable:             { label: 'Воспламеняемый' },
-  perishable:            { label: 'Скоропортящийся' },
-  hazardous:             { label: 'Опасный груз (ADR)' },
-  oversized:             { label: 'Негабаритный' },
-  temperature_controlled:{ label: 'Температурный режим' },
-  other:                 { label: 'Другое' },
+  general:               {
+    label: 'Общий груз',
+    color: '#F0A500',
+    restrictions: ['Стандартная тара', 'Без спец. требований', 'Макс. вес 1 ед. — 500 кг'],
+  },
+  fragile:               {
+    label: 'Хрупкий груз',
+    color: '#818CF8',
+    restrictions: ['Осторожная погрузка', 'Маркировка «Хрупкое»', 'Не укладывать горизонтально', 'Амортизирующая упаковка'],
+  },
+  flammable:             {
+    label: 'Воспламеняемый',
+    color: '#F04438',
+    restrictions: ['Спецтранспорт ADR', 'Декларация ДОПОГ обязательна', 'Запрет совместной загрузки', 'Огнетушитель на борту'],
+  },
+  perishable:            {
+    label: 'Скоропортящийся',
+    color: '#12B76A',
+    restrictions: ['Ускоренная доставка', 'Температурный контроль', 'Сан. паспорт транспорта', 'Срок хранения — не более 48 ч'],
+  },
+  hazardous:             {
+    label: 'Опасный груз (ADR)',
+    color: '#F59E0B',
+    restrictions: ['Класс опасности ADR', 'Разрешение на перевозку', 'Аварийная карточка', 'Инструктаж водителя'],
+  },
+  oversized:             {
+    label: 'Негабаритный',
+    color: '#8B5CF6',
+    restrictions: ['Согласование маршрута', 'Сопровождение ГАИ (от 20 т)', 'Доп. оплата за негабарит', 'Ограничения по времени движения'],
+  },
+  temperature_controlled:{
+    label: 'Температурный режим',
+    color: '#06B6D4',
+    restrictions: ['Рефрижератор обязателен', 'Диапазон: −20°C … +8°C', 'Мониторинг температуры', 'Термограф в пути'],
+  },
+  other:                 {
+    label: 'Другое',
+    color: 'rgba(255,255,255,0.5)',
+    restrictions: ['Условия уточняются менеджером'],
+  },
 }
 
 const PACKAGING_OPTIONS = [
@@ -102,6 +134,76 @@ function YesNo({ value, onChange }) {
           transition: 'all 0.15s',
         }}>{v === 'yes' ? 'Да' : 'Нет'}</button>
       ))}
+    </div>
+  )
+}
+
+// ── Cargo info card ────────────────────────────────────────────────────────
+function CargoInfoCard({ cargoType, cargoText, cargoInfo, CargoIco }) {
+  const color = cargoInfo?.color || '#F0A500'
+  const restrictions = cargoInfo?.restrictions || []
+  return (
+    <div style={{
+      borderRadius: 9,
+      border: `1px solid ${color}40`,
+      background: `${color}0d`,
+      overflow: 'hidden',
+      marginBottom: 10,
+    }}>
+      {/* Top row */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 14,
+        padding: '14px 16px',
+        borderBottom: restrictions.length ? `1px solid ${color}22` : 'none',
+      }}>
+        <div style={{
+          width: 52, height: 52, borderRadius: 12,
+          background: `${color}18`,
+          border: `1.5px solid ${color}55`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          flexShrink: 0, color,
+        }}>
+          <CargoIco s={26} />
+        </div>
+        <div>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: color, marginBottom: 3 }}>
+            Тип груза
+          </div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: '#fff' }}>
+            {cargoText}
+          </div>
+        </div>
+        <div style={{
+          marginLeft: 'auto',
+          display: 'flex', alignItems: 'center', gap: 5,
+          fontSize: 10, color: 'rgba(255,255,255,0.25)',
+        }}>
+          <Icons.Lock size={10} /> зафиксировано
+        </div>
+      </div>
+      {/* Restrictions */}
+      {restrictions.length > 0 && (
+        <div style={{ padding: '10px 16px 12px' }}>
+          <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', marginBottom: 8 }}>
+            Требования и ограничения
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {restrictions.map((r, i) => (
+              <span key={i} style={{
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                fontSize: 11, fontWeight: 600,
+                color: color,
+                background: `${color}15`,
+                border: `1px solid ${color}35`,
+                borderRadius: 5, padding: '4px 9px',
+              }}>
+                <svg width="8" height="8" viewBox="0 0 8 8" fill={color}><circle cx="4" cy="4" r="3"/></svg>
+                {r}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -292,10 +394,7 @@ export function BotQuestionForm({ onSubmit, disabled, orderData, chatId }) {
 
       {/* ── Блок 3: Характеристики ── */}
       <Block title="БЛОК 3 · ХАРАКТЕРИСТИКИ ГРУЗА">
-        {/* Тип груза — только отображение */}
-        <LockedField label="Тип груза">
-          <span style={{ flex: 1, fontSize: 13, color: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', gap: 6 }}><CargoIco />{cargoText}</span>
-        </LockedField>
+        <CargoInfoCard cargoType={cargoType} cargoText={cargoText} cargoInfo={cargoInfo} CargoIco={CargoIco} />
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 }}>
           <LockedField label="Вес" value={orderData?.weight ? `${orderData.weight} кг` : null} />
