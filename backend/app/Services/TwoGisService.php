@@ -111,45 +111,7 @@ class TwoGisService
      */
     public function truckRoute(array $from, array $to, array $truckParams = [], array $waypoints = []): ?array
     {
-        $points2gis = [['x' => $from['lon'], 'y' => $from['lat']]];
-        foreach ($waypoints as $wp) {
-            $points2gis[] = ['x' => (float)$wp['lng'], 'y' => (float)$wp['lat']];
-        }
-        $points2gis[] = ['x' => $to['lon'], 'y' => $to['lat']];
-
-        // ── Попытка 1: 2GIS Truck Directions ──────────────────────────────────
-        if ($this->key) {
-            $defaults = [
-                'height'        => 4.0,
-                'width'         => 2.55,
-                'length'        => 16.5,
-                'mass'          => 20000,
-                'max_perm_mass' => 44000,
-                'axle_load'     => 11500,
-            ];
-            $params = array_merge($defaults, array_filter($truckParams, fn($v) => $v !== null));
-
-            try {
-                $res = $this->http(15)->post(
-                    "https://routing.api.2gis.com/truck/6.0.0/global?key={$this->key}",
-                    ['points' => $points2gis, 'type' => 'truck_jam', 'truck_params' => $params]
-                );
-
-                $result = $res->json('result.0') ?? null;
-                if ($result && isset($result['geometry'])) {
-                    return [
-                        'distance' => isset($result['total_distance']) ? round($result['total_distance'] / 1000, 1) : null,
-                        'duration' => $result['total_duration'] ?? null,
-                        'polyline' => $this->parseLinestring($result['geometry']),
-                    ];
-                }
-                Log::info('2GIS truck route fallback to OSRM', ['status' => $res->status(), 'body' => substr($res->body(), 0, 200)]);
-            } catch (\Exception $e) {
-                Log::warning('2GIS truck route exception: ' . $e->getMessage());
-            }
-        }
-
-        // ── Попытка 2: OSRM (открытый, без ключа, реальные дороги) ──────────
+        // OSRM — бесплатный роутинг по реальным дорогам без ограничений по расстоянию
         return $this->osrmRoute($from, $to, $waypoints);
     }
 
