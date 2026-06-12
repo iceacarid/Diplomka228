@@ -25,7 +25,7 @@ class UserController extends Controller
         $data = $request->validate([
             'name'  => 'sometimes|string|max:255',
             'phone' => 'sometimes|nullable|string|max:20',
-            'avatar'=> 'sometimes|nullable|image|max:2048',
+            'avatar'=> 'sometimes|nullable|mimes:jpeg,jpg,png,gif,webp|max:2048',
         ]);
 
         // Смена пароля

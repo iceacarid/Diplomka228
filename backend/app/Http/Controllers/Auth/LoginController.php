@@ -60,11 +60,11 @@ class LoginController extends Controller
         }
 
         if ($user->is_blocked) {
-            $token = $user->createToken('auth_token')->plainTextToken;
             return response()->json([
-                'user'  => $this->userData($user),
-                'token' => $token,
-            ]);
+                'error'        => 'Аккаунт заблокирован.',
+                'is_blocked'   => true,
+                'block_reason' => $user->block_reason,
+            ], 403);
         }
 
         // Успешный вход — сброс счётчика
