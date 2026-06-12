@@ -16,6 +16,7 @@ class DriverController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
+            'user_id'        => 'nullable|exists:users,id|unique:drivers,user_id',
             'name'           => 'required|string|max:255',
             'phone'          => 'required|string|max:20',
             'license_number' => 'required|string|max:50',
@@ -63,6 +64,7 @@ class DriverController extends Controller
     {
         return [
             'id'             => $driver->id,
+            'user_id'        => $driver->user_id,
             'name'           => $driver->name,
             'phone'          => $driver->phone,
             'license_number' => $driver->license_number,

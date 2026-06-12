@@ -40,6 +40,12 @@ function makeIcon(pct) {
   })
 }
 
+const fmtWeight = (kg) => {
+  const abs = Math.abs(kg)
+  if (abs >= 500) return (kg < 0 ? '-' : '') + parseFloat((abs / 1000).toFixed(3)) + ' т'
+  return Math.round(kg) + ' кг'
+}
+
 const EMPTY_FORM = { name: '', address: '', total_capacity: '', current_load: '' }
 
 export default function WarehousesTab() {
@@ -54,6 +60,16 @@ export default function WarehousesTab() {
   const [saving,       setSaving]       = useState(false)
   const [error,        setError]        = useState('')
   const [deleteConfirm,setDeleteConfirm]= useState(null)
+
+  const [loadModal,    setLoadModal]   = useState(null)   // { wh } | null
+  const [loadForm,     setLoadForm]    = useState({ action: 'manual', weight_change: '', note: '' })
+  const [loadSaving,   setLoadSaving]  = useState(false)
+  const [loadError,    setLoadError]   = useState('')
+
+  const [editLogModal, setEditLogModal] = useState(null)  // { log, warehouseId } | null
+  const [editLogForm,  setEditLogForm]  = useState({ action: 'manual', weight_change: '', note: '' })
+  const [editLogSaving,setEditLogSaving]= useState(false)
+  const [editLogError, setEditLogError] = useState('')
 
   const [selectedWh,   setSelectedWh]  = useState(null)   // склад для логов
   const [logs,         setLogs]        = useState([])
@@ -108,7 +124,13 @@ export default function WarehousesTab() {
   const load = useCallback(() => {
     setLoading(true)
     api.get('/warehouses')
-      .then(({ data }) => setWarehouses(Array.isArray(data) ? data : []))
+      .then(({ data }) => {
+        const list = Array.isArray(data) ? data : []
+        setWarehouses(list)
+        // Синхронизируем selectedWh и loadModal.wh со свежими данными
+        setSelectedWh(prev => prev ? (list.find(w => w.id === prev.id) ?? prev) : null)
+        setLoadModal(prev => prev ? { ...prev, wh: list.find(w => w.id === prev.wh.id) ?? prev.wh } : null)
+      })
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
@@ -156,7 +178,7 @@ export default function WarehousesTab() {
       const marker = L.marker([wh.latitude, wh.longitude], { icon })
         .addTo(mapInst.current)
         .bindTooltip(
-          `<b>${wh.name}</b><br>Загружено: ${wh.current_load} из ${wh.total_capacity} т (${wh.load_percent}%)`,
+          `<b>${wh.name}</b><br>Загружено: ${wh.current_load} т из ${wh.total_capacity} т (${wh.load_percent}%)`,
           { sticky: true }
         )
         .on('click', () => {
@@ -220,6 +242,64 @@ export default function WarehousesTab() {
     setPendingCoord(null)
     setDeleteConfirm(null)
     if (tempMarker.current) { tempMarker.current.remove(); tempMarker.current = null }
+  }
+
+  const openLoadModal = (wh) => {
+    setLoadForm({ action: 'manual', weight_change: '', note: '' })
+    setLoadError('')
+    setLoadModal({ wh })
+  }
+
+  const handleManualLoad = async () => {
+    const wc = parseFloat(loadForm.weight_change)
+    if (!loadForm.weight_change || isNaN(wc) || wc === 0) {
+      setLoadError('Введите ненулевое изменение веса')
+      return
+    }
+    setLoadSaving(true)
+    setLoadError('')
+    try {
+      await api.post(`/warehouses/${loadModal.wh.id}/update-load`, {
+        action:        loadForm.action,
+        weight_change: wc / 1000,   // кг → т для backend
+        note:          loadForm.note || null,
+      })
+      load()
+      if (selectedWh?.id === loadModal.wh.id) openLogs(loadModal.wh)
+      setLoadModal(null)
+    } catch (err) {
+      setLoadError(err?.response?.data?.message || err?.response?.data?.error || 'Ошибка')
+    }
+    setLoadSaving(false)
+  }
+
+  const openEditLog = (log, warehouseId) => {
+    setEditLogForm({
+      action:        log.action,
+      weight_change: String(Math.round(log.weight_change * 1000)),  // т → кг для отображения
+      note:          log.note || '',
+    })
+    setEditLogError('')
+    setEditLogModal({ log, warehouseId })
+  }
+
+  const handleEditLog = async () => {
+    const wc = parseFloat(editLogForm.weight_change)
+    if (isNaN(wc)) { setEditLogError('Введите корректное число'); return }
+    setEditLogSaving(true)
+    setEditLogError('')
+    try {
+      const { data } = await api.patch(
+        `/warehouses/${editLogModal.warehouseId}/logs/${editLogModal.log.id}`,
+        { action: editLogForm.action, note: editLogForm.note || null, weight_change: wc / 1000 }  // кг → т
+      )
+      setLogs(prev => prev.map(l => l.id === data.id ? { ...l, ...data } : l))
+      load()
+      setEditLogModal(null)
+    } catch (err) {
+      setEditLogError(err?.response?.data?.message || err?.response?.data?.error || 'Ошибка')
+    }
+    setEditLogSaving(false)
   }
 
   const openLogs = async (wh) => {
@@ -334,11 +414,11 @@ export default function WarehousesTab() {
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontFamily: 'var(--font-mono)', color: 'rgba(255,255,255,0.4)' }}>
-                  <span>{wh.current_load} / {wh.total_capacity} т</span>
+                  <span>{wh.current_load} т / {wh.total_capacity} т</span>
                   <span style={{ color }}>{pct}%</span>
                 </div>
 
-                <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
+                <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
                   {isAdmin && (
                     <Btn kind="ghost" size="sm" icon={<Icons.Edit size={12}/>} onClick={(e) => {
                       e.stopPropagation()
@@ -366,7 +446,12 @@ export default function WarehousesTab() {
               {filteredLogs.length} записей
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            {isAdmin && selectedWh && (
+              <Btn size="sm" icon={<Icons.Bolt size={13}/>} onClick={() => openLoadModal(selectedWh)}>
+                Корректировка
+              </Btn>
+            )}
             {/* Фильтр по складу */}
             <select
               value={logWhFilter}
@@ -408,8 +493,8 @@ export default function WarehousesTab() {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, fontFamily: 'var(--font-body)' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                  {['Дата', 'Операция', 'Изменение', 'До → После', 'Заказ', 'Фура', 'Водитель', 'Примечание'].map(h => (
-                    <th key={h} style={{ padding: '10px 16px', textAlign: 'left', fontSize: 9, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)' }}>{h}</th>
+                  {['Дата', 'Операция', 'Изменение', 'До → После', 'Заказ', 'Фура', 'Водитель', 'Примечание', ...(isAdmin ? [''] : [])].map((h, i) => (
+                    <th key={i} style={{ padding: '10px 16px', textAlign: 'left', fontSize: 9, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -440,7 +525,7 @@ export default function WarehousesTab() {
                         </span>
                       </td>
                       <td style={{ padding: '12px 16px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: positive ? '#12B76A' : '#F04438' }}>
-                        {positive ? '+' : ''}{l.weight_change} т
+                        {positive ? '+' : ''}{fmtWeight(l.weight_change * 1000)}
                       </td>
                       <td style={{ padding: '12px 16px', fontFamily: 'var(--font-mono)', color: 'rgba(255,255,255,0.55)' }}>
                         {l.load_before} → {l.load_after}
@@ -459,6 +544,19 @@ export default function WarehousesTab() {
                       <td style={{ padding: '12px 16px', color: 'rgba(255,255,255,0.4)', maxWidth: 200 }}>
                         {l.note || '—'}
                       </td>
+                      {isAdmin && (
+                        <td style={{ padding: '12px 16px' }}>
+                          <button
+                            onClick={() => openEditLog(l, selectedWh.id)}
+                            title="Редактировать запись"
+                            style={{ background: 'none', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, color: 'rgba(255,255,255,0.4)', cursor: 'pointer', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, transition: 'all 0.15s' }}
+                            onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(240,165,0,0.4)'; e.currentTarget.style.color = 'var(--gold)' }}
+                            onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = 'rgba(255,255,255,0.4)' }}
+                          >
+                            <Icons.Edit size={11}/> Ред.
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   )
                 })}
@@ -467,6 +565,209 @@ export default function WarehousesTab() {
           </div>
         )}
       </Card>
+
+      {/* Модалка редактирования записи лога */}
+      {editLogModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }} onClick={() => setEditLogModal(null)}>
+          <div style={{ background: 'var(--navy-2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: 28, width: 420, maxWidth: '100%' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <div>
+                <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 20, letterSpacing: 1, marginBottom: 2 }}>Редактировать запись</h3>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', fontFamily: 'var(--font-mono)' }}>
+                  #{editLogModal.log.id} · {new Date(editLogModal.log.created_at).toLocaleString('ru', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' })}
+                </div>
+              </div>
+              <button onClick={() => setEditLogModal(null)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer' }}>
+                <Icons.X size={18}/>
+              </button>
+            </div>
+
+            {/* Тип операции */}
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>Тип операции</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 6 }}>
+                {[
+                  { value: 'load',           label: 'Загрузка',       color: '#12B76A' },
+                  { value: 'unload',         label: 'Разгрузка',      color: '#F04438' },
+                  { value: 'courier_pickup', label: 'Курьер',         color: '#63B3ED' },
+                  { value: 'manual',         label: 'Ручное',         color: 'var(--gold)' },
+                ].map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setEditLogForm(f => ({ ...f, action: opt.value }))}
+                    style={{
+                      padding: '8px 4px', borderRadius: 8, cursor: 'pointer', transition: 'all 0.15s',
+                      border: editLogForm.action === opt.value ? `1px solid ${opt.color}66` : '1px solid rgba(255,255,255,0.08)',
+                      background: editLogForm.action === opt.value ? `${opt.color}18` : 'rgba(255,255,255,0.03)',
+                      color: editLogForm.action === opt.value ? opt.color : 'rgba(255,255,255,0.5)',
+                      fontSize: 11, fontWeight: 600, textAlign: 'center',
+                    }}
+                  >{opt.label}</button>
+                ))}
+              </div>
+            </div>
+
+            {/* Изменение веса */}
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>Изменение, кг</div>
+              <input
+                type="number" step="1"
+                value={editLogForm.weight_change}
+                onChange={e => setEditLogForm(f => ({ ...f, weight_change: e.target.value }))}
+                style={{ width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, padding: '10px 14px', color: 'white', fontSize: 14, fontFamily: 'var(--font-mono)', outline: 'none' }}
+              />
+              <div style={{ marginTop: 5, fontSize: 11, fontFamily: 'var(--font-mono)', color: 'rgba(255,255,255,0.3)' }}>
+                Было: <span style={{ color: 'rgba(255,255,255,0.6)' }}>{editLogModal.log.weight_change > 0 ? '+' : ''}{fmtWeight(editLogModal.log.weight_change * 1000)}</span>
+                &nbsp;·&nbsp; До → После было: <span style={{ color: 'rgba(255,255,255,0.6)' }}>{editLogModal.log.load_before} т → {editLogModal.log.load_after} т</span>
+              </div>
+            </div>
+
+            {/* Примечание */}
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>Примечание</div>
+              <textarea
+                value={editLogForm.note}
+                onChange={e => setEditLogForm(f => ({ ...f, note: e.target.value }))}
+                rows={2}
+                placeholder="Причина изменения..."
+                style={{ width: '100%', boxSizing: 'border-box', resize: 'vertical', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, padding: '10px 14px', color: 'white', fontSize: 13, fontFamily: 'var(--font-body)', outline: 'none' }}
+              />
+            </div>
+
+            {editLogError && (
+              <div style={{ marginBottom: 14, fontSize: 12, color: 'var(--red)', padding: '8px 12px', background: 'rgba(240,68,56,0.08)', borderRadius: 6, border: '1px solid rgba(240,68,56,0.2)' }}>
+                {editLogError}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <Btn kind="ghost" onClick={() => setEditLogModal(null)}>Отмена</Btn>
+              <Btn onClick={handleEditLog} disabled={editLogSaving} icon={<Icons.Check size={14}/>}>
+                {editLogSaving ? 'Сохраняем...' : 'Сохранить'}
+              </Btn>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Модалка ручной корректировки загрузки */}
+      {loadModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }} onClick={() => setLoadModal(null)}>
+          <div style={{ background: 'var(--navy-2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: 28, width: 420, maxWidth: '100%' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <div>
+                <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 20, letterSpacing: 1, marginBottom: 2 }}>
+                  Корректировка загрузки
+                </h3>
+                <div style={{ fontSize: 12, color: 'var(--gold)', fontFamily: 'var(--font-mono)' }}>{loadModal.wh.name}</div>
+              </div>
+              <button onClick={() => setLoadModal(null)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer' }}>
+                <Icons.X size={18}/>
+              </button>
+            </div>
+
+            {/* Текущее состояние */}
+            <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+              {[
+                { label: 'Сейчас', value: `${loadModal.wh.current_load ?? 0} т`, color: LOAD_COLOR(loadModal.wh.load_percent ?? 0) },
+                { label: 'Вместимость', value: `${loadModal.wh.total_capacity ?? '—'} т`, color: 'rgba(255,255,255,0.5)' },
+                { label: 'Загружено', value: `${loadModal.wh.load_percent ?? 0}%`, color: LOAD_COLOR(loadModal.wh.load_percent ?? 0) },
+              ].map(item => (
+                <div key={item.label} style={{ flex: 1, background: 'rgba(255,255,255,0.04)', borderRadius: 8, padding: '10px 12px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>{item.label}</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: item.color, fontFamily: 'var(--font-mono)' }}>{item.value}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Тип операции */}
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>Тип операции</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                {[
+                  { value: 'load',    label: 'Загрузка',    hint: '+ вес', color: '#12B76A' },
+                  { value: 'unload',  label: 'Разгрузка',   hint: '− вес', color: '#F04438' },
+                  { value: 'manual',  label: 'Ручное',       hint: '± вес', color: 'var(--gold)' },
+                ].map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setLoadForm(f => ({ ...f, action: opt.value }))}
+                    style={{
+                      padding: '10px 8px', borderRadius: 8, cursor: 'pointer', transition: 'all 0.15s',
+                      border: loadForm.action === opt.value ? `1px solid ${opt.color}66` : '1px solid rgba(255,255,255,0.08)',
+                      background: loadForm.action === opt.value ? `${opt.color}18` : 'rgba(255,255,255,0.03)',
+                      color: loadForm.action === opt.value ? opt.color : 'rgba(255,255,255,0.5)',
+                      textAlign: 'center',
+                    }}
+                  >
+                    <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 2 }}>{opt.label}</div>
+                    <div style={{ fontSize: 10, opacity: 0.7, fontFamily: 'var(--font-mono)' }}>{opt.hint}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Изменение веса */}
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
+                Изменение, кг{loadForm.action === 'unload' ? ' (введите отрицательное)' : ''}
+              </div>
+              <input
+                type="number"
+                step="1"
+                value={loadForm.weight_change}
+                onChange={e => setLoadForm(f => ({ ...f, weight_change: e.target.value }))}
+                placeholder={loadForm.action === 'unload' ? '-500' : '500'}
+                style={{
+                  width: '100%', boxSizing: 'border-box',
+                  background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)',
+                  borderRadius: 8, padding: '10px 14px', color: 'white', fontSize: 14,
+                  fontFamily: 'var(--font-mono)', outline: 'none',
+                }}
+              />
+              {loadForm.weight_change && !isNaN(parseFloat(loadForm.weight_change)) && (
+                <div style={{ marginTop: 6, fontSize: 11, fontFamily: 'var(--font-mono)', color: 'rgba(255,255,255,0.4)' }}>
+                  Результат:&nbsp;
+                  <span style={{ color: 'white', fontWeight: 600 }}>
+                    {Math.max(0, loadModal.wh.current_load + parseFloat(loadForm.weight_change) / 1000).toFixed(3)} т
+                  </span>
+                  &nbsp;из {loadModal.wh.total_capacity} т
+                </div>
+              )}
+            </div>
+
+            {/* Примечание */}
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>Примечание (необязательно)</div>
+              <textarea
+                value={loadForm.note}
+                onChange={e => setLoadForm(f => ({ ...f, note: e.target.value }))}
+                placeholder="Причина корректировки..."
+                rows={2}
+                style={{
+                  width: '100%', boxSizing: 'border-box', resize: 'vertical',
+                  background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)',
+                  borderRadius: 8, padding: '10px 14px', color: 'white', fontSize: 13,
+                  fontFamily: 'var(--font-body)', outline: 'none',
+                }}
+              />
+            </div>
+
+            {loadError && (
+              <div style={{ marginBottom: 14, fontSize: 12, color: 'var(--red)', padding: '8px 12px', background: 'rgba(240,68,56,0.08)', borderRadius: 6, border: '1px solid rgba(240,68,56,0.2)' }}>
+                {loadError}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <Btn kind="ghost" onClick={() => setLoadModal(null)}>Отмена</Btn>
+              <Btn onClick={handleManualLoad} disabled={loadSaving} icon={<Icons.Check size={14}/>}>
+                {loadSaving ? 'Сохраняем...' : 'Применить'}
+              </Btn>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Модалка создания/редактирования */}
       {modal && (

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\BlockAppeal;
+use App\Models\Driver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
@@ -85,6 +86,20 @@ class UserController extends Controller
             $user->update(['role' => $request->role, 'warehouse_id' => $request->warehouse_id]);
         } else {
             $user->update(['role' => $request->role, 'warehouse_id' => null]);
+        }
+
+        // Авто-создать Driver профиль при назначении роли driver
+        if ($request->role === 'driver') {
+            Driver::firstOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'name'           => $user->name,
+                    'phone'          => $user->phone ?? '',
+                    'license_number' => '—',
+                    'type'           => 'staff',
+                    'is_available'   => true,
+                ]
+            );
         }
 
         return response()->json($this->userData($user->fresh()));

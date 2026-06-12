@@ -53,6 +53,15 @@ export default function LandingPage() {
               {label}
             </a>
           ))}
+          <Link to="/track"
+            style={{ padding:'8px 15px', fontSize:11, fontWeight:700, letterSpacing:'0.07em', textTransform:'uppercase', color:'rgba(240,165,0,0.7)', textDecoration:'none', transition:'color 0.2s', display:'flex', alignItems:'center', gap:5 }}
+            onMouseEnter={e => e.currentTarget.style.color='var(--gold)'}
+            onMouseLeave={e => e.currentTarget.style.color='rgba(240,165,0,0.7)'}>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+            </svg>
+            Отследить
+          </Link>
         </div>
 
         <div style={{ display:'flex', alignItems:'center', gap:10, flexShrink:0 }}>

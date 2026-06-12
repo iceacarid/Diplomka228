@@ -91,6 +91,41 @@ class WarehouseController extends Controller
         return response()->json($this->warehouseData($warehouse));
     }
 
+    public function updateLog(Request $request, Warehouse $warehouse, WarehouseLog $log)
+    {
+        if ($request->user()->role !== 'admin') {
+            return response()->json(['error' => 'Только администратор.'], 403);
+        }
+        if ($log->warehouse_id !== $warehouse->id) {
+            return response()->json(['error' => 'Лог не принадлежит складу.'], 422);
+        }
+
+        $data = $request->validate([
+            'action'        => 'sometimes|in:load,unload,manual,courier_pickup',
+            'note'          => 'nullable|string|max:500',
+            'weight_change' => 'sometimes|numeric',
+        ]);
+
+        // Если изменился weight_change — пересчитываем current_load склада
+        if (isset($data['weight_change']) && $data['weight_change'] != $log->weight_change) {
+            $delta = $data['weight_change'] - $log->weight_change;
+            $warehouse->current_load = max(0, $warehouse->current_load + $delta);
+            $warehouse->save();
+            $data['load_after'] = $log->load_before + $data['weight_change'];
+        }
+
+        $log->update($data);
+
+        return response()->json([
+            'id'            => $log->id,
+            'action'        => $log->action,
+            'note'          => $log->note,
+            'weight_change' => $log->weight_change,
+            'load_before'   => $log->load_before,
+            'load_after'    => $log->load_after,
+        ]);
+    }
+
     public function logs(Request $request, Warehouse $warehouse)
     {
         $query = $warehouse->logs()

@@ -125,8 +125,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Склады (manager/admin)
     Route::apiResource('warehouses', WarehouseController::class);
-    Route::post('warehouses/{warehouse}/update-load', [WarehouseController::class, 'updateLoad']);
-    Route::get('warehouses/{warehouse}/logs',         [WarehouseController::class, 'logs']);
+    Route::post('warehouses/{warehouse}/update-load',   [WarehouseController::class, 'updateLoad']);
+    Route::get('warehouses/{warehouse}/logs',            [WarehouseController::class, 'logs']);
+    Route::patch('warehouses/{warehouse}/logs/{log}',    [WarehouseController::class, 'updateLog']);
 
     // Курьеры (admin)
     Route::get('admin/couriers',                  [AdminCourierController::class, 'index']);

@@ -34,6 +34,7 @@ const TYPE_MAP = {
 export default function DriversTab() {
   const [drivers,      setDrivers]      = useState([])
   const [activeTrips,  setActiveTrips]  = useState([])
+  const [trucks,       setTrucks]       = useState([])
   const [loading,      setLoading]      = useState(true)
   const [showForm,     setShowForm]     = useState(false)
   const [editing,      setEditing]      = useState(null)
@@ -45,12 +46,14 @@ export default function DriversTab() {
   const load = async () => {
     setLoading(true)
     try {
-      const [driversRes, tripsRes] = await Promise.allSettled([
+      const [driversRes, tripsRes, trucksRes] = await Promise.allSettled([
         api.get('/drivers'),
         api.get('/trips/active-trucks'),
+        api.get('/trucks'),
       ])
       if (driversRes.status === 'fulfilled') setDrivers(driversRes.value.data)
       if (tripsRes.status === 'fulfilled') setActiveTrips(tripsRes.value.data)
+      if (trucksRes.status === 'fulfilled') setTrucks(Array.isArray(trucksRes.value.data) ? trucksRes.value.data : [])
     } catch {}
     setLoading(false)
   }
@@ -133,6 +136,7 @@ export default function DriversTab() {
                 onToggleMap={() => setExpandedMap(prev => prev === d.id ? null : d.id)}
                 onEdit={() => { setEditing(d); setShowForm(true) }}
                 onDelete={() => handleDelete(d.id)}
+                trucks={trucks}
               />
             ))}
           </div>
@@ -140,15 +144,14 @@ export default function DriversTab() {
       </div>
 
       {showForm && (
-        <DriverForm initial={editing} onClose={() => setShowForm(false)} onSaved={load} />
-
+        <DriverForm initial={editing} trucks={trucks} onClose={() => setShowForm(false)} onSaved={load} />
       )}
     </div>
   )
 }
 
 // ─── Driver Card ──────────────────────────────────────────────────────────────
-function DriverCard({ driver: d, activeTrip, expanded, onToggleMap, onEdit, onDelete }) {
+function DriverCard({ driver: d, activeTrip, expanded, onToggleMap, onEdit, onDelete, trucks }) {
   const [tripDetail, setTripDetail] = useState(null)
 
   useEffect(() => {
@@ -171,8 +174,18 @@ function DriverCard({ driver: d, activeTrip, expanded, onToggleMap, onEdit, onDe
         </div>
         <StatusPill status={d.is_available ? 'available' : 'busy'} map={AVAIL_MAP} />
       </div>
-      <div style={{ marginBottom: activeTrip ? 12 : 16 }}>
+      <div style={{ marginBottom: activeTrip ? 12 : 16, display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
         <StatusPill status={d.type} map={TYPE_MAP} />
+        {(!d.trucks || d.trucks.length === 0) && (
+          <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 20, background: 'rgba(247,144,9,0.12)', color: '#F79009', border: '1px solid rgba(247,144,9,0.25)' }}>
+            Без машины
+          </span>
+        )}
+        {d.trucks && d.trucks.length > 0 && (
+          <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'rgba(255,255,255,0.4)' }}>
+            {d.trucks.map(t => t.plate_number).join(', ')}
+          </span>
+        )}
       </div>
 
       {/* Active trip info */}
@@ -379,45 +392,108 @@ function DriverTripMap({ trip }) {
 }
 
 // ─── Driver Form ──────────────────────────────────────────────────────────────
-function DriverForm({ initial, onClose, onSaved }) {
+function DriverForm({ initial, trucks = [], onClose, onSaved }) {
+  const currentTruckId = initial?.trucks?.[0]?.id ?? ''
   const [form, setForm] = useState({
-    name: initial?.name || '',
-    phone: initial?.phone || '',
+    name:           initial?.name || '',
+    phone:          initial?.phone || '',
     license_number: initial?.license_number || '',
-    type: initial?.type || 'staff',
-    is_available: initial?.is_available ?? true,
+    type:           initial?.type || 'staff',
+    is_available:   initial?.is_available ?? true,
   })
-  const [error, setError] = useState('')
+  const [truckId, setTruckId] = useState(String(currentTruckId))
+  const [error,   setError]   = useState('')
   const [loading, setLoading] = useState(false)
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
+
+  // Фуры доступные для назначения: не занятые или уже назначенные этому водителю
+  const availableTrucks = trucks.filter(t =>
+    !t.driver_id || t.driver_id === initial?.id || String(t.id) === truckId
+  )
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
     setLoading(true)
     try {
-      if (initial) await api.put(`/drivers/${initial.id}`, form)
-      else await api.post('/drivers', form)
+      let driverId = initial?.id
+      if (initial) {
+        await api.put(`/drivers/${initial.id}`, form)
+      } else {
+        const { data } = await api.post('/drivers', form)
+        driverId = data.id
+      }
+
+      // Назначить фуру водителю
+      const newTruckId = truckId ? parseInt(truckId) : null
+      if (newTruckId && newTruckId !== currentTruckId) {
+        await api.put(`/trucks/${newTruckId}`, { driver_id: driverId })
+      }
+      // Снять фуру если выбрано "Без машины" и раньше была
+      if (!newTruckId && currentTruckId) {
+        await api.put(`/trucks/${currentTruckId}`, { driver_id: null })
+      }
+
       onSaved()
       onClose()
     } catch (err) {
-      setError(err.response?.data?.message || 'Ошибка')
+      setError(err.response?.data?.message || err.response?.data?.errors
+        ? Object.values(err.response.data.errors || {}).flat().join(', ')
+        : 'Ошибка')
     }
     setLoading(false)
   }
 
   return (
-    <Modal onClose={onClose} title={initial ? 'Изменить водителя' : 'Новый водитель'} maxWidth={440}>
+    <Modal onClose={onClose} title={initial ? 'Изменить водителя' : 'Новый водитель'} maxWidth={460}>
       {error && <Alert type="error">{error}</Alert>}
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <Field label="ФИО" required value={form.name} onChange={set('name')} />
         <Field label="Телефон" required value={form.phone} onChange={set('phone')} />
         <Field label="Номер прав" required value={form.license_number} onChange={set('license_number')} />
-        <Select label="Тип" value={form.type} onChange={set('type')}>
-          <option value="staff">Штатный</option>
-          <option value="hired">Наёмный</option>
-        </Select>
+
+        {/* Тип: штатный / наёмный */}
+        <div>
+          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>Тип водителя</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            {[
+              { value: 'staff',  label: 'Штатный',  color: 'var(--blue)' },
+              { value: 'hired',  label: 'Наёмный',  color: 'var(--violet)' },
+            ].map(opt => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setForm(f => ({ ...f, type: opt.value }))}
+                style={{
+                  padding: '10px', borderRadius: 8, cursor: 'pointer', transition: 'all 0.15s',
+                  border: form.type === opt.value ? `1px solid ${opt.color}66` : '1px solid rgba(255,255,255,0.08)',
+                  background: form.type === opt.value ? `${opt.color}18` : 'rgba(255,255,255,0.03)',
+                  color: form.type === opt.value ? opt.color : 'rgba(255,255,255,0.5)',
+                  fontSize: 13, fontWeight: 600, fontFamily: 'var(--font-body)',
+                }}
+              >{opt.label}</button>
+            ))}
+          </div>
+        </div>
+
+        {/* Назначение фуры */}
+        <div>
+          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>Назначенная фура</div>
+          <select
+            value={truckId}
+            onChange={e => setTruckId(e.target.value)}
+            style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, padding: '10px 14px', color: truckId ? 'white' : 'rgba(255,255,255,0.35)', fontSize: 13, fontFamily: 'var(--font-body)', outline: 'none', cursor: 'pointer' }}
+          >
+            <option value="">— Без машины —</option>
+            {availableTrucks.map(t => (
+              <option key={t.id} value={String(t.id)}>
+                {t.plate_number} · {t.brand} {t.model} ({t.capacity_weight} т)
+              </option>
+            ))}
+          </select>
+        </div>
+
         <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 13, color: 'rgba(255,255,255,0.7)', fontFamily: 'var(--font-body)' }}>
           <input
             type="checkbox"

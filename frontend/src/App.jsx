@@ -6,6 +6,7 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import DashboardPage from './pages/DashboardPage'
 import CourierDashboard from './pages/CourierDashboard'
 import LandingPage from './pages/LandingPage'
+import TrackingPage from './pages/TrackingPage'
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated, user } = useAuth()
@@ -36,6 +37,8 @@ function AppRoutes() {
       <Route path="/forgot-password" element={<GuestRoute><ForgotPasswordPage /></GuestRoute>} />
       <Route path="/dashboard/*" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
       <Route path="/courier/*" element={<CourierRoute><CourierDashboard /></CourierRoute>} />
+      <Route path="/track" element={<TrackingPage />} />
+      <Route path="/track/:tracking_id" element={<TrackingPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
