@@ -107,12 +107,79 @@ class TwoGisService
 
     /**
      * Маршрут для фуры с учётом ограничений (высота, вес, осевая нагрузка).
-     * Возвращает distance (км), duration (сек) и polyline ([[lon,lat], ...]).
+     * Использует ORS HGV профиль если ключ есть, иначе OSRM.
      */
     public function truckRoute(array $from, array $to, array $truckParams = [], array $waypoints = []): ?array
     {
-        // OSRM — бесплатный роутинг по реальным дорогам без ограничений по расстоянию
+        $orsKey = config('services.ors.key');
+        if ($orsKey) {
+            $result = $this->orsRoute($from, $to, $truckParams, $waypoints, $orsKey);
+            if ($result) return $result;
+        }
         return $this->osrmRoute($from, $to, $waypoints);
+    }
+
+    /**
+     * OpenRouteService HGV routing — учитывает реальные ограничения для грузовиков.
+     */
+    private function orsRoute(array $from, array $to, array $truckParams, array $waypoints, string $apiKey): ?array
+    {
+        $coordinates = [[$from['lon'], $from['lat']]];
+        foreach ($waypoints as $wp) {
+            $coordinates[] = [$wp['lng'] ?? $wp['lon'], $wp['lat']];
+        }
+        $coordinates[] = [$to['lon'], $to['lat']];
+
+        $body = ['coordinates' => $coordinates];
+
+        // Restrictions если переданы параметры фуры
+        $restrictions = array_filter([
+            'height'   => isset($truckParams['height'])    ? (float)$truckParams['height']            : null,
+            'width'    => isset($truckParams['width'])     ? (float)$truckParams['width']             : null,
+            'length'   => isset($truckParams['length'])    ? (float)$truckParams['length']            : null,
+            'weight'   => isset($truckParams['mass'])      ? round($truckParams['mass'] / 1000, 2)    : null,
+            'axleload' => isset($truckParams['axle_load']) ? round($truckParams['axle_load'] / 1000, 2) : null,
+        ], fn($v) => $v !== null && $v > 0);
+
+        if (!empty($restrictions)) {
+            $body['options'] = [
+                'vehicle_type'   => 'hgv',
+                'profile_params' => ['restrictions' => $restrictions],
+            ];
+        }
+
+        try {
+            $res = Http::withoutVerifying()
+                ->withHeaders([
+                    'Authorization' => $apiKey,
+                    'Content-Type'  => 'application/json',
+                    'Accept'        => 'application/json',
+                ])
+                ->timeout(20)
+                ->post('https://api.openrouteservice.org/v2/directions/driving-hgv/geojson', $body);
+
+            if (!$res->successful()) {
+                Log::warning('ORS route error: ' . $res->status(), ['body' => substr($res->body(), 0, 300)]);
+                return null;
+            }
+
+            $feature = $res->json('features.0') ?? null;
+            if (!$feature) return null;
+
+            $geom = $feature['geometry']['coordinates'] ?? [];
+            $summary = $feature['properties']['summary'] ?? [];
+
+            if (empty($geom)) return null;
+
+            return [
+                'distance' => isset($summary['distance']) ? round($summary['distance'] / 1000, 1) : null,
+                'duration' => $summary['duration'] ?? null,
+                'polyline' => $geom,
+            ];
+        } catch (\Exception $e) {
+            Log::error('ORS route exception: ' . $e->getMessage());
+            return null;
+        }
     }
 
     /**

@@ -5,6 +5,7 @@ import { Icons } from '../../components/Icons'
 import { Card, Btn, Alert, PageHeader } from '../../components/ui'
 
 const TWO_GIS_KEY = import.meta.env.VITE_2GIS_KEY || ''
+const ORS_KEY     = import.meta.env.VITE_ORS_KEY || ''
 
 // ─── 2GIS MapGL loader ────────────────────────────────────────────────────────
 function useMapGL() {
@@ -223,10 +224,21 @@ function WarehouseMap({ warehouses, whFrom, whTo, onSelectFrom, onSelectTo, full
       ;(async () => {
         const fallback = [[whFrom.longitude, whFrom.latitude], [whTo.longitude, whTo.latitude]]
         try {
-          const url = `https://router.project-osrm.org/route/v1/driving/${whFrom.longitude},${whFrom.latitude};${whTo.longitude},${whTo.latitude}?overview=full&geometries=geojson`
-          const res  = await fetch(url)
-          const json = await res.json()
-          const coords = json?.routes?.[0]?.geometry?.coordinates
+          let coords = null
+          if (ORS_KEY) {
+            const res = await fetch('https://api.openrouteservice.org/v2/directions/driving-hgv/geojson', {
+              method: 'POST',
+              headers: { 'Authorization': ORS_KEY, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ coordinates: [[whFrom.longitude, whFrom.latitude], [whTo.longitude, whTo.latitude]] }),
+            })
+            const json = await res.json()
+            coords = json?.features?.[0]?.geometry?.coordinates
+          } else {
+            const url = `https://router.project-osrm.org/route/v1/driving/${whFrom.longitude},${whFrom.latitude};${whTo.longitude},${whTo.latitude}?overview=full&geometries=geojson`
+            const res  = await fetch(url)
+            const json = await res.json()
+            coords = json?.routes?.[0]?.geometry?.coordinates
+          }
           if (!cancelled) { drawPoly(coords?.length ? coords : fallback) }
         } catch {
           if (!cancelled) { drawPoly(fallback) }

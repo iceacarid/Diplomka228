@@ -64,4 +64,8 @@ return [
         'auth_key' => env('GIGACHAT_AUTH_KEY'),
     ],
 
+    'ors' => [
+        'key' => env('OpenRouteServiceKey'),
+    ],
+
 ];
