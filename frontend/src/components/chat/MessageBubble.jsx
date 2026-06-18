@@ -84,7 +84,9 @@ export function MessageBubble({ msg, isArchived, canWrite, onFormSubmit, onFormU
   if (isFormCard) {
     return (
       <div style={{ display: 'flex', justifyContent: isMine ? 'flex-end' : 'flex-start', marginBottom: 10 }}>
-        <FormSubmissionCard msg={msg} chatId={chatId} onUpdate={onFormUpdate} />
+        <div style={{ maxWidth: 520, width: '100%' }}>
+          <FormSubmissionCard msg={msg} chatId={chatId} onUpdate={onFormUpdate} />
+        </div>
       </div>
     )
   }

@@ -124,7 +124,7 @@ export function FormSubmissionCard({ msg, chatId, onUpdate }) {
       border:       '1px solid rgba(240,165,0,0.2)',
       borderRadius: 10,
       overflow:     'hidden',
-      maxWidth:     520,
+      width:        '100%',
     }}>
       {/* Header */}
       <div style={{
