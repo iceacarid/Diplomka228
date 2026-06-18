@@ -226,13 +226,23 @@ function WarehouseMap({ warehouses, whFrom, whTo, onSelectFrom, onSelectTo, full
         try {
           let coords = null
           if (ORS_KEY) {
-            const res = await fetch('https://api.openrouteservice.org/v2/directions/driving-hgv/geojson', {
-              method: 'POST',
-              headers: { 'Authorization': ORS_KEY, 'Content-Type': 'application/json' },
-              body: JSON.stringify({ coordinates: [[whFrom.longitude, whFrom.latitude], [whTo.longitude, whTo.latitude]] }),
-            })
-            const json = await res.json()
-            coords = json?.features?.[0]?.geometry?.coordinates
+            try {
+              const res = await fetch('https://api.openrouteservice.org/v2/directions/driving-hgv/geojson', {
+                method: 'POST',
+                headers: { 'Authorization': ORS_KEY, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ coordinates: [[whFrom.longitude, whFrom.latitude], [whTo.longitude, whTo.latitude]] }),
+              })
+              const json = await res.json()
+              coords = json?.features?.[0]?.geometry?.coordinates
+            } catch {}
+          }
+          if (!coords?.length) {
+            try {
+              const url = `https://router.project-osrm.org/route/v1/driving/${whFrom.longitude},${whFrom.latitude};${whTo.longitude},${whTo.latitude}?overview=full&geometries=geojson`
+              const res  = await fetch(url)
+              const json = await res.json()
+              coords = json?.routes?.[0]?.geometry?.coordinates
+            } catch {}
           }
           if (!cancelled) { drawPoly(coords?.length ? coords : fallback) }
         } catch {

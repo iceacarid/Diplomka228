@@ -106,16 +106,17 @@ class TwoGisService
     // ─── Truck Directions API ─────────────────────────────────────────────────
 
     /**
-     * Маршрут для фуры с учётом ограничений (высота, вес, осевая нагрузка) через ORS HGV.
+     * Маршрут для фуры. ORS HGV — первый, OSRM — fallback.
      */
     public function truckRoute(array $from, array $to, array $truckParams = [], array $waypoints = []): ?array
     {
         $orsKey = config('services.ors.key');
-        if (!$orsKey) {
-            Log::warning('ORS: OpenRouteServiceKey not configured');
-            return null;
+        if ($orsKey) {
+            $result = $this->orsRoute($from, $to, $truckParams, $waypoints, $orsKey);
+            if ($result) return $result;
+            Log::warning('ORS failed, falling back to OSRM');
         }
-        return $this->orsRoute($from, $to, $truckParams, $waypoints, $orsKey);
+        return $this->osrmRoute($from, $to, $waypoints);
     }
 
     /**
@@ -180,6 +181,34 @@ class TwoGisService
             ];
         } catch (\Exception $e) {
             Log::error('ORS route exception: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    private function osrmRoute(array $from, array $to, array $waypoints = []): ?array
+    {
+        $coords = "{$from['lon']},{$from['lat']}";
+        foreach ($waypoints as $wp) {
+            $coords .= ";{$wp['lng']},{$wp['lat']}";
+        }
+        $coords .= ";{$to['lon']},{$to['lat']}";
+
+        try {
+            $res = $this->http(20)->get(
+                "https://router.project-osrm.org/route/v1/driving/{$coords}",
+                ['overview' => 'full', 'geometries' => 'geojson']
+            );
+            $route = $res->json('routes.0') ?? null;
+            if (!$route) return null;
+            $geom = $route['geometry']['coordinates'] ?? [];
+            if (empty($geom)) return null;
+            return [
+                'distance' => isset($route['distance']) ? round($route['distance'] / 1000, 1) : null,
+                'duration' => $route['duration'] ?? null,
+                'polyline' => $geom,
+            ];
+        } catch (\Exception $e) {
+            Log::error('OSRM route error: ' . $e->getMessage());
             return null;
         }
     }
