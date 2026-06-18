@@ -141,6 +141,9 @@ class AiController extends Controller
         $planByTruck   = [];
         $usedOrderIds  = [];
 
+        // Отслеживаем накопленный вес/объём по фурам для контроля перегруза
+        $truckLoad = []; // [truck_id => ['weight' => float, 'volume' => float]]
+
         foreach ($aiResult['plan'] as $item) {
             $truck = $trucksById->get($item['truck_id']);
             if (!$truck) continue;
@@ -153,13 +156,30 @@ class AiController extends Controller
                     'orders'        => [],
                     'justification' => '',
                 ];
+                $truckLoad[$tid] = ['weight' => 0.0, 'volume' => 0.0];
             }
 
             foreach ($item['order_ids'] ?? [] as $oid) {
                 $order = $ordersById->get($oid);
-                // Skip unknown IDs, already-used orders, and duplicate assignments
                 if (!$order || in_array($oid, $usedOrderIds)) continue;
+
+                $w = (float) ($order->actual_weight ?? $order->weight ?? 0);
+                $v = (float) ($order->volume ?? 0);
+
+                $capW = (float) $truck->capacity_weight;
+                $capV = (float) ($truck->capacity_volume ?? 0);
+
+                $newW = $truckLoad[$tid]['weight'] + $w;
+                $newV = $truckLoad[$tid]['volume'] + $v;
+
+                // Перегруз → пропускаем (уйдёт в unassigned ниже)
+                $overWeight = $capW > 0 && $newW > $capW;
+                $overVolume = $capV > 0 && $newV > $capV;
+                if ($overWeight || $overVolume) continue;
+
                 $planByTruck[$tid]['orders'][] = $this->orderSummary($order);
+                $truckLoad[$tid]['weight'] = $newW;
+                $truckLoad[$tid]['volume'] = $newV;
                 $usedOrderIds[] = $oid;
             }
 
@@ -174,6 +194,7 @@ class AiController extends Controller
             fn($p) => count($p['orders']) > 0
         ));
 
+        // Unassigned = из ответа GigaChat + те, что мы срезали из-за перегруза
         $unassigned = [];
         foreach ($aiResult['unassigned'] ?? [] as $item) {
             $order = $ordersById->get($item['order_id']);
@@ -182,6 +203,18 @@ class AiController extends Controller
                     'order'  => $this->orderSummary($order),
                     'reason' => $item['reason'] ?? '',
                 ];
+            }
+        }
+        // Добавляем заказы, срезанные из-за перегруза (не вошли в usedOrderIds)
+        foreach ($ordersData as $od) {
+            if (!in_array($od['id'], $usedOrderIds)) {
+                $alreadyListed = collect($unassigned)->contains(fn($u) => $u['order']['id'] === $od['id']);
+                if (!$alreadyListed) {
+                    $unassigned[] = [
+                        'order'  => $od,
+                        'reason' => 'Превышена грузоподъёмность или объём всех доступных фур',
+                    ];
+                }
             }
         }
 
