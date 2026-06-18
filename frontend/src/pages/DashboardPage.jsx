@@ -14,7 +14,6 @@ import UsersTab from './dashboard/UsersTab'
 import ClientHome from './dashboard/ClientHome'
 import ClientOrders from './dashboard/ClientOrders'
 import ClientNewOrder from './dashboard/ClientNewOrder'
-import ClientSupport from './dashboard/ClientSupport'
 import ClientChats from './dashboard/ClientChats'
 import ManagerChats from './dashboard/ManagerChats'
 import ManagerHome from './dashboard/ManagerHome'
@@ -66,7 +65,6 @@ const CLIENT_NAV = [
   { to: '/dashboard/my-orders',   label: 'Мои заявки',   icon: 'Package'  },
   { to: '/dashboard/new-order',   label: 'Новая заявка', icon: 'Plus'     },
   { to: '/dashboard/profile',     label: 'Профиль',      icon: 'Settings' },
-  { to: '/dashboard/support',     label: 'Поддержка',    icon: 'LifeBuoy' },
   { to: '/dashboard/chats',       label: 'Чаты',         icon: 'Chat'     },
 ]
 
@@ -220,7 +218,6 @@ export default function DashboardPage() {
               <Route path="my-orders"  element={<ClientOrders />} />
               <Route path="new-order"  element={<ClientNewOrder />} />
               <Route path="profile"    element={<ProfileTab />} />
-              <Route path="support"    element={<ClientSupport />} />
               <Route path="chats"      element={<ClientChats />} />
               <Route index             element={<ClientHome />} />
             </>

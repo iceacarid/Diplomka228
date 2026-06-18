@@ -173,10 +173,12 @@ export function BotQuestionForm({ onSubmit, disabled, orderData, chatId }) {
   const [deliveryPhone, setDeliveryPhone] = useState('')
 
   const [cargoDesc,    setCargoDesc]    = useState(orderData?.cargo_description || '')
-  const [loaderLoad,   setLoaderLoad]   = useState('no')
-  const [loadFloor,    setLoadFloor]    = useState('')
-  const [loadLift,     setLoadLift]     = useState(false)
-  const [loaderUnload, setLoaderUnload] = useState('no')
+  const [loaderLoad,    setLoaderLoad]    = useState('no')
+  const [loadFloor,     setLoadFloor]     = useState('')
+  const [loadLift,      setLoadLift]      = useState(false)
+  const [loaderUnload,  setLoaderUnload]  = useState('no')
+  const [unloadFloor,   setUnloadFloor]   = useState('')
+  const [unloadLift,    setUnloadLift]    = useState(false)
   const [packaging,    setPackaging]    = useState('')
   const [comment,      setComment]      = useState('')
 
@@ -209,7 +211,9 @@ export function BotQuestionForm({ onSubmit, disabled, orderData, chatId }) {
       loaders_pickup:       loaderLoad,
       loaders_pickup_floor: loaderLoad === 'yes' ? loadFloor : '',
       loaders_pickup_lift:  loaderLoad === 'yes' ? loadLift  : false,
-      loaders_delivery:     loaderUnload,
+      loaders_delivery:       loaderUnload,
+      loaders_delivery_floor: loaderUnload === 'yes' ? unloadFloor : '',
+      loaders_delivery_lift:  loaderUnload === 'yes' ? unloadLift  : false,
       packaging,
       comment,
       // snapshot данных из заявки (для документа)
@@ -359,6 +363,15 @@ export function BotQuestionForm({ onSubmit, disabled, orderData, chatId }) {
         <div style={{ marginBottom: 12 }}>
           <label style={LBL}>Нужны грузчики на выгрузке?</label>
           <YesNo value={loaderUnload} onChange={setLoaderUnload} />
+          {loaderUnload === 'yes' && (
+            <div style={{ marginTop: 8, display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, alignItems: 'center' }}>
+              <input value={unloadFloor} onChange={e => setUnloadFloor(e.target.value)} placeholder="Этаж" style={INP} />
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'rgba(255,255,255,0.55)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                <input type="checkbox" checked={unloadLift} onChange={e => setUnloadLift(e.target.checked)} style={{ accentColor: 'var(--gold)' }} />
+                Есть лифт
+              </label>
+            </div>
+          )}
         </div>
 
         <div style={{ marginBottom: 12 }}>

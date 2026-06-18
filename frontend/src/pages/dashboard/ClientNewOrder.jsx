@@ -23,8 +23,6 @@ export default function ClientNewOrder() {
     cargo_type:        'general',
     cargo_type_custom: '',
     cargo_description: '',
-    floor:         '',
-    has_elevator:  false,
   })
   const [calc, setCalc]         = useState(null)
   const [calcLoading, setCalcL] = useState(false)
@@ -76,11 +74,9 @@ export default function ClientNewOrder() {
     try {
       const { data: order } = await api.post('/orders', {
         ...form,
-        weight:       parseFloat(form.weight),
-        volume:       parseFloat(form.volume) || 0,
-        price:        calc.price,
-        floor:        form.floor ? parseInt(form.floor) : null,
-        has_elevator: form.has_elevator,
+        weight: parseFloat(form.weight),
+        volume: parseFloat(form.volume) || 0,
+        price:  calc.price,
       })
       navigate('/dashboard/chats', { state: { activeChatId: order.chat_id } })
     } catch (err) {
@@ -120,28 +116,6 @@ export default function ClientNewOrder() {
                   <Btn kind="ghost" size="sm" type="button" onClick={() => setMapPicker('dest_address')} icon={<Icons.Pin size={13} />}>
                     Выбрать на карте
                   </Btn>
-                  <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                    <div style={{ flex: 1 }}>
-                      <label style={{ display: 'block', fontSize: 11, color: 'rgba(255,255,255,0.45)', marginBottom: 5, fontWeight: 500 }}>Этаж</label>
-                      <input
-                        type="number"
-                        min="1"
-                        value={form.floor}
-                        onChange={e => setForm(f => ({ ...f, floor: e.target.value }))}
-                        placeholder="1"
-                        style={{ width: '100%', background: 'var(--navy-3)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 6, padding: '9px 12px', color: '#fff', fontSize: 13, fontFamily: 'var(--font-body)', outline: 'none', boxSizing: 'border-box' }}
-                      />
-                    </div>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, color: 'rgba(255,255,255,0.65)', cursor: 'pointer', paddingTop: 20, whiteSpace: 'nowrap' }}>
-                      <input
-                        type="checkbox"
-                        checked={form.has_elevator}
-                        onChange={e => setForm(f => ({ ...f, has_elevator: e.target.checked }))}
-                        style={{ accentColor: 'var(--gold)', width: 15, height: 15 }}
-                      />
-                      Есть лифт
-                    </label>
-                  </div>
                 </div>
               </div>
             </Card>
