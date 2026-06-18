@@ -4,6 +4,26 @@ import api from '../../api/axios'
 import { Icons } from '../../components/Icons'
 import { Card, Btn, Field, Select, Modal, PageHeader, StatusPill, Alert, Loading, Empty } from '../../components/ui'
 
+// Маска госномера RU: А123ВС197 (1 кир.буква, 3 цифры, 2 кир.буквы, 2-3 цифры)
+const LATIN_TO_CYR = { A:'А',B:'В',E:'Е',K:'К',M:'М',H:'Н',O:'О',P:'Р',C:'С',T:'Т',Y:'У',X:'Х' }
+const PLATE_LETTERS = new Set(['А','В','Е','К','М','Н','О','Р','С','Т','У','Х'])
+
+function formatPlate(raw) {
+  const chars = raw.toUpperCase().split('').map(c => LATIN_TO_CYR[c] ?? c)
+  let result = ''
+  for (const c of chars) {
+    const pos = result.length
+    const isLetter = PLATE_LETTERS.has(c)
+    const isDigit  = /\d/.test(c)
+    if (pos === 0 && isLetter)              { result += c; continue }
+    if (pos >= 1 && pos <= 3 && isDigit)   { result += c; continue }
+    if (pos >= 4 && pos <= 5 && isLetter)  { result += c; continue }
+    if (pos >= 6 && pos <= 8 && isDigit)   { result += c; continue }
+    if (pos >= 9) break
+  }
+  return result
+}
+
 const TRUCK_STATUS_MAP = {
   available:   { bg: 'rgba(18,183,106,0.14)',  fg: 'var(--green)', label: 'Свободен' },
   in_transit:  { bg: 'rgba(240,165,0,0.14)',   fg: 'var(--gold)',  label: 'В рейсе' },
@@ -209,7 +229,22 @@ function TruckForm({ initial, drivers, onClose, onSaved }) {
     <Modal onClose={onClose} title={initial ? 'Изменить транспорт' : 'Новый транспорт'} maxWidth={460}>
       {error && <Alert type="error">{error}</Alert>}
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <Field label="Госномер" required value={form.plate_number} onChange={set('plate_number')} />
+        <div>
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,0.7)', marginBottom: 6 }}>
+            Госномер <span style={{ color: 'var(--red)' }}>*</span>
+          </label>
+          <input
+            required
+            value={form.plate_number}
+            onChange={e => setForm(f => ({ ...f, plate_number: formatPlate(e.target.value) }))}
+            placeholder="А123ВС197"
+            maxLength={9}
+            style={{ width: '100%', background: 'var(--navy-3)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 6, padding: '9px 12px', color: '#fff', fontSize: 15, fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', outline: 'none', boxSizing: 'border-box', textTransform: 'uppercase' }}
+          />
+          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 4 }}>
+            Формат: А123ВС197 · латинские буквы конвертируются автоматически
+          </div>
+        </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           <Field label="Марка" required value={form.brand} onChange={set('brand')} />
           <Field label="Модель" required value={form.model} onChange={set('model')} />
