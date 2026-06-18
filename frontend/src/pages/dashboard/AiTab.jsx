@@ -305,6 +305,7 @@ export default function AiTab() {
   const [submitting, setSubmitting] = useState(false)
   const [error,      setError]      = useState('')
   const [success,    setSuccess]    = useState('')
+  const [unassignedModal, setUnassignedModal] = useState(null)
   const [mapFullscreen,     setMapFullscreen]     = useState(false)
   const [createdTrip,       setCreatedTrip]       = useState(null)
   const [activeTrips,       setActiveTrips]       = useState([])
@@ -379,6 +380,13 @@ export default function AiTab() {
         if (sugTruck) setSelectedTruck(sugTruck)
       } else {
         setError('AI не смог предложить план — выберите заказы вручную')
+      }
+      // Show popup if there are unassigned orders
+      if ((data.unassigned || []).length > 0) {
+        setUnassignedModal({
+          orders:         data.unassigned,
+          recommendation: data.recommendation || null,
+        })
       }
     } catch (e) {
       setError(e.response?.data?.error || 'Ошибка AI запроса')
@@ -768,7 +776,90 @@ export default function AiTab() {
     {createdTrip && (
       <TripRouteModal trip={createdTrip} onClose={handleTripModalClose} warehouses={warehouses} />
     )}
+    {unassignedModal && (
+      <UnassignedModal
+        orders={unassignedModal.orders}
+        recommendation={unassignedModal.recommendation}
+        onClose={() => setUnassignedModal(null)}
+      />
+    )}
     </>
+  )
+}
+
+// ─── Unassigned Modal ────────────────────────────────────────────────────────
+function UnassignedModal({ orders, recommendation, onClose }) {
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div style={{ background: 'var(--navy-2)', border: '1px solid rgba(240,165,0,0.25)', borderRadius: 12, width: '100%', maxWidth: 560, maxHeight: '80vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+
+        {/* Header */}
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+            <Icons.AlertTriangle size={16} style={{ color: '#f79009' }} />
+            <span style={{ fontWeight: 700, fontSize: 15, color: 'white' }}>
+              Нераспределённые грузы · {orders.length}
+            </span>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', padding: 4 }}>
+            <Icons.X size={16} />
+          </button>
+        </div>
+
+        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+          {/* Список заказов с причинами */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {orders.map((item, i) => (
+              <div key={i} style={{ background: 'rgba(247,144,9,0.06)', border: '1px solid rgba(247,144,9,0.2)', borderRadius: 8, padding: '10px 14px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--gold)', fontWeight: 700 }}>
+                    {item.order?.tracking_id}
+                  </span>
+                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)' }}>
+                    {item.order?.weight} кг
+                  </span>
+                </div>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginBottom: item.reason ? 5 : 0 }}>
+                  {item.order?.origin_address && `${shortAddr(item.order.origin_address)} → ${shortAddr(item.order.dest_address)}`}
+                </div>
+                {item.reason && (
+                  <div style={{ fontSize: 11, color: '#f79009', display: 'flex', gap: 5 }}>
+                    <span style={{ opacity: 0.6 }}>Причина:</span> {item.reason}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Рекомендации GigaChat */}
+          {recommendation ? (
+            <div style={{ background: 'rgba(139,92,246,0.07)', border: '1px solid rgba(139,92,246,0.25)', borderRadius: 10, padding: '14px 16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
+                <Icons.Sparkles size={13} style={{ color: '#8b5cf6' }} />
+                <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#8b5cf6' }}>
+                  Рекомендации GigaChat AI
+                </span>
+              </div>
+              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', lineHeight: 1.65, whiteSpace: 'pre-wrap' }}>
+                {recommendation}
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'rgba(255,255,255,0.3)', fontSize: 12 }}>
+              <Icons.Sparkles size={12} /> GigaChat не дал рекомендаций
+            </div>
+          )}
+        </div>
+
+        <div style={{ padding: '12px 20px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+          <button onClick={onClose} style={{ width: '100%', padding: '9px 0', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 7, color: 'rgba(255,255,255,0.7)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+            Понятно
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }
 

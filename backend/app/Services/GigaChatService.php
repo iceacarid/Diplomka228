@@ -120,6 +120,28 @@ class GigaChatService
     }
 
     /**
+     * Ask GigaChat for recommendations on orders that didn't fit any truck.
+     */
+    public function recommendForUnassigned(array $unassignedOrders, array $trucks): ?string
+    {
+        $ordersJson = json_encode($unassignedOrders, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        $trucksJson = json_encode($trucks,           JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+
+        $system = 'Ты — опытный логист-консультант. '
+                . 'Для каждого нераспределённого груза дай конкретную практическую рекомендацию. '
+                . 'Предлагай реальные решения: газель / малотоннажный транспорт, разбивку партии на части, '
+                . 'консолидацию с попутным грузом, перенос на следующий рейс, изменение маршрута через другой склад. '
+                . 'Отвечай на русском, кратко и конкретно, без воды. '
+                . 'Формат: для каждого груза одна строка "• [tracking_id]: [рекомендация]".';
+
+        $user = "Нераспределённые грузы:\n{$ordersJson}\n\n"
+              . "Доступные фуры (для контекста вместимости):\n{$trucksJson}\n\n"
+              . "Дай рекомендацию для каждого нераспределённого груза.";
+
+        return $this->chat($system, $user);
+    }
+
+    /**
      * Ask GigaChat to distribute orders across trucks.
      * Returns decoded array with keys: plan[], unassigned[]
      * or null on failure.

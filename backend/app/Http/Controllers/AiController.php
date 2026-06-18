@@ -186,15 +186,25 @@ class AiController extends Controller
         }
 
         $assignedCount = array_sum(array_map(fn($p) => count($p['orders']), $enrichedPlan));
+
+        // Если есть нераспределённые — запрашиваем рекомендации у GigaChat
+        $recommendation = null;
+        if (!empty($unassigned)) {
+            $unassignedForAi = array_map(fn($u) => $u['order'], $unassigned);
+            $recommendation  = $this->gigaChatService->recommendForUnassigned($unassignedForAi, $trucksData);
+        }
+
         AiRequest::create([
             'manager_id'    => $request->user()->id,
             'request_text'  => "Распределение: фур {$trucks->count()}, заказов {$orders->count()}",
-            'response_text' => "Назначено {$assignedCount}/{$orders->count()} заказов по " . count($enrichedPlan) . " фурам",
+            'response_text' => "Назначено {$assignedCount}/{$orders->count()} заказов по " . count($enrichedPlan) . " фурам"
+                             . (!empty($unassigned) ? ', нераспределено: ' . count($unassigned) : ''),
         ]);
 
         return response()->json([
-            'plan'       => $enrichedPlan,
-            'unassigned' => $unassigned,
+            'plan'           => $enrichedPlan,
+            'unassigned'     => $unassigned,
+            'recommendation' => $recommendation,
         ]);
     }
 
