@@ -306,6 +306,7 @@ export default function AiTab() {
   const [error,      setError]      = useState('')
   const [success,    setSuccess]    = useState('')
   const [unassignedModal, setUnassignedModal] = useState(null)
+  const [confirmTrip,     setConfirmTrip]     = useState(false)
   const [mapFullscreen,     setMapFullscreen]     = useState(false)
   const [createdTrip,       setCreatedTrip]       = useState(null)
   const [activeTrips,       setActiveTrips]       = useState([])
@@ -752,7 +753,7 @@ export default function AiTab() {
               )}
 
               <button
-                onClick={handleCreateTrip}
+                onClick={() => setConfirmTrip(true)}
                 disabled={!canCreate || submitting || selTruckLoad?.wOver || selTruckLoad?.vOver}
                 style={{
                   padding: '12px 0',
@@ -782,6 +783,37 @@ export default function AiTab() {
         recommendation={unassignedModal.recommendation}
         onClose={() => setUnassignedModal(null)}
       />
+    )}
+    {confirmTrip && (
+      <div style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <div style={{ background: 'var(--navy-2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, width: '100%', maxWidth: 400, padding: 28 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+            <Icons.Truck size={20} style={{ color: 'var(--gold)' }} />
+            <span style={{ fontWeight: 700, fontSize: 17, color: 'white' }}>Подтвердить рейс</span>
+          </div>
+          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', lineHeight: 1.6, marginBottom: 20 }}>
+            <div><span style={{ color: 'rgba(255,255,255,0.4)' }}>Фура:</span> {selectedTruck?.brand} {selectedTruck?.model} · {selectedTruck?.plate_number}</div>
+            <div><span style={{ color: 'rgba(255,255,255,0.4)' }}>Маршрут:</span> {whFrom?.name} → {whTo?.name}</div>
+            <div><span style={{ color: 'rgba(255,255,255,0.4)' }}>Заказов:</span> {selectedOrders.length} шт.</div>
+            {estimatedArrival && <div><span style={{ color: 'rgba(255,255,255,0.4)' }}>Прибытие:</span> {new Date(estimatedArrival).toLocaleString('ru-RU')}</div>}
+          </div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button
+              onClick={() => setConfirmTrip(false)}
+              style={{ flex: 1, padding: '10px 0', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 7, color: 'rgba(255,255,255,0.7)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+            >
+              ← Назад
+            </button>
+            <button
+              onClick={() => { setConfirmTrip(false); handleCreateTrip() }}
+              disabled={submitting}
+              style={{ flex: 2, padding: '10px 0', background: 'var(--gold)', border: 'none', borderRadius: 7, color: 'var(--navy)', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}
+            >
+              <Icons.Truck size={14} /> Отправить в рейс
+            </button>
+          </div>
+        </div>
+      </div>
     )}
     </>
   )
