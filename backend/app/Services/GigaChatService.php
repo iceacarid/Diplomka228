@@ -81,12 +81,19 @@ class GigaChatService
             if (!$text) {
                 Log::warning('GigaChat: empty response', ['body' => substr($response->body(), 0, 500)]);
                 Cache::forget('gigachat_access_token');
+                Cache::put('gigachat_last_call_ok', false, 3600);
+                Cache::put('gigachat_last_call_at', now()->timestamp, 3600);
+                return null;
             }
 
+            Cache::put('gigachat_last_call_ok', true, 3600);
+            Cache::put('gigachat_last_call_at', now()->timestamp, 3600);
             return $text;
         } catch (\Exception $e) {
             Log::warning('GigaChat chat failed: ' . $e->getMessage());
             Cache::forget('gigachat_access_token');
+            Cache::put('gigachat_last_call_ok', false, 3600);
+            Cache::put('gigachat_last_call_at', now()->timestamp, 3600);
             return null;
         }
     }

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AdminCourierController;
+use App\Http\Controllers\AdminStatsController;
 use App\Http\Controllers\AiController;
 use App\Http\Controllers\CourierController;
 use App\Http\Controllers\AppealController;
@@ -128,6 +129,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('warehouses/{warehouse}/update-load',   [WarehouseController::class, 'updateLoad']);
     Route::get('warehouses/{warehouse}/logs',            [WarehouseController::class, 'logs']);
     Route::patch('warehouses/{warehouse}/logs/{log}',    [WarehouseController::class, 'updateLog']);
+
+    // Admin stats / health / log
+    Route::get('admin/stats',         [AdminStatsController::class, 'stats']);
+    Route::get('admin/system-health', [AdminStatsController::class, 'systemHealth']);
+    Route::get('admin/activity-log',  [AdminStatsController::class, 'activityLog']);
 
     // Курьеры (manager/admin)
     Route::get('admin/couriers',                         [AdminCourierController::class, 'index']);

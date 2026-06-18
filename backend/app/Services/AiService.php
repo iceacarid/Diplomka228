@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -12,13 +13,26 @@ class AiService
         $prompt = $this->buildPrompt($trucks, $orders, $customPrompt);
 
         // Цепочка: Claude → Gemini → Groq → DeepSeek
-        $result = $this->tryClaude($prompt)
-               ?? $this->tryGemini($prompt)
-               ?? $this->tryGroq($prompt)
-               ?? $this->tryDeepSeek($prompt)
-               ?? 'Не удалось получить рекомендацию от AI. Проверьте API-ключи.';
+        $providers = ['claude', 'gemini', 'groq', 'deepseek'];
+        $methods   = ['tryClaude', 'tryGemini', 'tryGroq', 'tryDeepSeek'];
+        $result    = null;
+        $usedProvider = null;
 
-        return $result;
+        foreach ($providers as $i => $name) {
+            $res = $this->{$methods[$i]}($prompt);
+            if ($res !== null) {
+                $result       = $res;
+                $usedProvider = $name;
+                break;
+            }
+        }
+
+        $ttl = 3600;
+        Cache::put('ai_last_call_ok',       $result !== null, $ttl);
+        Cache::put('ai_last_call_at',        now()->timestamp, $ttl);
+        Cache::put('ai_last_used_provider',  $usedProvider ?? 'none', $ttl);
+
+        return $result ?? 'Не удалось получить рекомендацию от AI. Проверьте API-ключи.';
     }
 
     private function buildPrompt(array $trucks, array $orders, string $custom): string
