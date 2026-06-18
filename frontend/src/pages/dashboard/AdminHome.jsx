@@ -58,6 +58,18 @@ function statusColor(status) {
   return { ok: '#12B76A', warn: '#F79009', error: 'var(--red)', critical: 'var(--red)', unknown: 'rgba(255,255,255,0.35)' }[status] ?? 'inherit'
 }
 
+const ROLE_FILTERS = [
+  { value: 'all',               label: 'Все' },
+  { value: 'client',            label: 'Клиент' },
+  { value: 'manager',           label: 'Менеджер' },
+  { value: 'admin',             label: 'Админ' },
+  { value: 'courier',           label: 'Курьер' },
+  { value: 'warehouse_keeper',  label: 'Кладовщик' },
+  { value: 'driver',            label: 'Водитель' },
+]
+
+const LOG_PER_COL = 6
+
 export default function AdminHome() {
   const [users, setUsers]         = useState([])
   const [trucks, setTrucks]       = useState([])
@@ -67,6 +79,9 @@ export default function AdminHome() {
   const [health, setHealth]       = useState(null)
   const [healthLoading, setHealthLoading] = useState(true)
   const [log, setLog]             = useState([])
+  const [filterRole, setFilterRole] = useState('all')
+  const [filterOpen, setFilterOpen] = useState(false)
+  const filterRef = useRef(null)
   const [logLoading, setLogLoading] = useState(true)
 
   const mapReady  = useMapGL()
@@ -102,6 +117,12 @@ export default function AdminHome() {
     const id = setInterval(loadLog, 30_000)
     return () => clearInterval(id)
   }, [loadLog])
+
+  useEffect(() => {
+    const handler = (e) => { if (filterRef.current && !filterRef.current.contains(e.target)) setFilterOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
 
   // Map init
   useEffect(() => {
@@ -170,30 +191,56 @@ export default function AdminHome() {
           <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 24, letterSpacing: 1 }}>Пользователи</h3>
-              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)', marginTop: 2 }}>{users.length} всего</div>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)', marginTop: 2 }}>
+                {filterRole === 'all' ? users.length : users.filter(u => u.role === filterRole).length} {filterRole === 'all' ? 'всего' : `· фильтр: ${ROLE_FILTERS.find(f => f.value === filterRole)?.label}`}
+              </div>
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <Btn kind="ghost" size="sm" icon={<Icons.Filter size={14}/>}>Фильтр</Btn>
-              <Btn size="sm" icon={<Icons.Plus size={14}/>}>Добавить</Btn>
+            <div ref={filterRef} style={{ position: 'relative' }}>
+              <Btn
+                kind={filterOpen || filterRole !== 'all' ? 'primary' : 'ghost'}
+                size="sm"
+                icon={<Icons.Filter size={14}/>}
+                onClick={() => setFilterOpen(v => !v)}
+              >
+                Фильтр{filterRole !== 'all' ? ` · ${ROLE_FILTERS.find(f => f.value === filterRole)?.label}` : ''}
+              </Btn>
+              {filterOpen && (
+                <div style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 50, background: 'var(--navy-2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: 12, width: 180, boxShadow: '0 16px 48px rgba(0,0,0,0.5)' }}>
+                  {ROLE_FILTERS.map(opt => (
+                    <button
+                      key={opt.value}
+                      onClick={() => { setFilterRole(opt.value); setFilterOpen(false) }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 10px', borderRadius: 6, background: filterRole === opt.value ? 'rgba(240,165,0,0.1)' : 'transparent', border: filterRole === opt.value ? '1px solid rgba(240,165,0,0.3)' : '1px solid transparent', color: filterRole === opt.value ? 'var(--gold)' : 'rgba(255,255,255,0.65)', cursor: 'pointer', fontSize: 12, fontFamily: 'var(--font-body)', textAlign: 'left' }}
+                    >
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: filterRole === opt.value ? 'var(--gold)' : 'rgba(255,255,255,0.2)', flexShrink: 0 }} />
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
-          {users.length === 0 ? (
-            <div style={{ padding: '32px 24px', textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>Нет пользователей</div>
-          ) : (
-            <DataTable
-              columns={['Имя', 'Роль', 'Email', 'Статус', '']}
-              rows={users.slice(0, 8).map(u => [
-                <span style={{ fontWeight: 500 }}>{u.name}</span>,
-                <RolePill role={u.role} />,
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>{u.email}</span>,
-                <StatusPill status={u.status || 'active'} map={USER_STATUS_MAP} />,
-                <div style={{ display: 'flex', gap: 4 }}>
-                  <button style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', padding: 4 }}><Icons.Edit size={14}/></button>
-                  <button style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', padding: 4 }}><Icons.Trash size={14}/></button>
-                </div>,
-              ])}
-            />
-          )}
+          {(() => {
+            const filtered = filterRole === 'all' ? users : users.filter(u => u.role === filterRole)
+            if (filtered.length === 0) return (
+              <div style={{ padding: '32px 24px', textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>Нет пользователей</div>
+            )
+            return (
+              <DataTable
+                columns={['Имя', 'Роль', 'Email', 'Статус', '']}
+                rows={filtered.slice(0, 10).map(u => [
+                  <span style={{ fontWeight: 500 }}>{u.name}</span>,
+                  <RolePill role={u.role} />,
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>{u.email}</span>,
+                  <StatusPill status={u.status || 'active'} map={USER_STATUS_MAP} />,
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    <button style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', padding: 4 }}><Icons.Edit size={14}/></button>
+                    <button style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', padding: 4 }}><Icons.Trash size={14}/></button>
+                  </div>,
+                ])}
+              />
+            )
+          })()}
         </Card>
 
         {/* System Health */}
@@ -241,8 +288,8 @@ export default function AdminHome() {
         {log.length === 0 && !logLoading ? (
           <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>Событий нет</div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px 28px', maxHeight: 320, overflowY: 'auto' }}>
-            {log.map(e => (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px 28px' }}>
+            {log.slice(0, LOG_PER_COL * 2).map(e => (
               <div key={e.id} style={{ display: 'flex', gap: 12 }}>
                 <div style={{ width: 2, background: e.color, borderRadius: 1, flexShrink: 0, minHeight: 40 }}/>
                 <div style={{ flex: 1, minWidth: 0 }}>
