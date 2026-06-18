@@ -117,7 +117,8 @@ class AiController extends Controller
             'driver_name'     => $t->driver?->name ?? 'Нет водителя',
         ])->values()->toArray();
 
-        $ordersData = $orders->map(fn($o) => [
+        // Сортируем по дате создания (старые — приоритет)
+        $ordersData = $orders->sortBy('created_at')->map(fn($o) => [
             'id'             => $o->id,
             'tracking_id'    => $o->tracking_id,
             'origin_address' => $o->origin_address,
@@ -126,6 +127,7 @@ class AiController extends Controller
             'volume'         => (float) ($o->volume ?? 0),
             'cargo_type'     => $o->cargo_type,
             'actual_weight'  => $o->actual_weight ? (float) $o->actual_weight : null,
+            'created_at'     => $o->created_at?->toDateTimeString(),
         ])->values()->toArray();
 
         $aiResult = $this->gigaChatService->optimizeDistribution($trucksData, $ordersData, $warehousesData);
