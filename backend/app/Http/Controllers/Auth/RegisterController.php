@@ -27,6 +27,12 @@ class RegisterController extends Controller
                 if (!preg_match('/[!@#$%^&*()\-_=+\[\]{}|;:,.<>?\/\\\\\'"`~]/', $val))
                     $fail('Минимум один специальный символ.');
             }],
+        ], [
+            'email.required' => 'Укажите email.',
+            'email.email'    => 'Некорректный формат email.',
+            'email.unique'   => 'Этот email уже зарегистрирован.',
+            'name.required'  => 'Укажите имя.',
+            'name.max'       => 'Имя слишком длинное.',
         ]);
 
         if ($validator->fails()) {

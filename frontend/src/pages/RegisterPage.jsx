@@ -22,11 +22,13 @@ export default function RegisterPage() {
   const [showPass, setShowPass] = useState(false)
   const [showPass2, setShowPass2] = useState(false)
   const [error, setError] = useState('')
+  const [fieldErrors, setFieldErrors] = useState({})
   const [loading, setLoading] = useState(false)
 
   const handleRegister = async (e) => {
     e.preventDefault()
     setError('')
+    setFieldErrors({})
     if (!form.name.trim() || form.name.trim().length < 2) {
       setError('Введите имя (минимум 2 символа)')
       return
@@ -52,8 +54,16 @@ export default function RegisterPage() {
       navigate('/dashboard')
     } catch (err) {
       const errs = err.response?.data?.errors
-      if (errs) setError(Object.values(errs).flat().join('. '))
-      else setError(err.response?.data?.error || 'Ошибка регистрации')
+      if (errs) {
+        setFieldErrors(errs)
+        // общая ошибка только если нет конкретных полей
+        const nonFieldErrs = Object.entries(errs)
+          .filter(([k]) => !['email','name','phone','password'].includes(k))
+          .flatMap(([,v]) => v)
+        if (nonFieldErrs.length) setError(nonFieldErrs.join('. '))
+      } else {
+        setError(err.response?.data?.error || 'Ошибка регистрации')
+      }
     } finally {
       setLoading(false)
     }
@@ -126,6 +136,7 @@ export default function RegisterPage() {
 
               <AuthInput label="Email" type="email" value={form.email} onChange={(v) => setForm({ ...form, email: v })} placeholder="you@example.com"
                 icon={<svg width="18" height="18" fill="none" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="3" stroke="currentColor" strokeWidth="1.8"/><path d="m2 8 10 6 10-6" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/></svg>} />
+              {fieldErrors.email && <div style={{ color: 'var(--red)', fontSize: 11, marginTop: -8, marginBottom: 8 }}>{fieldErrors.email[0]}</div>}
 
               {/* Password */}
               <div style={{ marginBottom: '20px' }}>
@@ -151,6 +162,9 @@ export default function RegisterPage() {
                     <p style={{ fontSize: '12px', color: strengthColor, marginTop: '4px' }}>{strengthLabel}</p>
                   </div>
                 )}
+                {fieldErrors.password && fieldErrors.password.map((e, i) => (
+                  <div key={i} style={{ color: 'var(--red)', fontSize: 11, marginTop: 4 }}>{e}</div>
+                ))}
               </div>
 
               {/* Confirm password */}
