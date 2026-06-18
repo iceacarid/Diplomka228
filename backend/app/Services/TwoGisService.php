@@ -173,6 +173,8 @@ class TwoGisService
 
             $dist = isset($summary['distance']) ? round($summary['distance'] / 1000, 1) : null;
             Log::info('ORS HGV route OK', ['distance_km' => $dist, 'restrictions' => $restrictions]);
+            Cache::put('ors_last_call_ok', true,  3600);
+            Cache::put('ors_last_call_at', now()->timestamp, 3600);
 
             return [
                 'distance' => $dist,
@@ -181,6 +183,8 @@ class TwoGisService
             ];
         } catch (\Exception $e) {
             Log::error('ORS route exception: ' . $e->getMessage());
+            Cache::put('ors_last_call_ok', false, 3600);
+            Cache::put('ors_last_call_at', now()->timestamp, 3600);
             return null;
         }
     }

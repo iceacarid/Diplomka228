@@ -91,6 +91,28 @@ class AdminStatsController extends Controller
         $twoGisStatus = $twoGisKey ? 'ok' : 'error';
         $twoGisNote   = $twoGisKey ? 'API-ключ настроен' : 'API-ключ отсутствует';
 
+        // ORS + OSRM fallback
+        $orsKey     = config('services.ors.key');
+        $orsLastOk  = Cache::get('ors_last_call_ok');
+        $orsLastAt  = Cache::get('ors_last_call_at');
+        if (!$orsKey) {
+            $orsStatus = 'warn';
+            $orsNote   = 'OpenRouteServiceKey не задан · резерв: OSRM';
+            $orsValue  = 'OSRM fallback';
+        } elseif ($orsLastOk === null) {
+            $orsStatus = 'unknown';
+            $orsNote   = 'Ключ настроен, ещё не вызван · резерв: OSRM';
+            $orsValue  = 'Нет данных';
+        } elseif ($orsLastOk) {
+            $orsStatus = 'ok';
+            $orsNote   = 'ORS HGV маршруты активны' . ($orsLastAt ? ' · ' . $this->relativeTime($orsLastAt) : '') . ' · резерв: OSRM';
+            $orsValue  = 'ORS активен';
+        } else {
+            $orsStatus = 'warn';
+            $orsNote   = 'ORS не отвечает — используется OSRM' . ($orsLastAt ? ' · ' . $this->relativeTime($orsLastAt) : '');
+            $orsValue  = 'OSRM fallback';
+        }
+
         // GigaChat
         $gigaChatLastOk = Cache::get('gigachat_last_call_ok');
         $gigaChatAt     = Cache::get('gigachat_last_call_at');
@@ -135,6 +157,12 @@ class AdminStatsController extends Controller
                         'error'   => 'Нет ключа',
                         default   => 'Нет данных',
                     },
+                ],
+                [
+                    'name'   => 'ORS / OSRM маршруты',
+                    'note'   => $orsNote,
+                    'status' => $orsStatus,
+                    'value'  => $orsValue,
                 ],
             ],
         ]);
