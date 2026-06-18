@@ -171,8 +171,11 @@ class TwoGisService
 
             if (empty($geom)) return null;
 
+            $dist = isset($summary['distance']) ? round($summary['distance'] / 1000, 1) : null;
+            Log::info('ORS HGV route OK', ['distance_km' => $dist, 'restrictions' => $restrictions]);
+
             return [
-                'distance' => isset($summary['distance']) ? round($summary['distance'] / 1000, 1) : null,
+                'distance' => $dist,
                 'duration' => $summary['duration'] ?? null,
                 'polyline' => $geom,
             ];
