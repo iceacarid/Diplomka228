@@ -391,6 +391,7 @@ export default function AiTab() {
         setAiSuggestedIds(suggestedIds)
         const sugTruck = trucks.find(t => t.id === firstPlan.truck_id)
         if (sugTruck) setSelectedTruck(sugTruck)
+        setMapFullscreen(false)
       } else {
         setError('AI не смог предложить план — выберите заказы вручную')
       }
