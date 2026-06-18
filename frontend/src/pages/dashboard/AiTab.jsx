@@ -205,7 +205,7 @@ function WarehouseMap({ warehouses, whFrom, whTo, onSelectFrom, onSelectTo, full
       markers.current.push(marker)
     })
 
-    // Draw route via OSRM
+    // Draw route via ORS HGV
     if (whFrom?.latitude && whFrom?.longitude && whTo?.latitude && whTo?.longitude) {
       let cancelled = false
       setRouteLoading(true)
@@ -233,11 +233,6 @@ function WarehouseMap({ warehouses, whFrom, whTo, onSelectFrom, onSelectTo, full
             })
             const json = await res.json()
             coords = json?.features?.[0]?.geometry?.coordinates
-          } else {
-            const url = `https://router.project-osrm.org/route/v1/driving/${whFrom.longitude},${whFrom.latitude};${whTo.longitude},${whTo.latitude}?overview=full&geometries=geojson`
-            const res  = await fetch(url)
-            const json = await res.json()
-            coords = json?.routes?.[0]?.geometry?.coordinates
           }
           if (!cancelled) { drawPoly(coords?.length ? coords : fallback) }
         } catch {
@@ -946,7 +941,7 @@ function TripRouteModal({ trip: initialTrip, onClose, warehouses = [] }) {
 
   const trip = initialTrip
 
-  // Auto-build OSRM route if only straight-line fallback (≤ 2 points)
+  // Auto-build ORS route if only straight-line fallback (≤ 2 points)
   useEffect(() => {
     const poly = initialTrip.route_polyline || []
     if (poly.length <= 2 && initialTrip.id) {

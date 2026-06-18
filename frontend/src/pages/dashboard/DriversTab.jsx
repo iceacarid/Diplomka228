@@ -360,7 +360,7 @@ function DriverTripMap({ trip }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapReady])
 
-  // Update polyline when poly changes (incl. after OSRM auto-recalc)
+  // Update polyline when poly changes (incl. after ORS auto-recalc)
   useEffect(() => {
     if (!mapInst.current || !mapReady) return
     if (polyRef.current) { polyRef.current.destroy?.(); polyRef.current = null }
