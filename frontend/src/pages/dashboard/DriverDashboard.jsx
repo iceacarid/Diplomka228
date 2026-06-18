@@ -62,9 +62,9 @@ function useMapGL() {
 }
 
 function TripMap({ trip }) {
-  const mapRef    = useRef(null)
-  const mapInst   = useRef(null)
-  const mapReady  = useMapGL()
+  const mapRef   = useRef(null)
+  const mapInst  = useRef(null)
+  const mapReady = useMapGL()
 
   useEffect(() => {
     if (!mapReady || !mapRef.current || !TWO_GIS_KEY) return
@@ -73,43 +73,61 @@ function TripMap({ trip }) {
     const from = trip.warehouse_from
     const to   = trip.warehouse_to
 
-    if (!from.lat || !from.lng || !to.lat || !to.lng) return
-
-    const centerLng = (from.lng + to.lng) / 2
-    const centerLat = (from.lat + to.lat) / 2
+    const hasCoords = from.lat && from.lng && to.lat && to.lng
+    const center = hasCoords
+      ? [(from.lng + to.lng) / 2, (from.lat + to.lat) / 2]
+      : [49.1221, 55.7879] // Казань по умолчанию
 
     const map = new window.mapgl.Map(mapRef.current, {
-      center: [centerLng, centerLat],
-      zoom: 6,
+      center,
+      zoom: hasCoords ? 5 : 4,
       key: TWO_GIS_KEY,
     })
     mapInst.current = map
 
-    map.once('load', () => {
-      // Маркер склада А
-      new window.mapgl.Marker(map, {
-        coordinates: [from.lng, from.lat],
-        label: { text: from.name, relativeAnchor: [0.5, 1.5], fontSize: 12 },
-      })
+    const drawRoute = () => {
+      if (!hasCoords) return
 
-      // Маркер склада Б
-      new window.mapgl.Marker(map, {
-        coordinates: [to.lng, to.lat],
-        label: { text: to.name, relativeAnchor: [0.5, 1.5], fontSize: 12 },
-      })
-
-      // Линия маршрута
+      // Маршрут — реальный polyline или прямая
       const coords = trip.route_polyline && trip.route_polyline.length >= 2
         ? trip.route_polyline
         : [[from.lng, from.lat], [to.lng, to.lat]]
 
-      new window.mapgl.Polyline(map, {
-        coordinates: coords,
-        width: 3,
-        color: '#f0a500',
-        opacity: 0.85,
-      })
-    })
+      try {
+        new window.mapgl.Polyline(map, {
+          coordinates: coords,
+          width: 4,
+          color: '#f0a500',
+          opacity: 0.9,
+        })
+      } catch {}
+
+      // Маркер А
+      try {
+        const elA = document.createElement('div')
+        elA.style.cssText = 'padding:3px 8px;background:#f0a500;border-radius:5px;color:#0d0d1f;font-size:11px;font-weight:700;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.4);'
+        elA.textContent = from.name || 'Склад А'
+        new window.mapgl.HtmlMarker(map, { coordinates: [from.lng, from.lat], html: elA, anchor: [0.5, 1] })
+      } catch {}
+
+      // Маркер Б
+      try {
+        const elB = document.createElement('div')
+        elB.style.cssText = 'padding:3px 8px;background:#10b981;border-radius:5px;color:#0d0d1f;font-size:11px;font-weight:700;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.4);'
+        elB.textContent = to.name || 'Склад Б'
+        new window.mapgl.HtmlMarker(map, { coordinates: [to.lng, to.lat], html: elB, anchor: [0.5, 1] })
+      } catch {}
+    }
+
+    // Надёжный запуск: сразу или после load
+    if (map.isLoaded?.()) {
+      drawRoute()
+    } else {
+      map.once('load', drawRoute)
+      // Страховка: если load не выстрелил за 1.5 сек
+      const fallback = setTimeout(() => drawRoute(), 1500)
+      map.once('load', () => clearTimeout(fallback))
+    }
 
     return () => { if (mapInst.current) { mapInst.current.destroy(); mapInst.current = null } }
   }, [mapReady, trip])
@@ -117,17 +135,12 @@ function TripMap({ trip }) {
   if (!TWO_GIS_KEY) {
     return (
       <div style={{ height: 280, background: 'rgba(255,255,255,0.03)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>
-        Добавьте VITE_2GIS_KEY в .env для отображения карты
+        Добавьте VITE_2GIS_KEY в .env для карты
       </div>
     )
   }
 
-  return (
-    <div
-      ref={mapRef}
-      style={{ height: 280, borderRadius: 8, overflow: 'hidden', marginTop: 14 }}
-    />
-  )
+  return <div ref={mapRef} style={{ height: 280, borderRadius: 8, overflow: 'hidden', marginTop: 14 }} />
 }
 
 // ─── Полноэкранная карта позиции водителя ─────────────────────────────────────
@@ -277,8 +290,8 @@ function DriverLocationModal({ trip, onClose }) {
 }
 
 function TripCard({ trip, onAction }) {
-  const [busy, setBusy] = useState(false)
-  const [showMyMap, setShowMyMap] = useState(false)
+  const [busy, setBusy]         = useState(false)
+  const [locating, setLocating] = useState(false)
   const st = TRIP_STATUS[trip.status] || { label: trip.status, color: '#999', next: null }
 
   const doAction = async (endpoint) => {
@@ -291,6 +304,26 @@ function TripCard({ trip, onAction }) {
     } finally {
       setBusy(false)
     }
+  }
+
+  const openMyLocation = () => {
+    if (!navigator.geolocation) { alert('Геолокация недоступна'); return }
+    setLocating(true)
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude
+        const lng = pos.coords.longitude
+        api.post('/driver/location', { latitude: lat, longitude: lng }).catch(() => {})
+        window.open(`https://2gis.ru/geo/${lng},${lat}`, '_blank')
+        setLocating(false)
+      },
+      (err) => {
+        const msgs = { 1: 'Доступ к геолокации запрещён', 2: 'Позиция недоступна', 3: 'Таймаут' }
+        alert(msgs[err.code] || err.message)
+        setLocating(false)
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    )
   }
 
   const totalWeight = trip.orders.reduce((s, o) => s + (o.weight || 0), 0)
@@ -312,14 +345,22 @@ function TripCard({ trip, onAction }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, padding: '12px 14px', background: 'rgba(255,255,255,0.04)', borderRadius: 8 }}>
         <div style={{ flex: 1 }}>
           <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, marginBottom: 2 }}>ОТКУДА</div>
-          <div style={{ color: 'white', fontWeight: 600, fontSize: 14 }}>{trip.warehouse_from.name}</div>
-          <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12 }}>{trip.warehouse_from.address}</div>
+          <a href={`https://2gis.ru/search/${encodeURIComponent(trip.warehouse_from.address)}`} target="_blank" rel="noreferrer" style={{ color: 'white', fontWeight: 600, fontSize: 14, textDecoration: 'none', borderBottom: '1px solid rgba(240,165,0,0.4)' }}>
+            {trip.warehouse_from.name}
+          </a>
+          <a href={`https://2gis.ru/search/${encodeURIComponent(trip.warehouse_from.address)}`} target="_blank" rel="noreferrer" style={{ display: 'block', color: 'var(--gold)', fontSize: 12, marginTop: 2, textDecoration: 'none', opacity: 0.8 }}>
+            {trip.warehouse_from.address}
+          </a>
         </div>
         <div style={{ color: 'var(--gold)', fontSize: 20 }}>→</div>
         <div style={{ flex: 1, textAlign: 'right' }}>
           <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, marginBottom: 2 }}>КУДА</div>
-          <div style={{ color: 'white', fontWeight: 600, fontSize: 14 }}>{trip.warehouse_to.name}</div>
-          <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12 }}>{trip.warehouse_to.address}</div>
+          <a href={`https://2gis.ru/search/${encodeURIComponent(trip.warehouse_to.address)}`} target="_blank" rel="noreferrer" style={{ color: 'white', fontWeight: 600, fontSize: 14, textDecoration: 'none', borderBottom: '1px solid rgba(240,165,0,0.4)' }}>
+            {trip.warehouse_to.name}
+          </a>
+          <a href={`https://2gis.ru/search/${encodeURIComponent(trip.warehouse_to.address)}`} target="_blank" rel="noreferrer" style={{ display: 'block', color: 'var(--gold)', fontSize: 12, marginTop: 2, textDecoration: 'none', opacity: 0.8 }}>
+            {trip.warehouse_to.address}
+          </a>
         </div>
       </div>
 
@@ -327,7 +368,8 @@ function TripCard({ trip, onAction }) {
       <div style={{ position: 'relative' }}>
         <TripMap trip={trip} />
         <button
-          onClick={() => setShowMyMap(true)}
+          onClick={openMyLocation}
+          disabled={locating}
           style={{
             position: 'absolute', bottom: 10, right: 10,
             display: 'flex', alignItems: 'center', gap: 6,
@@ -335,14 +377,14 @@ function TripCard({ trip, onAction }) {
             background: 'rgba(13,13,31,0.88)',
             border: '1px solid rgba(240,165,0,0.4)',
             borderRadius: 7,
-            color: '#f0a500',
+            color: locating ? 'rgba(240,165,0,0.4)' : '#f0a500',
             fontWeight: 700, fontSize: 12,
-            cursor: 'pointer',
+            cursor: locating ? 'default' : 'pointer',
             backdropFilter: 'blur(4px)',
             boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
           }}
         >
-          <Icons.Pin size={12} /> Где я
+          <Icons.Pin size={12} /> {locating ? 'Определяю...' : 'Где я'}
         </button>
       </div>
 
@@ -408,8 +450,98 @@ function TripCard({ trip, onAction }) {
           Ожидается разгрузка кладовщиком...
         </div>
       )}
-      {showMyMap && <DriverLocationModal trip={trip} onClose={() => setShowMyMap(false)} />}
     </Card>
+  )
+}
+
+function GpsStatus() {
+  const [status, setStatus]     = useState('idle') // idle | checking | ok | error
+  const [coords, setCoords]     = useState(null)
+  const [errorMsg, setErrorMsg] = useState('')
+  const [lastPing, setLastPing] = useState(null)
+  const [permission, setPermission] = useState('unknown')
+
+  useEffect(() => {
+    if (!navigator.permissions) return
+    navigator.permissions.query({ name: 'geolocation' }).then(r => {
+      setPermission(r.state)
+      r.onchange = () => setPermission(r.state)
+    }).catch(() => {})
+  }, [])
+
+  const check = () => {
+    if (!navigator.geolocation) {
+      setStatus('error')
+      setErrorMsg('Геолокация не поддерживается браузером')
+      return
+    }
+    setStatus('checking')
+    setErrorMsg('')
+    setCoords(null)
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setCoords({ lat: pos.coords.latitude.toFixed(5), lng: pos.coords.longitude.toFixed(5), acc: Math.round(pos.coords.accuracy) })
+        setLastPing(new Date())
+        setStatus('ok')
+        api.post('/driver/location', { latitude: pos.coords.latitude, longitude: pos.coords.longitude }).catch(() => {})
+      },
+      (err) => {
+        const msgs = { 1: 'Доступ запрещён — разрешите геолокацию в браузере', 2: 'Позиция недоступна', 3: 'Время ожидания истекло' }
+        setErrorMsg(msgs[err.code] || err.message)
+        setStatus('error')
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    )
+  }
+
+  const permColor = { granted: '#12B76A', denied: '#F04438', prompt: '#F79009', unknown: 'rgba(255,255,255,0.35)' }
+  const permLabel = { granted: 'Разрешено', denied: 'Запрещено', prompt: 'Не запрошено', unknown: 'Неизвестно' }
+
+  return (
+    <div style={{ marginBottom: 20, padding: '14px 18px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: coords || errorMsg ? 12 : 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ width: 8, height: 8, borderRadius: '50%', background: status === 'ok' ? '#12B76A' : status === 'error' ? '#F04438' : status === 'checking' ? '#F79009' : 'rgba(255,255,255,0.2)', boxShadow: status === 'ok' ? '0 0 6px #12B76A' : 'none' }} />
+          <span style={{ fontSize: 13, fontWeight: 600, color: 'white' }}>Геолокация</span>
+          <span style={{ fontSize: 11, color: permColor[permission], background: permColor[permission] + '18', border: `1px solid ${permColor[permission]}33`, borderRadius: 4, padding: '1px 6px', lineHeight: 1.6 }}>
+            {permLabel[permission]}
+          </span>
+        </div>
+        <button
+          onClick={check}
+          disabled={status === 'checking'}
+          style={{ padding: '6px 14px', borderRadius: 7, fontSize: 12, fontWeight: 700, fontFamily: 'var(--font-body)', cursor: status === 'checking' ? 'default' : 'pointer', background: 'rgba(240,165,0,0.1)', border: '1px solid rgba(240,165,0,0.3)', color: status === 'checking' ? 'rgba(255,255,255,0.3)' : 'var(--gold)' }}
+        >
+          {status === 'checking' ? 'Определяю...' : 'Проверить GPS'}
+        </button>
+      </div>
+
+      {status === 'ok' && coords && (
+        <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
+            Широта: <span style={{ color: '#12B76A', fontFamily: 'var(--font-mono)' }}>{coords.lat}</span>
+          </div>
+          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
+            Долгота: <span style={{ color: '#12B76A', fontFamily: 'var(--font-mono)' }}>{coords.lng}</span>
+          </div>
+          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
+            Точность: <span style={{ color: 'white', fontFamily: 'var(--font-mono)' }}>±{coords.acc} м</span>
+          </div>
+          {lastPing && (
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
+              Отправлено: <span style={{ color: 'white' }}>{lastPing.toLocaleTimeString('ru-RU')}</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {status === 'error' && (
+        <div style={{ fontSize: 12, color: '#F04438', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          {errorMsg}
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -508,6 +640,8 @@ export default function DriverDashboard() {
           Смена закрыта. Откройте смену для начала работы и GPS трансляции.
         </div>
       )}
+
+      <GpsStatus />
 
       {trips.length === 0 ? (
         <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.3)', padding: '80px 0', fontSize: 15 }}>

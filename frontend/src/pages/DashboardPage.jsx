@@ -56,7 +56,7 @@ const STAFF_NAV = [
   { to: '/dashboard/chats',    label: 'Чаты',           icon: 'Chat',     roles: ['manager', 'admin'] },
   { to: '/dashboard/warehouses',label: 'Склады',          icon: 'Boxes',    roles: ['manager', 'admin'] },
   { to: '/dashboard/appeals',  label: 'Апелляции',      icon: 'LifeBuoy', roles: ['admin'] },
-  { to: '/dashboard/couriers', label: 'Курьеры',         icon: 'User',     roles: ['admin'] },
+  { to: '/dashboard/couriers', label: 'Курьеры',         icon: 'User',     roles: ['manager', 'admin'] },
   { to: '/dashboard/ai',      label: 'AI Оптимизация', icon: 'Sparkles', roles: ['manager', 'admin'] },
   { to: '/dashboard/profile', label: 'Профиль',        icon: 'Settings', roles: ['client', 'manager', 'admin'] },
 ]

@@ -68,10 +68,8 @@ export default function MapPickerModal({ onClose, onSelect, title }) {
   useEffect(() => {
     if (!mapRef.current || mapInst.current) return
 
-    const map = L.map(mapRef.current).setView([55.75, 37.61], 10)
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a>',
-    }).addTo(map)
+    const map = L.map(mapRef.current, { attributionControl: false }).setView([55.75, 37.61], 10)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map)
 
     iconRef.current = L.divIcon({
       html: '<div style="width:16px;height:16px;background:#F0A500;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.5)"></div>',

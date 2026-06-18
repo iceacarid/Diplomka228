@@ -29,9 +29,14 @@ class OtpService
         ]);
 
         $subject = $this->getSubject($purpose);
-        $body    = $this->getBody($user, $code, $purpose);
 
-        Mail::raw($body, function ($message) use ($user, $subject) {
+        Mail::send('emails.otp', [
+            'name'    => $user->name,
+            'code'    => $code,
+            'purpose' => $purpose,
+            'minutes' => self::EXPIRY_MINUTES,
+            'subject' => $subject,
+        ], function ($message) use ($user, $subject) {
             $message->to($user->email)->subject($subject);
         });
 
@@ -59,25 +64,5 @@ class OtpService
         };
     }
 
-    private function getBody(User $user, string $code, string $purpose): string
-    {
-        $minutes = self::EXPIRY_MINUTES;
-        return match($purpose) {
-            'registration' =>
-                "Здравствуйте, {$user->name}!\n\n" .
-                "Ваш код подтверждения: {$code}\n\n" .
-                "Код действителен {$minutes} минут.\n" .
-                "Если вы не регистрировались в ФураЕдет — проигнорируйте письмо.",
-            'two_factor' =>
-                "Здравствуйте, {$user->name}!\n\n" .
-                "Ваш код для входа: {$code}\n\n" .
-                "Код действителен {$minutes} минут.\n" .
-                "Если вы не входили в ФураЕдет — немедленно смените пароль.",
-            default =>
-                "Здравствуйте, {$user->name}!\n\n" .
-                "Код для сброса пароля: {$code}\n\n" .
-                "Код действителен {$minutes} минут.\n" .
-                "Если вы не запрашивали сброс — проигнорируйте письмо.",
-        };
-    }
+
 }

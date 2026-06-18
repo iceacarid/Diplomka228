@@ -262,36 +262,54 @@ class OrderController extends Controller
             return response()->json(['error' => 'Нельзя назначить курьера на данном этапе.'], 400);
         }
 
-        $data    = $request->validate(['courier_id' => 'required|exists:users,id']);
+        $data    = $request->validate([
+            'courier_id' => 'required|exists:users,id',
+            'force'      => 'boolean',
+        ]);
         $courier = User::findOrFail($data['courier_id']);
+        $force   = !empty($data['force']);
 
         if ($courier->role !== 'courier') {
             return response()->json(['error' => 'Пользователь не является курьером.'], 400);
         }
 
+        $geoMismatch = false;
         if ($courier->warehouse_id) {
             $warehouse = Warehouse::find($courier->warehouse_id);
             $geoAddr = $order->status === 'ready_for_pickup'
                 ? $order->dest_address
                 : $order->origin_address;
             if ($warehouse && $warehouse->address && !$this->citiesMatch($geoAddr, $warehouse->address)) {
-                return response()->json(['error' => 'Регион склада курьера не совпадает с городом заказа.'], 422);
+                if (!$force) {
+                    return response()->json(['error' => 'Регион склада курьера не совпадает с городом заказа.'], 422);
+                }
+                $geoMismatch = true;
             }
         }
 
         $order->update(['courier_id' => $courier->id, 'status' => 'courier_assigned']);
 
-        $chat = $order->chat;
+        $manager = $request->user();
+        $chat    = $order->chat;
         if ($chat) {
+            if ($geoMismatch) {
+                $body = $order->trip_id
+                    ? "⚠️ Менеджер {$manager->name} принудительно назначил курьера {$courier->name} для выдачи груза (регион курьера не совпадает с городом доставки)."
+                    : "⚠️ Менеджер {$manager->name} принудительно назначил курьера {$courier->name} для забора груза (регион курьера не совпадает с городом заказа).";
+                $event = 'courier_force_assigned_by_manager';
+            } else {
+                $body = $order->trip_id
+                    ? "Курьер {$courier->name} назначен для выдачи груза клиенту."
+                    : "Курьер {$courier->name} назначен для забора груза.";
+                $event = 'courier_assigned_by_manager';
+            }
             Message::create([
                 'chat_id'     => $chat->id,
                 'sender_id'   => null,
                 'sender_role' => 'bot',
-                'body'        => $order->trip_id
-                    ? "Курьер {$courier->name} назначен для выдачи груза клиенту."
-                    : "Курьер {$courier->name} назначен для забора груза.",
+                'body'        => $body,
                 'type'        => 'text',
-                'metadata'    => ['event' => 'courier_assigned_by_manager'],
+                'metadata'    => ['event' => $event, 'manager_id' => $manager->id, 'courier_id' => $courier->id],
             ]);
             $chat->touch();
         }
@@ -418,6 +436,7 @@ class OrderController extends Controller
             'courier_name'      => $order->courier?->name ?? '',
             'truck_id'          => $order->truck_id,
             'truck_plate'       => $order->truck?->plate_number ?? '',
+            'truck_model'       => trim(($order->truck?->brand ?? '') . ' ' . ($order->truck?->model ?? '')) ?: '',
             'driver_id'         => $order->driver_id,
             'driver_name'       => $order->driver?->name ?? '',
             'status'            => $order->status,

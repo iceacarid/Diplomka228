@@ -156,10 +156,11 @@ function formatDate(dateStr) {
 }
 
 function CourierPickerModal({ orderId, originAddress, onClose, onAssigned }) {
-  const [couriers, setCouriers]   = useState([])
-  const [loading, setLoading]     = useState(true)
-  const [assigning, setAssigning] = useState(null)
-  const [error, setError]         = useState(null)
+  const [couriers, setCouriers]     = useState([])
+  const [loading, setLoading]       = useState(true)
+  const [assigning, setAssigning]   = useState(null)
+  const [error, setError]           = useState(null)
+  const [confirmForce, setConfirmForce] = useState(null) // courier obj pending force
 
   useEffect(() => {
     api.get(`/orders/${orderId}/available-couriers`)
@@ -168,11 +169,12 @@ function CourierPickerModal({ orderId, originAddress, onClose, onAssigned }) {
       .finally(() => setLoading(false))
   }, [orderId])
 
-  const assign = async (courierId) => {
+  const assign = async (courierId, force = false) => {
     setAssigning(courierId)
     setError(null)
+    setConfirmForce(null)
     try {
-      await api.post(`/orders/${orderId}/assign-courier`, { courier_id: courierId })
+      await api.post(`/orders/${orderId}/assign-courier`, { courier_id: courierId, force })
       onAssigned()
       onClose()
     } catch (e) {
@@ -180,6 +182,110 @@ function CourierPickerModal({ orderId, originAddress, onClose, onAssigned }) {
     }
     setAssigning(null)
   }
+
+  const matched  = couriers.filter(c => c.geo_match)
+  const unmatched = couriers.filter(c => !c.geo_match)
+
+  const CourierRow = ({ c }) => (
+    <div
+      key={c.id}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 14,
+        padding: '12px 14px', borderRadius: 10,
+        background: c.geo_match ? 'rgba(18,183,106,0.05)' : 'rgba(255,255,255,0.03)',
+        border: `1px solid ${c.geo_match ? 'rgba(18,183,106,0.18)' : 'rgba(255,255,255,0.07)'}`,
+        flexDirection: confirmForce?.id === c.id ? 'column' : 'row',
+        alignItems: confirmForce?.id === c.id ? 'stretch' : 'center',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, width: '100%' }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: 'white' }}>{c.name}</span>
+            {c.geo_match
+              ? null : null
+            }
+          </div>
+          <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+            {c.warehouse_name && (
+              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <Icons.Warehouse size={10}/> {c.warehouse_name}
+              </span>
+            )}
+            <span style={{ fontSize: 11, color: c.has_open_shift ? '#12B76A' : 'rgba(255,255,255,0.25)' }}>
+              {c.has_open_shift ? '● Смена открыта' : '○ Не в смене'}
+            </span>
+            {c.active_orders > 0 && (
+              <span style={{ fontSize: 11, color: '#F79009' }}>{c.active_orders} активных</span>
+            )}
+          </div>
+        </div>
+        {confirmForce?.id !== c.id && (
+          c.geo_match ? (
+            <button
+              onClick={() => assign(c.id)}
+              disabled={!!assigning}
+              style={{
+                padding: '8px 16px', borderRadius: 7, fontSize: 12, fontWeight: 700, fontFamily: 'var(--font-body)',
+                background: assigning === c.id ? 'rgba(255,255,255,0.08)' : 'rgba(18,183,106,0.2)',
+                border: '1px solid rgba(18,183,106,0.35)',
+                color: assigning === c.id ? 'rgba(255,255,255,0.3)' : '#12B76A',
+                cursor: assigning ? 'default' : 'pointer', flexShrink: 0,
+              }}
+            >
+              {assigning === c.id ? '...' : 'Назначить'}
+            </button>
+          ) : (
+            <button
+              onClick={() => setConfirmForce(c)}
+              disabled={!!assigning}
+              style={{
+                padding: '8px 16px', borderRadius: 7, fontSize: 12, fontWeight: 700, fontFamily: 'var(--font-body)',
+                background: 'rgba(247,144,9,0.12)', border: '1px solid rgba(247,144,9,0.3)',
+                color: '#F79009', cursor: assigning ? 'default' : 'pointer', flexShrink: 0,
+              }}
+            >
+              Принудительно
+            </button>
+          )
+        )}
+      </div>
+
+      {confirmForce?.id === c.id && (
+        <div style={{ marginTop: 10, padding: '10px 12px', background: 'rgba(247,144,9,0.08)', border: '1px solid rgba(247,144,9,0.25)', borderRadius: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 10 }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
+              <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            <span style={{ fontSize: 12, color: 'var(--gold)', lineHeight: 1.5 }}>Курьер работает вне своей рабочей зоны. Назначить принудительно?</span>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={() => assign(c.id, true)}
+              disabled={!!assigning}
+              style={{
+                padding: '7px 14px', borderRadius: 6, fontSize: 12, fontWeight: 700, fontFamily: 'var(--font-body)',
+                background: 'rgba(247,144,9,0.25)', border: '1px solid rgba(247,144,9,0.4)',
+                color: '#F79009', cursor: assigning ? 'default' : 'pointer',
+              }}
+            >
+              {assigning === c.id ? '...' : 'Да, назначить'}
+            </button>
+            <button
+              onClick={() => setConfirmForce(null)}
+              style={{
+                padding: '7px 14px', borderRadius: 6, fontSize: 12, fontWeight: 600, fontFamily: 'var(--font-body)',
+                background: 'transparent', border: '1px solid rgba(255,255,255,0.12)',
+                color: 'rgba(255,255,255,0.5)', cursor: 'pointer',
+              }}
+            >
+              Отмена
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
 
   return (
     <div
@@ -199,7 +305,7 @@ function CourierPickerModal({ orderId, originAddress, onClose, onAssigned }) {
         </div>
 
         <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', background: 'rgba(255,255,255,0.04)', borderRadius: 6, padding: '8px 12px', fontFamily: 'var(--font-body)' }}>
-          Адрес забора: <span style={{ color: 'rgba(255,255,255,0.75)' }}>{originAddress}</span>
+          Адрес: <span style={{ color: 'rgba(255,255,255,0.75)' }}>{originAddress}</span>
         </div>
 
         {error && <Alert type="error">{error}</Alert>}
@@ -209,53 +315,26 @@ function CourierPickerModal({ orderId, originAddress, onClose, onAssigned }) {
             <div style={{ textAlign: 'center', padding: 32, color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>Загрузка...</div>
           ) : couriers.length === 0 ? (
             <div style={{ textAlign: 'center', padding: 32, color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>Нет доступных курьеров</div>
-          ) : couriers.map(c => (
-            <div
-              key={c.id}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 14,
-                padding: '12px 14px', borderRadius: 10,
-                background: c.geo_match ? 'rgba(18,183,106,0.05)' : 'rgba(255,255,255,0.03)',
-                border: `1px solid ${c.geo_match ? 'rgba(18,183,106,0.18)' : 'rgba(255,255,255,0.07)'}`,
-              }}
-            >
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: 'white' }}>{c.name}</span>
-                  {c.geo_match && (
-                    <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#12B76A', border: '1px solid rgba(18,183,106,0.3)', borderRadius: 4, padding: '1px 5px' }}>GEO ✓</span>
-                  )}
-                </div>
-                <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
-                  {c.warehouse_name && (
-                    <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <Icons.Package size={10}/> {c.warehouse_name}
-                    </span>
-                  )}
-                  <span style={{ fontSize: 11, color: c.has_open_shift ? '#12B76A' : 'rgba(255,255,255,0.25)' }}>
-                    {c.has_open_shift ? '● Смена открыта' : '○ Не в смене'}
-                  </span>
-                  {c.active_orders > 0 && (
-                    <span style={{ fontSize: 11, color: '#F79009' }}>{c.active_orders} активных заказов</span>
-                  )}
-                </div>
-              </div>
-              <button
-                onClick={() => assign(c.id)}
-                disabled={!!assigning}
-                style={{
-                  padding: '8px 16px', borderRadius: 7, fontSize: 12, fontWeight: 700, fontFamily: 'var(--font-body)',
-                  background: assigning === c.id ? 'rgba(255,255,255,0.08)' : c.geo_match ? 'rgba(18,183,106,0.2)' : 'rgba(255,255,255,0.08)',
-                  border: `1px solid ${c.geo_match ? 'rgba(18,183,106,0.35)' : 'rgba(255,255,255,0.12)'}`,
-                  color: assigning === c.id ? 'rgba(255,255,255,0.3)' : c.geo_match ? '#12B76A' : 'rgba(255,255,255,0.6)',
-                  cursor: assigning ? 'default' : 'pointer',
-                  flexShrink: 0,
-                }}
-              >
-                {assigning === c.id ? '...' : 'Назначить'}
-              </button>
-            </div>
-          ))}
+          ) : (
+            <>
+              {matched.length > 0 && (
+                <>
+                  <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#12B76A', padding: '2px 2px' }}>
+                    Свой город · {matched.length}
+                  </div>
+                  {matched.map(c => <CourierRow key={c.id} c={c} />)}
+                </>
+              )}
+              {unmatched.length > 0 && (
+                <>
+                  <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#F79009', padding: '2px 2px', marginTop: matched.length > 0 ? 8 : 0 }}>
+                    Другой регион · {unmatched.length}
+                  </div>
+                  {unmatched.map(c => <CourierRow key={c.id} c={c} />)}
+                </>
+              )}
+            </>
+          )}
         </div>
       </div>
     </div>

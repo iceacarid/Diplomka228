@@ -129,9 +129,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('warehouses/{warehouse}/logs',            [WarehouseController::class, 'logs']);
     Route::patch('warehouses/{warehouse}/logs/{log}',    [WarehouseController::class, 'updateLog']);
 
-    // Курьеры (admin)
-    Route::get('admin/couriers',                  [AdminCourierController::class, 'index']);
-    Route::get('admin/couriers/{user}/history',   [AdminCourierController::class, 'history']);
+    // Курьеры (manager/admin)
+    Route::get('admin/couriers',                         [AdminCourierController::class, 'index']);
+    Route::get('admin/couriers/{user}/history',          [AdminCourierController::class, 'history']);
+    Route::post('admin/couriers/{user}/close-shift',     [AdminCourierController::class, 'closeShift']);
+    Route::post('admin/couriers/{user}/open-shift',      [AdminCourierController::class, 'openShift']);
 
     // Курьер
     Route::prefix('courier')->group(function () {

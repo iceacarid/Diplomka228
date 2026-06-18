@@ -121,7 +121,7 @@ export default function ClientHome() {
         <StatTile icon={<Icons.Package size={20}/>} label="Активных заявок" value={String(active.length)} sub={`${active.filter(o => o.status === 'shipped').length} в пути · ${active.filter(o => o.status === 'pending').length} новая`} trend={`+${active.length}`} />
         <StatTile icon={<Icons.Check size={20}/>} label="Доставлено в этом месяце" value={String(delivered.length)} sub="из них все в срок" trend={`+${delivered.length}`} />
         <StatTile icon={<Icons.Wallet size={20}/>} label="Расходы за месяц" value={fmtMoney(totalSpent)} sub="по доставленным" trend="—" />
-        <StatTile icon={<Icons.Map size={20}/>} label="Текущий пробег" value={`${active.length * 700} км`} sub={`по ${active.length} активным`} trend="—" />
+        <StatTile icon={<Icons.Boxes size={20}/>} label="Всего заявок" value={String(orders.length)} sub={`${delivered.length} доставлено · ${active.length} активных`} trend={`+${orders.length}`} />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 18 }}>
@@ -130,7 +130,7 @@ export default function ClientHome() {
             <div>
               <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: 4 }}>Активная доставка</div>
               <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 28, letterSpacing: 1 }}>
-                {transit ? `${transit.tracking_id} · ${transit.origin} → ${transit.destination}` : 'Нет активных доставок'}
+                {transit ? `${transit.tracking_id} · ${transit.origin_address} → ${transit.dest_address}` : 'Нет активных доставок'}
               </h3>
             </div>
             {transit && <StatusPill status="shipped" map={ORDER_STATUS_MAP} />}
@@ -140,7 +140,7 @@ export default function ClientHome() {
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
                 <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)', flexShrink: 0 }}>
-                  {(transit.origin || '').slice(0, 3).toUpperCase()}
+                  {(transit.origin_address || '').slice(0, 3).toUpperCase()}
                 </div>
                 <div style={{ flex: 1, position: 'relative', height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 2 }}>
                   <div style={{ position: 'absolute', left: 0, top: 0, height: 4, width: '62%', background: 'var(--gold)', borderRadius: 2 }}/>
@@ -149,14 +149,14 @@ export default function ClientHome() {
                   </div>
                 </div>
                 <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)', flexShrink: 0 }}>
-                  {(transit.destination || '').slice(0, 3).toUpperCase()}
+                  {(transit.dest_address || '').slice(0, 3).toUpperCase()}
                 </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 18, padding: '18px 0', borderTop: '1px solid rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                 {[
-                  ['Откуда', transit.origin, 'var(--gold)'],
-                  ['Куда', transit.destination, 'white'],
+                  ['Откуда', transit.origin_address, 'var(--gold)'],
+                  ['Куда', transit.dest_address, 'white'],
                   ['Вес', `${(transit.weight || 0).toLocaleString('ru')} кг`, 'white'],
                   ['Сумма', transit.price ? `₽ ${Number(transit.price).toLocaleString('ru')}` : '—', 'white'],
                 ].map(([l, v, c], i) => (
@@ -174,10 +174,9 @@ export default function ClientHome() {
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 13, fontWeight: 600 }}>Водитель назначен</div>
                   <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)' }}>
-                    {transit.truck_info || 'Транспорт назначается'}
+                    {[transit.driver_name, transit.truck_model, transit.truck_plate].filter(Boolean).join(' · ')}
                   </div>
                 </div>
-                <Btn kind="ghost" icon={<Icons.Phone size={14}/>} size="sm">Связаться</Btn>
                 <Btn icon={<Icons.Map size={14}/>} size="sm">На карте</Btn>
               </div>
             </>
@@ -208,7 +207,7 @@ export default function ClientHome() {
               columns={['№ Заявки', 'Маршрут', 'Дата', 'Вес', 'Сумма', 'Статус']}
               rows={orders.slice(0, 5).map(o => [
                 <span key="id" style={{ fontFamily: 'var(--font-mono)', color: 'var(--gold)', fontWeight: 600 }}>{o.tracking_id}</span>,
-                <span key="route" style={{ fontWeight: 500 }}>{o.origin} <span style={{ color: 'rgba(255,255,255,0.3)' }}>→</span> {o.destination}</span>,
+                <span key="route" style={{ fontWeight: 500 }}>{o.origin_address} <span style={{ color: 'rgba(255,255,255,0.3)' }}>→</span> {o.dest_address}</span>,
                 <span key="date" style={{ fontFamily: 'var(--font-mono)', color: 'rgba(255,255,255,0.7)' }}>
                   {o.created_at ? new Date(o.created_at).toLocaleDateString('ru') : '—'}
                 </span>,

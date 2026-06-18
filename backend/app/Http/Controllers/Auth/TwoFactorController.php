@@ -69,15 +69,16 @@ class TwoFactorController extends Controller
         ]);
 
         $confirmUrl = config('app.url') . "/api/auth/2fa/confirm-link?token={$token}&action={$action}";
-        $label = $action === 'enable' ? 'включения' : 'отключения';
+        $label   = $action === 'enable' ? 'включения' : 'отключения';
         $subject = "ФураЕдет — подтверждение {$label} 2FA";
-        $body = "Здравствуйте, {$user->name}!\n\n" .
-                "Для подтверждения {$label} двухфакторной аутентификации перейдите по ссылке:\n\n" .
-                "{$confirmUrl}\n\n" .
-                "Ссылка действительна " . self::ACTION_EXPIRY_MINUTES . " минут.\n" .
-                "Если вы не делали этот запрос — проигнорируйте письмо.";
 
-        \Illuminate\Support\Facades\Mail::raw($body, function ($msg) use ($user, $subject) {
+        \Illuminate\Support\Facades\Mail::send('emails.2fa_link', [
+            'name'       => $user->name,
+            'action'     => $action,
+            'confirmUrl' => $confirmUrl,
+            'minutes'    => self::ACTION_EXPIRY_MINUTES,
+            'subject'    => $subject,
+        ], function ($msg) use ($user, $subject) {
             $msg->to($user->email)->subject($subject);
         });
 

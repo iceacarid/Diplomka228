@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import api from '../api/axios'
@@ -124,36 +124,38 @@ export default function LandingPage() {
 
           {/* Calc widget */}
           <div style={{ flexShrink:0 }}>
-            <div style={{ background:'var(--navy2)', borderRadius:14, padding:'40px 40px 36px', border:'2px solid rgba(255,255,255,0.07)', width:420, transform:'rotate(3deg)', transition:'transform 0.45s cubic-bezier(0.34,1.56,0.64,1),border-color 0.35s,box-shadow 0.35s', boxShadow:'20px 20px 60px rgba(0,0,0,0.55)' }}
+            <div style={{ background:'var(--navy2)', borderRadius:16, padding:'44px 44px 40px', border:'2px solid rgba(255,255,255,0.07)', width:520, transform:'rotate(2.5deg)', transition:'transform 0.45s cubic-bezier(0.34,1.56,0.64,1),border-color 0.35s,box-shadow 0.35s', boxShadow:'20px 20px 60px rgba(0,0,0,0.55)' }}
               onMouseEnter={e => { e.currentTarget.style.transform='rotate(0deg)'; e.currentTarget.style.borderColor='var(--gold)'; e.currentTarget.style.boxShadow='0 0 0 1px var(--gold),0 0 60px rgba(240,165,0,0.2),24px 24px 48px rgba(0,0,0,0.4)' }}
-              onMouseLeave={e => { e.currentTarget.style.transform='rotate(3deg)'; e.currentTarget.style.borderColor='rgba(255,255,255,0.07)'; e.currentTarget.style.boxShadow='20px 20px 60px rgba(0,0,0,0.55)' }}>
+              onMouseLeave={e => { e.currentTarget.style.transform='rotate(2.5deg)'; e.currentTarget.style.borderColor='rgba(255,255,255,0.07)'; e.currentTarget.style.boxShadow='20px 20px 60px rgba(0,0,0,0.55)' }}>
               <div style={{ fontSize:9, fontWeight:700, letterSpacing:'0.22em', textTransform:'uppercase', color:'var(--gold)', marginBottom:6 }}>Онлайн-калькулятор</div>
-              <div style={{ fontFamily:'var(--font-display)', fontSize:38, letterSpacing:1, marginBottom:28, lineHeight:1 }}>
+              <div style={{ fontFamily:'var(--font-display)', fontSize:42, letterSpacing:1, marginBottom:28, lineHeight:1 }}>
                 Быстрый <span style={{ color:'var(--gold)' }}>расчёт</span>
               </div>
               <form onSubmit={handleCalc}>
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:10 }}>
-                  <CalcField label="Откуда" placeholder="Москва" value={calc.from} onChange={v => setCalc({...calc, from:v})} />
-                  <CalcField label="Куда" placeholder="Казань" value={calc.to} onChange={v => setCalc({...calc, to:v})} />
+                <div style={{ display:'flex', flexDirection:'column', gap:10, marginBottom:10 }}>
+                  <SuggestField label="Откуда" placeholder="Начните вводить город или адрес" value={calc.from} onChange={v => setCalc({...calc, from:v})} />
+                  <SuggestField label="Куда" placeholder="Начните вводить город или адрес" value={calc.to} onChange={v => setCalc({...calc, to:v})} />
                 </div>
                 <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:10 }}>
                   <CalcField label="Вес, кг" placeholder="5000" type="number" value={calc.kg} onChange={v => setCalc({...calc, kg:v})} />
                   <CalcField label="Объём, м³" placeholder="20" type="number" value={calc.m3} onChange={v => setCalc({...calc, m3:v})} />
                 </div>
-                <div style={{ height:1, background:'rgba(255,255,255,0.07)', margin:'16px 0 12px' }} />
-                <button type="submit" disabled={calcLoading} style={{ width:'100%', padding:14, background:'var(--gold)', color:'var(--navy)', fontWeight:700, fontSize:12, letterSpacing:'0.1em', textTransform:'uppercase', border:'none', borderRadius:6, cursor:'pointer', fontFamily:'var(--font-body)' }}>
-                  {calcLoading ? 'Считаем...' : 'Рассчитать стоимость'}
+                <div style={{ height:1, background:'rgba(255,255,255,0.07)', margin:'18px 0 14px' }} />
+                <button type="submit" disabled={calcLoading} style={{ width:'100%', padding:'15px 0', background:'var(--gold)', color:'var(--navy)', fontWeight:700, fontSize:12, letterSpacing:'0.1em', textTransform:'uppercase', border:'none', borderRadius:8, cursor:'pointer', fontFamily:'var(--font-body)' }}>
+                  {calcLoading ? 'Считаем...' : 'Рассчитать стоимость →'}
                 </button>
               </form>
               {calcResult && (
-                <div style={{ textAlign:'center', paddingTop:20 }}>
-                  <div style={{ fontSize:9, letterSpacing:'0.22em', textTransform:'uppercase', color:'rgba(255,255,255,0.3)', marginBottom:8, fontWeight:700 }}>Ориентировочная цена</div>
-                  <div style={{ fontFamily:'var(--font-display)', fontSize:52, color:'var(--gold)', letterSpacing:2 }}>
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginTop:16, paddingTop:14, borderTop:'1px solid rgba(255,255,255,0.07)' }}>
+                  <div>
+                    <div style={{ fontSize:9, letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(255,255,255,0.28)', fontWeight:700, marginBottom:3 }}>Ориентировочная цена</div>
+                    {calcResult.distance_km && calcResult.distance_km !== '—' && (
+                      <div style={{ fontSize:11, color:'rgba(255,255,255,0.3)' }}>{calcResult.distance_km} км · ~{calcResult.estimated_delivery_days} дн.</div>
+                    )}
+                  </div>
+                  <div style={{ fontFamily:'var(--font-display)', fontSize:32, color:'var(--gold)', letterSpacing:1, flexShrink:0 }}>
                     {typeof calcResult.price === 'number' ? `${Number(calcResult.price).toLocaleString('ru')} ₽` : calcResult.price}
                   </div>
-                  {calcResult.distance_km && calcResult.distance_km !== '—' && (
-                    <div style={{ fontSize:11, color:'rgba(255,255,255,0.3)', marginTop:4 }}>{calcResult.distance_km} км · ~{calcResult.estimated_delivery_days} дн.</div>
-                  )}
                 </div>
               )}
             </div>
@@ -482,6 +484,13 @@ export default function LandingPage() {
   )
 }
 
+const calcInputStyle = {
+  background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.09)',
+  color:'var(--white)', padding:'13px 14px', borderRadius:6, fontSize:13,
+  fontWeight:600, fontFamily:'var(--font-body)', width:'100%', outline:'none',
+  boxSizing:'border-box', transition:'border 0.2s,background 0.2s',
+}
+
 function CalcField({ label, placeholder, type='text', value, onChange }) {
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
@@ -491,10 +500,86 @@ function CalcField({ label, placeholder, type='text', value, onChange }) {
         placeholder={placeholder}
         value={value}
         onChange={e => onChange(e.target.value)}
-        style={{ background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.09)', color:'var(--white)', padding:'13px 14px', borderRadius:6, fontSize:13, fontWeight:600, fontFamily:'var(--font-body)', width:'100%', outline:'none', transition:'border 0.2s,background 0.2s' }}
+        style={calcInputStyle}
         onFocus={e => { e.target.style.borderColor='var(--gold)'; e.target.style.background='rgba(255,255,255,0.08)' }}
         onBlur={e => { e.target.style.borderColor='rgba(255,255,255,0.09)'; e.target.style.background='rgba(255,255,255,0.05)' }}
       />
+    </div>
+  )
+}
+
+function SuggestField({ label, placeholder, value, onChange }) {
+  const [items, setItems] = useState([])
+  const [open, setOpen]   = useState(false)
+  const [busy, setBusy]   = useState(false)
+  const timer = useRef(null)
+  const wrap  = useRef(null)
+
+  useEffect(() => {
+    const close = (e) => { if (wrap.current && !wrap.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [])
+
+  const handleInput = (val) => {
+    onChange(val)
+    clearTimeout(timer.current)
+    if (val.length < 2) { setItems([]); setOpen(false); return }
+    timer.current = setTimeout(async () => {
+      setBusy(true)
+      try {
+        const { data } = await api.get('/suggest', { params: { q: val } })
+        const list = Array.isArray(data) ? data : []
+        setItems(list)
+        setOpen(list.length > 0)
+      } catch { setItems([]) }
+      finally { setBusy(false) }
+    }, 280)
+  }
+
+  const pick = (item) => { onChange(item.name); setItems([]); setOpen(false) }
+
+  return (
+    <div ref={wrap} style={{ position:'relative' }}>
+      <div style={{ fontSize:9, fontWeight:700, letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(255,255,255,0.28)', marginBottom:4 }}>{label}</div>
+      <div style={{ position:'relative' }}>
+        <span style={{ position:'absolute', left:12, top:'50%', transform:'translateY(-50%)', color:'rgba(240,165,0,0.45)', pointerEvents:'none', display:'flex' }}>
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" stroke="currentColor" strokeWidth="2"/><circle cx="12" cy="9" r="2.5" stroke="currentColor" strokeWidth="1.8"/></svg>
+        </span>
+        <input
+          type="text"
+          placeholder={placeholder}
+          value={value}
+          autoComplete="off"
+          onChange={e => handleInput(e.target.value)}
+          onFocus={e => { e.target.style.borderColor='var(--gold)'; e.target.style.background='rgba(255,255,255,0.08)'; if (items.length > 0) setOpen(true) }}
+          onBlur={e => { e.target.style.borderColor='rgba(255,255,255,0.09)'; e.target.style.background='rgba(255,255,255,0.05)' }}
+          style={{ ...calcInputStyle, paddingLeft:34, paddingRight: busy ? 32 : 14 }}
+        />
+        {busy && (
+          <span style={{ position:'absolute', right:12, top:'50%', transform:'translateY(-50%)', display:'flex' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ animation:'spin 0.8s linear infinite' }}>
+              <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+              <circle cx="12" cy="12" r="9" stroke="rgba(255,255,255,0.15)" strokeWidth="2.5"/>
+              <path d="M12 3a9 9 0 0 1 9 9" stroke="var(--gold)" strokeWidth="2.5" strokeLinecap="round"/>
+            </svg>
+          </span>
+        )}
+      </div>
+      {open && items.length > 0 && (
+        <div style={{ position:'absolute', top:'calc(100% + 4px)', left:0, right:0, zIndex:1000, background:'#0f0f28', border:'1px solid rgba(240,165,0,0.25)', borderRadius:8, maxHeight:220, overflowY:'auto', boxShadow:'0 16px 48px rgba(0,0,0,0.65)' }}>
+          {items.map((s, i) => (
+            <div key={i} onMouseDown={() => pick(s)}
+              style={{ padding:'10px 14px', fontSize:13, color:'rgba(255,255,255,0.75)', cursor:'pointer', borderBottom: i < items.length-1 ? '1px solid rgba(255,255,255,0.05)':'none', display:'flex', alignItems:'center', gap:8, transition:'background 0.1s' }}
+              onMouseEnter={e => e.currentTarget.style.background='rgba(240,165,0,0.09)'}
+              onMouseLeave={e => e.currentTarget.style.background='transparent'}
+            >
+              <svg width="12" height="12" fill="none" viewBox="0 0 24 24" style={{ color:'rgba(240,165,0,0.45)', flexShrink:0 }}><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" stroke="currentColor" strokeWidth="2"/><circle cx="12" cy="9" r="2.5" stroke="currentColor" strokeWidth="1.8"/></svg>
+              <span>{s.name}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

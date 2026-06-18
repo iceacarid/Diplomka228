@@ -108,7 +108,7 @@ export default function TrucksTab() {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 14 }}>
                   <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)' }}>
-                    Грузоподъёмность: <span style={{ color: 'rgba(255,255,255,0.85)', fontFamily: 'var(--font-mono)' }}>{t.capacity_weight.toLocaleString('ru')} кг</span>
+                    Грузоподъёмность: <span style={{ color: 'rgba(255,255,255,0.85)', fontFamily: 'var(--font-mono)' }}>{(t.capacity_weight / 1000).toLocaleString('ru', { maximumFractionDigits: 2 })} Т</span>
                   </div>
                   <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)' }}>
                     Объём: <span style={{ color: 'rgba(255,255,255,0.85)', fontFamily: 'var(--font-mono)' }}>{t.capacity_volume} м³</span>
@@ -215,7 +215,7 @@ function TruckForm({ initial, drivers, onClose, onSaved }) {
           <Field label="Модель" required value={form.model} onChange={set('model')} />
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-          <Field label="Грузоподъёмность (т)" type="number" step="0.1" required value={form.capacity_weight} onChange={set('capacity_weight')} />
+          <Field label="Грузоподъёмность (кг)" type="number" step="1" required value={form.capacity_weight} onChange={set('capacity_weight')} />
           <Field label="Объём (м³)" type="number" step="0.1" required value={form.capacity_volume} onChange={set('capacity_volume')} />
         </div>
 

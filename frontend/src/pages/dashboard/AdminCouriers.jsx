@@ -3,21 +3,25 @@ import api from '../../api/axios'
 import { Icons } from '../../components/Icons'
 
 const ACTION_LABELS = {
-  shift_open:         'Открыл смену',
-  shift_close:        'Закрыл смену',
-  order_taken:        'Взял заказ',
-  order_picked_up:    'Груз забран',
-  order_at_warehouse: 'Груз передан на склад',
-  reschedule_requested: 'Запросил перенос',
+  shift_open:             'Открыл смену',
+  shift_close:            'Закрыл смену',
+  shift_open_by_manager:  'Смена открыта менеджером',
+  shift_close_by_manager: 'Смена закрыта менеджером',
+  order_taken:            'Взял заказ',
+  order_picked_up:        'Груз забран',
+  order_at_warehouse:     'Груз передан на склад',
+  reschedule_requested:   'Запросил перенос',
 }
 
 const ACTION_COLORS = {
-  shift_open:         '#12B76A',
-  shift_close:        '#F04438',
-  order_taken:        'var(--gold)',
-  order_picked_up:    '#7BB4FF',
-  order_at_warehouse: '#A78BFA',
-  reschedule_requested: '#F59E0B',
+  shift_open:             '#12B76A',
+  shift_close:            '#F04438',
+  shift_open_by_manager:  'var(--gold)',
+  shift_close_by_manager: 'var(--gold)',
+  order_taken:            'var(--gold)',
+  order_picked_up:        '#7BB4FF',
+  order_at_warehouse:     '#A78BFA',
+  reschedule_requested:   '#F59E0B',
 }
 
 function groupByDate(actions) {
@@ -43,6 +47,7 @@ export default function AdminCouriers() {
   const [detailLoading, setDetailLoading] = useState(false)
   const [search,     setSearch]     = useState('')
   const [filterShift, setFilterShift] = useState('all')
+  const [closingShift, setClosingShift] = useState(false)
 
   useEffect(() => {
     api.get('/admin/couriers')
@@ -65,6 +70,34 @@ export default function AdminCouriers() {
     api.get(`/admin/couriers/${c.id}/history`)
       .then(r => setDetail(r.data))
       .finally(() => setDetailLoading(false))
+  }
+
+  async function handleCloseShift() {
+    if (!selected || closingShift) return
+    setClosingShift(true)
+    try {
+      await api.post(`/admin/couriers/${selected.id}/close-shift`)
+      const r = await api.get(`/admin/couriers/${selected.id}/history`)
+      setDetail(r.data)
+      setCouriers(prev => prev.map(c => c.id === selected.id ? { ...c, has_open_shift: false } : c))
+    } catch (e) {
+      alert(e?.response?.data?.error || 'Ошибка закрытия смены')
+    }
+    setClosingShift(false)
+  }
+
+  async function handleOpenShift() {
+    if (!selected || closingShift) return
+    setClosingShift(true)
+    try {
+      await api.post(`/admin/couriers/${selected.id}/open-shift`)
+      const r = await api.get(`/admin/couriers/${selected.id}/history`)
+      setDetail(r.data)
+      setCouriers(prev => prev.map(c => c.id === selected.id ? { ...c, has_open_shift: true } : c))
+    } catch (e) {
+      alert(e?.response?.data?.error || 'Ошибка открытия смены')
+    }
+    setClosingShift(false)
   }
 
   const grouped = detail ? groupByDate(detail.actions) : []
@@ -193,9 +226,36 @@ export default function AdminCouriers() {
                   {detail.courier.email} · {detail.courier.phone || 'нет телефона'}
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: 12, flexShrink: 0 }}>
+              <div style={{ display: 'flex', gap: 12, flexShrink: 0, alignItems: 'center' }}>
                 <StatBox value={detail.courier.total_orders} label="Всего" />
                 <StatBox value={detail.courier.active_orders} label="Активных" color="var(--gold)" />
+                {detail.courier.has_open_shift ? (
+                  <button
+                    onClick={handleCloseShift}
+                    disabled={closingShift}
+                    style={{
+                      padding: '8px 14px', borderRadius: 8, fontSize: 12, fontWeight: 700,
+                      fontFamily: 'var(--font-body)', cursor: closingShift ? 'default' : 'pointer',
+                      background: 'rgba(240,68,56,0.12)', border: '1px solid rgba(240,68,56,0.35)',
+                      color: closingShift ? 'rgba(255,255,255,0.3)' : '#F04438',
+                    }}
+                  >
+                    {closingShift ? '...' : 'Закрыть смену'}
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleOpenShift}
+                    disabled={closingShift}
+                    style={{
+                      padding: '8px 14px', borderRadius: 8, fontSize: 12, fontWeight: 700,
+                      fontFamily: 'var(--font-body)', cursor: closingShift ? 'default' : 'pointer',
+                      background: 'rgba(18,183,106,0.12)', border: '1px solid rgba(18,183,106,0.35)',
+                      color: closingShift ? 'rgba(255,255,255,0.3)' : '#12B76A',
+                    }}
+                  >
+                    {closingShift ? '...' : 'Открыть смену'}
+                  </button>
+                )}
               </div>
             </div>
 

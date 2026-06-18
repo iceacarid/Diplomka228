@@ -140,10 +140,8 @@ export default function WarehousesTab() {
   // Инициализация карты
   useEffect(() => {
     if (mapInst.current || !mapRef.current) return
-    const map = L.map(mapRef.current, { zoomControl: true }).setView([55.75, 37.62], 5)
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap',
-    }).addTo(map)
+    const map = L.map(mapRef.current, { zoomControl: true, attributionControl: false }).setView([55.75, 37.62], 5)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map)
 
     map.on('click', (e) => {
       if (!isAdmin) return

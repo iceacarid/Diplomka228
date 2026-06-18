@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import { useAuth } from '../context/AuthContext'
@@ -13,6 +13,15 @@ export default function LoginPage() {
   const [twoFactor, setTwoFactor] = useState(false)
   const [otpCode, setOtpCode] = useState('')
 
+  // Push history entry when 2FA screen opens so browser back works correctly
+  useEffect(() => {
+    if (!twoFactor) return
+    window.history.pushState({ step: '2fa' }, '')
+    const onPop = () => { setTwoFactor(false); setError(''); setOtpCode('') }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [twoFactor])
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
@@ -23,7 +32,7 @@ export default function LoginPage() {
         setTwoFactor(true)
       } else {
         login(data.user, data.token)
-        navigate('/dashboard')
+        navigate('/dashboard', { replace: true })
       }
     } catch (err) {
       setError(err.response?.data?.error || 'Ошибка входа')
@@ -39,7 +48,7 @@ export default function LoginPage() {
     try {
       const { data } = await api.post('/auth/2fa/verify', { email: form.email, code: otpCode })
       login(data.user, data.token)
-      navigate('/dashboard')
+      navigate('/dashboard', { replace: true })
     } catch (err) {
       setError(err.response?.data?.error || 'Неверный код')
     } finally {
@@ -175,7 +184,7 @@ export default function LoginPage() {
                   {loading ? <Spinner /> : 'ПОДТВЕРДИТЬ'}
                 </button>
 
-                <button type="button" onClick={() => { setTwoFactor(false); setError('') }}
+                <button type="button" onClick={() => window.history.back()}
                   style={{ width: '100%', marginTop: '12px', padding: '12px', background: 'none', border: '1.5px solid var(--gray1)', borderRadius: '12px', cursor: 'pointer', color: 'var(--gray3)', fontSize: '14px', fontFamily: 'var(--font-body)', transition: 'border-color .2s' }}
                   onMouseOver={e => e.currentTarget.style.borderColor = 'var(--navy)'}
                   onMouseOut={e => e.currentTarget.style.borderColor = 'var(--gray1)'}
@@ -236,14 +245,25 @@ function AuthInput({ label, type = 'text', value, onChange, placeholder, icon })
 }
 
 function OtpInput({ value, onChange }) {
+  const containerRef = useRef(null)
   const digits = [0,1,2,3,4,5]
   const chars = value.padEnd(6, '')
+
+  const handlePaste = (e) => {
+    e.preventDefault()
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6)
+    if (!pasted) return
+    onChange(pasted)
+    const inputs = containerRef.current?.querySelectorAll('input')
+    if (inputs) inputs[Math.min(pasted.length, 5)]?.focus()
+  }
+
   return (
     <div>
       <p style={{ fontSize: '13px', color: 'var(--gray3)', marginBottom: '16px', textAlign: 'center' }}>
         Введите 6-значный код подтверждения
       </p>
-      <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+      <div ref={containerRef} style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
         {digits.map(i => (
           <input
             key={i}
@@ -262,6 +282,7 @@ function OtpInput({ value, onChange }) {
               if (e.key === 'Backspace' && !chars[i] && e.target.previousElementSibling)
                 e.target.previousElementSibling.focus()
             }}
+            onPaste={handlePaste}
             style={{
               width: '48px', height: '56px', textAlign: 'center',
               fontSize: '22px', fontFamily: 'var(--font-mono)', fontWeight: '600',

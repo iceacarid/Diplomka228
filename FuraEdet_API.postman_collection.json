@@ -1,0 +1,476 @@
+{
+  "info": {
+    "name": "ФураЕдет API",
+    "description": "REST API для логистической платформы ФураЕдет",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://45.87.247.240.nip.io/api",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Аутентификация",
+      "item": [
+        {
+          "name": "Регистрация",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/auth/register",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"name\": \"Иван Иванов\",\n  \"email\": \"ivan@example.com\",\n  \"phone\": \"+79001234567\",\n  \"password\": \"Password1!\"\n}"}
+          }
+        },
+        {
+          "name": "Подтверждение email (OTP)",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/auth/verify-email",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"email\": \"ivan@example.com\",\n  \"code\": \"123456\",\n  \"purpose\": \"registration\"\n}"}
+          }
+        },
+        {
+          "name": "Повторная отправка OTP",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/auth/resend-otp",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"email\": \"ivan@example.com\",\n  \"purpose\": \"registration\"\n}"}
+          }
+        },
+        {
+          "name": "Вход",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/auth/login",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"email\": \"ivan@example.com\",\n  \"password\": \"Password1!\"\n}"}
+          }
+        },
+        {
+          "name": "Выход",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/auth/logout",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}]
+          }
+        },
+        {
+          "name": "Профиль (me)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/auth/me",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}]
+          }
+        },
+        {
+          "name": "Обновить профиль",
+          "request": {
+            "method": "PUT",
+            "url": "{{base_url}}/auth/me",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}, {"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"name\": \"Новое Имя\",\n  \"phone\": \"+79009999999\"\n}"}
+          }
+        },
+        {
+          "name": "Сброс пароля — запрос",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/auth/password-reset",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"email\": \"ivan@example.com\"\n}"}
+          }
+        },
+        {
+          "name": "Сброс пароля — подтверждение",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/auth/password-reset/confirm",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"email\": \"ivan@example.com\",\n  \"code\": \"123456\",\n  \"new_password\": \"NewPassword1!\"\n}"}
+          }
+        },
+        {
+          "name": "2FA — запрос включения/отключения",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/auth/2fa/request",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}, {"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"action\": \"enable\"\n}"}
+          }
+        },
+        {
+          "name": "2FA — верификация при входе",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/auth/2fa/verify",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"email\": \"ivan@example.com\",\n  \"code\": \"123456\"\n}"}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Заказы",
+      "item": [
+        {
+          "name": "Список заказов",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/orders",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}]
+          }
+        },
+        {
+          "name": "Создать заказ",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/orders",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}, {"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"origin_address\": \"Москва, ул. Ленина, 1\",\n  \"dest_address\": \"Санкт-Петербург, Невский пр., 10\",\n  \"weight\": 500,\n  \"volume\": 2.5,\n  \"cargo_type\": \"general\",\n  \"price\": 15000,\n  \"pickup_date\": \"2026-07-01\"\n}"}
+          }
+        },
+        {
+          "name": "Получить заказ",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/orders/:id",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}]
+          }
+        },
+        {
+          "name": "Обновить заказ",
+          "request": {
+            "method": "PUT",
+            "url": "{{base_url}}/orders/:id",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}, {"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"status\": \"pending\"\n}"}
+          }
+        },
+        {
+          "name": "Удалить заказ",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/orders/:id",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}]
+          }
+        },
+        {
+          "name": "Принять заказ (менеджер)",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/orders/:id/accept",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}]
+          }
+        },
+        {
+          "name": "Отклонить заказ (менеджер)",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/orders/:id/reject",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}, {"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"rejection_reason\": \"Груз не соответствует требованиям\"\n}"}
+          }
+        },
+        {
+          "name": "Назначить транспорт",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/orders/:id/assign-transport",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}, {"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"truck_id\": 1,\n  \"driver_id\": 1\n}"}
+          }
+        },
+        {
+          "name": "Назначить курьера",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/orders/:id/assign-courier",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}, {"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"courier_id\": 5\n}"}
+          }
+        },
+        {
+          "name": "Снять курьера",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/orders/:id/unassign-courier",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}]
+          }
+        },
+        {
+          "name": "Публичное отслеживание",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/orders/track/:tracking_id"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Чаты",
+      "item": [
+        {
+          "name": "Список чатов",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/chats",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}]
+          }
+        },
+        {
+          "name": "Открыть чат",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/chats/:id",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}]
+          }
+        },
+        {
+          "name": "Сообщения чата",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/chats/:id/messages",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}]
+          }
+        },
+        {
+          "name": "Отправить сообщение",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/chats/:id/messages",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}, {"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"body\": \"Здравствуйте, когда будет забор?\"\n}"}
+          }
+        },
+        {
+          "name": "Архивировать чат",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/chats/:id/archive",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Пользователи",
+      "item": [
+        {
+          "name": "Список пользователей",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/users",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}]
+          }
+        },
+        {
+          "name": "Изменить роль",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/users/:id/change-role",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}, {"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"role\": \"manager\"\n}"}
+          }
+        },
+        {
+          "name": "Заблокировать пользователя",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/users/:id/block",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}, {"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"reason\": \"Нарушение правил\"\n}"}
+          }
+        },
+        {
+          "name": "Разблокировать пользователя",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/users/:id/unblock",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Водители и транспорт",
+      "item": [
+        {
+          "name": "Список водителей",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/drivers",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}]
+          }
+        },
+        {
+          "name": "Создать водителя",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/drivers",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}, {"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"name\": \"Пётр Петров\",\n  \"phone\": \"+79001112233\",\n  \"license_number\": \"77АА123456\"\n}"}
+          }
+        },
+        {
+          "name": "Список фур",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/trucks",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}]
+          }
+        },
+        {
+          "name": "Создать фуру",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/trucks",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}, {"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"plate_number\": \"А123ВС77\",\n  \"brand\": \"КАМАЗ\",\n  \"model\": \"5490\",\n  \"capacity_weight\": 20000,\n  \"capacity_volume\": 82\n}"}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Калькулятор и геокодинг",
+      "item": [
+        {
+          "name": "Рассчитать стоимость",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/calculator",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"origin\": \"Москва\",\n  \"destination\": \"Санкт-Петербург\",\n  \"weight\": 500,\n  \"volume\": 2.5,\n  \"cargo_type\": \"general\"\n}"}
+          }
+        },
+        {
+          "name": "Подсказки адресов",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/suggest?q=Москва",
+              "query": [{"key": "q", "value": "Москва"}]
+            }
+          }
+        },
+        {
+          "name": "Обратное геокодирование",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/geocode/reverse?lat=55.7558&lon=37.6173",
+              "query": [{"key": "lat", "value": "55.7558"}, {"key": "lon", "value": "37.6173"}]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "AI оптимизация",
+      "item": [
+        {
+          "name": "Оптимизация загрузки",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/ai/optimize",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}, {"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"trucks\": [],\n  \"orders\": [],\n  \"prompt\": \"Оптимизируй распределение грузов\"\n}"}
+          }
+        },
+        {
+          "name": "План распределения (GigaChat)",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/ai/distribution-plan",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}, {"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"order_ids\": [1, 2, 3]\n}"}
+          }
+        },
+        {
+          "name": "Применить план",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/ai/apply-plan",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}, {"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"assignments\": [\n    {\"truck_id\": 1, \"order_ids\": [1, 2]}\n  ]\n}"}
+          }
+        },
+        {
+          "name": "История запросов AI",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/ai/history",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Склады",
+      "item": [
+        {
+          "name": "Список складов",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/warehouses",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}]
+          }
+        },
+        {
+          "name": "Создать склад",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/warehouses",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}, {"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"name\": \"Склад Москва-1\",\n  \"address\": \"Москва, Складской пр., 5\",\n  \"latitude\": 55.7558,\n  \"longitude\": 37.6173,\n  \"total_capacity\": 1000\n}"}
+          }
+        },
+        {
+          "name": "Журнал склада",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/warehouses/:id/logs",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Тарифы и типы груза",
+      "item": [
+        {
+          "name": "Список тарифов",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/tariffs"
+          }
+        },
+        {
+          "name": "Обновить тариф",
+          "request": {
+            "method": "PUT",
+            "url": "{{base_url}}/tariffs/:id",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}, {"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"price_per_km\": 55,\n  \"weight_coef\": 1.2\n}"}
+          }
+        },
+        {
+          "name": "Список типов груза",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/cargo-types"
+          }
+        }
+      ]
+    }
+  ]
+}

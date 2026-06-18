@@ -20,7 +20,7 @@ class AdminCourierController extends Controller
 
     public function index(Request $request)
     {
-        abort_unless($request->user()->isAdmin(), 403);
+        abort_unless($request->user()->isManagerOrAdmin(), 403);
 
         $couriers = User::where('role', 'courier')->orderBy('name')->with('warehouse')->get();
 
@@ -51,7 +51,7 @@ class AdminCourierController extends Controller
 
     public function history(Request $request, User $user)
     {
-        abort_unless($request->user()->isAdmin(), 403);
+        abort_unless($request->user()->isManagerOrAdmin(), 403);
         abort_if($user->role !== 'courier', 422, 'Пользователь не является курьером.');
 
         $actions = CourierAction::where('courier_id', $user->id)
@@ -81,5 +81,55 @@ class AdminCourierController extends Controller
             ],
             'actions' => $actions,
         ]);
+    }
+
+    public function closeShift(Request $request, User $user)
+    {
+        abort_unless($request->user()->isManagerOrAdmin(), 403);
+        abort_if($user->role !== 'courier', 422, 'Пользователь не является курьером.');
+
+        $shift = CourierShift::where('courier_id', $user->id)
+                             ->whereNull('closed_at')
+                             ->first();
+
+        if (!$shift) {
+            return response()->json(['error' => 'У курьера нет открытой смены.'], 400);
+        }
+
+        $shift->update(['closed_at' => now()]);
+
+        CourierAction::create([
+            'courier_id'  => $user->id,
+            'action_type' => 'shift_close_by_manager',
+            'order_id'    => null,
+            'shift_id'    => $shift->id,
+        ]);
+
+        return response()->json(['success' => true, 'closed_at' => $shift->closed_at]);
+    }
+
+    public function openShift(Request $request, User $user)
+    {
+        abort_unless($request->user()->isManagerOrAdmin(), 403);
+        abort_if($user->role !== 'courier', 422, 'Пользователь не является курьером.');
+
+        $existing = CourierShift::where('courier_id', $user->id)
+                                ->whereNull('closed_at')
+                                ->first();
+
+        if ($existing) {
+            return response()->json(['error' => 'У курьера уже открыта смена.'], 400);
+        }
+
+        $shift = CourierShift::create(['courier_id' => $user->id, 'opened_at' => now()]);
+
+        CourierAction::create([
+            'courier_id'  => $user->id,
+            'action_type' => 'shift_open_by_manager',
+            'order_id'    => null,
+            'shift_id'    => $shift->id,
+        ]);
+
+        return response()->json(['success' => true, 'opened_at' => $shift->opened_at]);
     }
 }

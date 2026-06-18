@@ -1,27 +1,26 @@
 import { useState, useEffect, useRef } from 'react'
-import L from 'leaflet'
-import 'leaflet/dist/leaflet.css'
 import api from '../../api/axios'
 import { Icons } from '../../components/Icons'
 import { Card, Btn, StatTile, StatusPill } from '../../components/ui'
 
-const WH_COLOR = (pct) => pct >= 90 ? '#F04438' : pct >= 70 ? '#F79009' : '#12B76A'
+const TWO_GIS_KEY = import.meta.env.VITE_2GIS_KEY || ''
 
-function makeWhIcon(pct) {
-  const color = WH_COLOR(pct)
-  return L.divIcon({
-    className: '',
-    html: `<div style="
-      width:36px;height:36px;border-radius:50%;
-      background:${color};border:3px solid #fff;
-      box-shadow:0 2px 8px rgba(0,0,0,0.5);
-      display:flex;align-items:center;justify-content:center;
-      font-size:10px;font-weight:700;color:#fff;font-family:monospace;
-    ">${Math.round(pct)}%</div>`,
-    iconSize: [36, 36],
-    iconAnchor: [18, 18],
-  })
+function useMapGL() {
+  const [ready, setReady] = useState(typeof window !== 'undefined' && !!window.mapgl)
+  useEffect(() => {
+    if (window.mapgl) { setReady(true); return }
+    const existing = document.querySelector('script[data-2gis]')
+    if (existing) { existing.addEventListener('load', () => setReady(true)); return }
+    const s = document.createElement('script')
+    s.src = 'https://mapgl.2gis.com/api/js/v1'
+    s.setAttribute('data-2gis', '1')
+    s.onload = () => setReady(true)
+    document.head.appendChild(s)
+  }, [])
+  return ready
 }
+
+const WH_COLOR = (pct) => pct >= 90 ? '#F04438' : pct >= 70 ? '#F79009' : '#12B76A'
 
 const ORDER_STATUS_MAP = {
   draft:            { bg: 'rgba(255,255,255,0.06)', fg: 'rgba(255,255,255,0.45)', label: 'Черновик' },
@@ -59,6 +58,7 @@ export default function ManagerHome() {
   const [trucks,     setTrucks]     = useState([])
   const [warehouses, setWarehouses] = useState([])
 
+  const mapReady  = useMapGL()
   const whMapRef  = useRef(null)
   const whMapInst = useRef(null)
   const whMarkers = useRef([])
@@ -85,32 +85,46 @@ export default function ManagerHome() {
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
-  // Инициализация карты складов
+  // Инициализация карты складов (2GIS)
   useEffect(() => {
-    if (whMapInst.current || !whMapRef.current) return
-    const map = L.map(whMapRef.current, { zoomControl: true }).setView([62, 95], 3)
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap',
-    }).addTo(map)
+    if (!mapReady || !whMapRef.current || !TWO_GIS_KEY) return
+    if (whMapInst.current) return
+    const map = new window.mapgl.Map(whMapRef.current, {
+      center: [95, 62],
+      zoom: 3,
+      key: TWO_GIS_KEY,
+    })
     whMapInst.current = map
-    return () => { map.remove(); whMapInst.current = null }
-  }, [])
+    return () => { map.destroy(); whMapInst.current = null }
+  }, [mapReady])
 
   // Обновить маркеры при загрузке складов
   useEffect(() => {
-    if (!whMapInst.current) return
-    whMarkers.current.forEach(m => m.remove())
+    if (!whMapInst.current || !mapReady) return
+    whMarkers.current.forEach(m => m.destroy?.())
     whMarkers.current = []
     warehouses.forEach(wh => {
-      const marker = L.marker([wh.latitude, wh.longitude], { icon: makeWhIcon(wh.load_percent) })
-        .addTo(whMapInst.current)
-        .bindTooltip(
-          `<b>${wh.name}</b><br>Загружено: ${wh.current_load} из ${wh.total_capacity} т (${wh.load_percent}%)`,
-          { sticky: true }
-        )
+      if (!wh.latitude || !wh.longitude) return
+      const color = WH_COLOR(wh.load_percent)
+      const el = document.createElement('div')
+      el.style.cssText = `position:relative;width:40px;height:40px;border-radius:50%;background:${color};border:3px solid rgba(255,255,255,0.9);box-shadow:0 2px 10px rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;font-family:monospace;cursor:pointer;`
+      el.textContent = `${Math.round(wh.load_percent)}%`
+
+      const tip = document.createElement('div')
+      tip.style.cssText = `position:absolute;bottom:46px;left:50%;transform:translateX(-50%);background:rgba(10,10,30,0.96);border:1px solid rgba(255,255,255,0.12);color:#fff;padding:7px 11px;border-radius:7px;font-size:11px;white-space:nowrap;pointer-events:none;display:none;font-family:sans-serif;line-height:1.5;`
+      tip.innerHTML = `<b style="color:#f0a500">${wh.name}</b><br>${wh.current_load ?? '?'} / ${wh.total_capacity ?? '?'} т · ${Math.round(wh.load_percent)}%`
+      el.appendChild(tip)
+      el.addEventListener('mouseenter', () => { tip.style.display = 'block' })
+      el.addEventListener('mouseleave', () => { tip.style.display = 'none' })
+
+      const marker = new window.mapgl.HtmlMarker(whMapInst.current, {
+        coordinates: [wh.longitude, wh.latitude],
+        html: el,
+        anchor: [0.5, 0.5],
+      })
       whMarkers.current.push(marker)
     })
-  }, [warehouses])
+  }, [warehouses, mapReady])
 
   const newOrders  = orders.filter(o => ['pending', 'pending_approval'].includes(o.status))
   const inWork     = orders.filter(o => QUEUE_STATUSES.filter(s => s !== 'pending').includes(o.status))

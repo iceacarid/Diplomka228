@@ -133,11 +133,12 @@ function CargoCard({ order, selected, aiSuggested, onClick, onRemove, onChatOpen
 
 // ─── Warehouse Map ─────────────────────────────────────────────────────────────
 function WarehouseMap({ warehouses, whFrom, whTo, onSelectFrom, onSelectTo, fullscreen, onToggleFullscreen }) {
-  const mapRef   = useRef(null)
-  const mapInst  = useRef(null)
-  const markers  = useRef([])
-  const polyline = useRef(null)
-  const mapReady = useMapGL()
+  const mapRef      = useRef(null)
+  const mapInst     = useRef(null)
+  const markers     = useRef([])
+  const polyline    = useRef(null)
+  const mapReady    = useMapGL()
+  const [routeLoading, setRouteLoading] = useState(false)
 
   // Init map
   useEffect(() => {
@@ -203,17 +204,38 @@ function WarehouseMap({ warehouses, whFrom, whTo, onSelectFrom, onSelectTo, full
       markers.current.push(marker)
     })
 
-    // Draw route line
+    // Draw route via OSRM
     if (whFrom?.latitude && whFrom?.longitude && whTo?.latitude && whTo?.longitude) {
-      polyline.current = new window.mapgl.Polyline(mapInst.current, {
-        coordinates: [
-          [whFrom.longitude, whFrom.latitude],
-          [whTo.longitude,   whTo.latitude],
-        ],
-        width: 3,
-        color: '#f0a500',
-        opacity: 0.8,
-      })
+      let cancelled = false
+      setRouteLoading(true)
+
+      const drawPoly = (coords) => {
+        if (cancelled || !mapInst.current) return
+        if (polyline.current) { polyline.current.destroy?.(); polyline.current = null }
+        polyline.current = new window.mapgl.Polyline(mapInst.current, {
+          coordinates: coords,
+          width: 4,
+          color: '#f0a500',
+          opacity: 0.9,
+        })
+      }
+
+      ;(async () => {
+        const fallback = [[whFrom.longitude, whFrom.latitude], [whTo.longitude, whTo.latitude]]
+        try {
+          const url = `https://router.project-osrm.org/route/v1/driving/${whFrom.longitude},${whFrom.latitude};${whTo.longitude},${whTo.latitude}?overview=full&geometries=geojson`
+          const res  = await fetch(url)
+          const json = await res.json()
+          const coords = json?.routes?.[0]?.geometry?.coordinates
+          if (!cancelled) { drawPoly(coords?.length ? coords : fallback) }
+        } catch {
+          if (!cancelled) { drawPoly(fallback) }
+        } finally {
+          if (!cancelled) setRouteLoading(false)
+        }
+      })()
+
+      return () => { cancelled = true; setRouteLoading(false) }
     }
   }, [mapReady, warehouses, whFrom, whTo, onSelectFrom, onSelectTo])
 
@@ -239,6 +261,12 @@ function WarehouseMap({ warehouses, whFrom, whTo, onSelectFrom, onSelectTo, full
       {!mapReady && (
         <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(13,13,31,0.85)', color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>
           Загрузка карты...
+        </div>
+      )}
+      {routeLoading && (
+        <div style={{ position: 'absolute', bottom: 12, left: 12, zIndex: 10, background: 'rgba(13,13,31,0.88)', border: '1px solid rgba(240,165,0,0.35)', borderRadius: 6, padding: '5px 10px', color: 'var(--gold)', fontSize: 11, fontWeight: 600, backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--gold)', display: 'inline-block', animation: 'pulse 1s infinite' }} />
+          Строим маршрут...
         </div>
       )}
       <button
